@@ -99,6 +99,7 @@ Richness refers to the number of unique taxa. Typically, richness is used to ref
 ```{r}
 rich.df <- metrics.key %>% 
   dplyr::mutate(
+    rich_order = taxa_rich(lgss.df, unique_id, class, order, taxon = NULL),
     rich_family = taxa_rich(lgss.df, unique_id, order, family, taxon = NULL),
     rich_genus = taxa_rich(lgss.df, unique_id, order, genus, taxon = NULL)
   )
@@ -114,8 +115,18 @@ subrich.df <- metrics.key %>%
   dplyr::mutate(
     rich_ephemeroptera_fam = taxa_rich(lgss.df, unique_id, order, family, taxon = "ephemeroptera"),
     rich_ephemeroptera_gen = taxa_rich(lgss.df, unique_id, order, genus, taxon = "ephemeroptera"),
+    rich_ept_fam = taxa_rich(lgss.df, unique_id, order, family,
+                             taxon = c("ephemeroptera", "plecoptera", "trichoptera")),
     rich_ept_gen = taxa_rich(lgss.df, unique_id, order, genus,
-                             taxon = c("ephemeroptera", "plecoptera", "trichoptera"))
+                             taxon = c("ephemeroptera", "plecoptera", "trichoptera")),
+    rich_cote_fam = taxa_rich(lgss.df, unique_id, order, family,
+                             taxon = c("coleoptera", "odonata", "trichoptera", "ephemeroptera")),
+    rich_cote_gen = taxa_rich(lgss.df, unique_id, order, genus,
+                             taxon = c("coleoptera", "odonata", "trichoptera", "ephemeroptera")),
+    rich_potec_fam = taxa_rich(lgss.df, unique_id, order, family,
+                             taxon = c("plecoptera", "odonata", "coleoptera",  "trichoptera", "ephemeroptera")),
+    rich_potec_gen = taxa_rich(lgss.df, unique_id, order, genus,
+                             taxon = c("coleoptera", "odonata", "trichoptera", "ephemeroptera")),
   )
 
 DT::datatable(subrich.df, options = list(scrollX = TRUE))  
@@ -145,31 +156,6 @@ div.df <- metrics.key %>%
   )
 
 DT::datatable(div.df, options = list(scrollX = TRUE))  
-```
-
-### Subgroup Diversity
-
-```{r, eval=FALSE}
-subdiv.df <- metrics.key %>% 
-  dplyr::mutate(
-    gini_simpson_ept = taxa_div(lgss.df, unique_id, indiv,
-                           low.taxa.col = order,
-                           high.taxa.col = genus,
-                           taxon = c("ephemeroptera", "plecoptera", "trichoptera"),
-                           job = "gini_simpson"),
-    simpson_ept = taxa_div(lgss.df, unique_id, indiv,
-                           low.taxa.col = order,
-                           high.taxa.col = genus,
-                           taxon = c("ephemeroptera", "plecoptera", "trichoptera"),
-                           job = "simpson"),
-    shannon_ept = taxa_div(lgss.df, unique_id, indiv,
-                           low.taxa.col = order,
-                           high.taxa.col = genus,
-                           taxon = c("ephemeroptera", "plecoptera", "trichoptera"),
-                           job = "shannon", base.log = 2)
-  )
-
-DT::datatable(subdiv.df, options = list(scrollX = TRUE))  
 ```
 
 ## Community Metrics
