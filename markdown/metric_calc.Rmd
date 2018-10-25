@@ -50,31 +50,21 @@ root.dir <- rprojroot::find_root("lgss.Rproj")
 ```
 
 ```{r}
-attributes.df <- read_csv(file.path(root.dir, "data", "taxa_attributes.csv")) %>% 
+attributes.df <- read_csv(file.path(root.dir, "data", "master_species.csv")) %>% 
   toolbox::prep_df()
 
-taxa.df <- readxl::read_excel(file.path(root.dir, "data", "LGSS_SpeciesData_Raw.xlsx"),
-                   sheet = "SampleSpeciesOriginal") %>% 
+taxa.df <- read.csv(file.path(root.dir, "data", "LGSS_merge.csv"),stringsAsFactors = FALSE) %>% 
   toolbox::prep_df() %>% 
   mutate(unique_id = paste(location, station, sep = "_"),
          final_id = genspecies) %>% 
   left_join(attributes.df, by = "final_id")
 
-
-site.df <- readxl::read_excel(file.path(root.dir, "data", "Compiled_LGSS_SiteData.xlsx"),
-                   sheet = "Sheet1") %>% 
-  toolbox::prep_df() %>% 
-  rename(unique_id = efielddata_lgss_new)
-```
-
-```{r}
-lgss.df <- left_join(taxa.df, site.df, by = "unique_id")
 ```
 
 Create a data frame that will store the calculated metrics. This should include a unique site ID and possibly a few other important columns, such as stream gradient classification column (e.g., Reference and Degraded). I recommend not carrying all of the site information through the metric calculation process because it can easily be appended at the end of the calculation process or at another later step. This will reduce clutter, allowing you to focus on the metric values, and will help you manage memory allocation. Additionally, do __NOT__ alter the order of the unique identifier. The output from each metric function is a vector in the order of the supplied data frame of taxonomic counts (in this case `lgss.df`). If the unique identifier is rearranged, no error will appear but the metric values will be associated with incorrect unique identifier.
 ```{r}
 metrics.key <- lgss.df %>% 
-  select(unique_id, condition) %>% 
+  select(newid, condition) %>% 
   distinct()
 ```
 
