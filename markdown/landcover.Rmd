@@ -2,6 +2,7 @@
 title: "Untitled"
 author: "Zachary M. Smith"
 date: "December 21, 2018"
+updated: "12/26/18 by Gavin Lemley""
 output: html_document
 ---
 `r format(Sys.Date(), "%m-%d-%Y")`
@@ -51,6 +52,11 @@ landcover.df <- landcover.df %>%
   mutate(total_acres = sum(Area_acre)) %>% 
   ungroup() %>% 
   mutate(percent_cover = Area_acre / total_acres * 100)
+```
+
+```{r}
+NLCD_key <- read.csv(file.path(root.dir, "data", "NLCD_attribute_key_condensed_LGSS.csv"))
+landcover.df <- merge(landcover.df,NLCD_key, by = "Value", all.x = TRUE)
 ```
 
 # Use "summarize" function to group by combined land use types. This will collapse unneeded rows...
