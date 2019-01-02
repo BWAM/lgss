@@ -59,5 +59,13 @@ NLCD_key <- read.csv(file.path(root.dir, "data", "NLCD_attribute_key_condensed_L
 landcover.df <- merge(landcover.df,NLCD_key, by = "Value", all.x = TRUE)
 ```
 
-# Use "summarize" function to group by combined land use types. This will collapse unneeded rows...
+# Zach suggests using "summarize" function to group by combined land use types. This will collapse unneeded rows...
+```{r}
+sitetype.df <- landcover.df %>% 
+  filter(Condensed_class %in% c("Natural", "Wetland")) %>% 
+  group_by(site_id) %>% 
+  summarize(pct = sum(percent_cover)) %>% 
+  mutate(site_type = ifelse(pct>=75,"ref","test"))
+
+```
 
