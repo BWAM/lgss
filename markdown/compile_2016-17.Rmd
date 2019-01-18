@@ -1,0 +1,44 @@
+---
+title: "compile_2016-17"
+author: "Gavin Lemley"
+date: "January 2, 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+Find the R-project root directory to simplify file path designations.
+```{r}
+root.dir <- rprojroot::find_root("lgss.Rproj")
+```
+
+Load in data tables and create BAS_LOC_RM column in sites table.
+```{r}
+
+field_data <- read.csv(file.path(root.dir, "data/compile_2016-17", "LGSS_field_2016_2017.csv"))
+sites_tbl <- read.csv(file.path(root.dir, "data/compile_2016-17", "Sites_DiUpdated_2018-12-17.csv"))
+
+#Format fields to add leading, and keep trailing zeros.
+sites_tbl$BASIN <- formatC(sites_tbl$BASIN, width = 2, format = "d", flag = "0")
+sites_tbl$RIVMILE <- formatC( sites_tbl$RIVMILE, format='f', digits=1 )
+
+#Create BAS_LOC_RM field
+sites_tbl$BAS_LOC_RM <- paste0(sites_tbl$BASIN,"-",sites_tbl$LOCATION,"-",sites_tbl$RIVMILE)
+
+```
+
+Merge tables to associate site info with field data.
+```{r}
+FSmerge <- merge(field_data,sites_tbl,by="BAS_LOC_RM", all=FALSE)
+
+```
+
+
+```{r}
+write.table(FSmerge, file.path(root.dir, "data/compile_2016-17/LGSS_16-17_field-Sites_merge.csv"),sep=",", row.names = FALSE)
+
+```
+
