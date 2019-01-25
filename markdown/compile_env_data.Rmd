@@ -1,0 +1,37 @@
+---
+title: "Compile_env_data"
+author: "Gavin Lemley"
+date: "January 23, 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+
+Find the R-project root directory to simplify file path designations.
+```{r}
+root.dir <- rprojroot::find_root("lgss.Rproj")
+```
+
+Load in data tables and merge
+```{r}
+
+env.partial <- read.csv(file.path(root.dir, "data/Compile_env_data", "2015_LGSS_env_numerical_partial.csv"))
+env.TOC <- read.csv(file.path(root.dir, "data/Compile_env_data", "2015_LGSS_TOC.csv"))
+env.grainsize <- read.csv(file.path(root.dir, "data/Compile_env_data", "2015_LGSS_grainsize.csv"))
+
+env.merge1 <- merge(env.partial,env.TOC,by="BAS_LOC_RM", all=TRUE)
+env.merge2 <- merge(env.merge1,env.grainsize,by="BAS_LOC_RM", all=TRUE)
+
+```
+
+Write output table
+```{r}
+write.table(env.merge2, file.path(root.dir, "data/Compile_env_data/LGSS_2015_env_numerical_ALL.csv"),sep=",", row.names = FALSE)
+
+```
+
