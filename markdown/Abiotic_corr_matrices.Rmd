@@ -19,9 +19,7 @@ abiotic.df$BAS_LOC_RM <- NULL
 
 abiotic.dfsmall.1 <- abiotic.df[,c(1:6)]
 abiotic.dfsmall.2 <- abiotic.df[,c(7:12)]
-
 abiotic.habitat <- abiotic.df[,c(13:25)]
-
 abiotic.dfsmall.4 <- abiotic.df[,c(26:33)]
 
 ```
@@ -96,13 +94,76 @@ pairs(abiotic.dfsmall.1, upper.panel = panel.cor, diag.panel = panel.hist)
 ```
 
 Using corrplot package
-```{r}
-M<-cor(abiotic.df, use = "everything" )
+```{r,fig.width=20, fig.height=20}
+M<-cor(abiotic.df, use = "complete.obs" )
 head(round(M,2))
 
 # See http://www.sthda.com/english/wiki/visualize-correlation-matrix-using-correlogram for different graph styles
 
-corrplot(M, method="circle")
+corrplot::corrplot(M, method="circle")
+
+col <- colorRampPalette(c("#BB4444", "#EE9988", "#FFFFFF", "#77AADD", "#4477AA"))
+corrplot::corrplot(M, method="color", col=col(200),  
+         type="upper", order="hclust", 
+         addCoef.col = "black", # Add coefficient of correlation
+         tl.col="black", tl.srt=45, #Text label color and rotation
+         # Combine with significance
+         # p.mat = p.mat, sig.level = 0.01, insig = "blank", 
+         # hide correlation coefficient on the principal diagonal
+         diag=FALSE 
+         )
+
+
 
 ```
 
+
+Corrplot for corr values limited to >0.5 
+```{r,fig.width=20, fig.height=20}
+
+M.df <- as.data.frame(M)
+M.df <- apply(M.df,2,abs)
+col.i <- 1
+keep.vec <- sapply(1:ncol(M.df), function(col.i){
+  sub.vec <- M.df[, col.i]
+  any(sub.vec > 0.5 & sub.vec < 1)
+})
+smallmatrix.df <- M[keep.vec,keep.vec]
+
+
+col <- colorRampPalette(c("#BB4444", "#EE9988", "#FFFFFF", "#77AADD", "#4477AA"))
+corrplot::corrplot(smallmatrix.df, method="color", col=col(200),  
+         type="upper", order="hclust", 
+         addCoef.col = "black", # Add coefficient of correlation
+         tl.col="black", tl.srt=45, #Text label color and rotation
+         # Combine with significance
+         # p.mat = p.mat, sig.level = 0.01, insig = "blank", 
+         # hide correlation coefficient on the principal diagonal
+         diag=FALSE 
+         )
+```
+
+Corrplot for corr values limited to >0.8 
+```{r,fig.width=10, fig.height=10}
+
+M.df <- as.data.frame(M)
+M.df <- apply(M.df,2,abs)
+col.i <- 1
+keep.vec <- sapply(1:ncol(M.df), function(col.i){
+  sub.vec <- M.df[, col.i]
+  any(sub.vec > 0.7 & sub.vec < 1)
+})
+smallmatrix.df <- M[keep.vec,keep.vec]
+
+
+col <- colorRampPalette(c("#BB4444", "#EE9988", "#FFFFFF", "#77AADD", "#4477AA"))
+corrplot::corrplot(smallmatrix.df, method="color", col=col(200),  
+         type="upper", order="hclust", 
+         addCoef.col = "black", # Add coefficient of correlation
+         tl.col="black", tl.srt=45, #Text label color and rotation
+         # Combine with significance
+         # p.mat = p.mat, sig.level = 0.01, insig = "blank", 
+         # hide correlation coefficient on the principal diagonal
+         diag=FALSE 
+         )
+```
