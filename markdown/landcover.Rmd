@@ -28,7 +28,7 @@ Specify the file path to the XLS file.
 ```{r}
 landcover.path <- file.path(root.dir,
                             "data",
-                            "Batch_Land_Cover_Output_12212018.xls")
+                            "Batch_Land_Cover_Output_01312019.xls")
 ```
 
 Identify all of the sheets in the XLS file.
@@ -65,6 +65,9 @@ sitetype.df <- landcover.df %>%
   group_by(site_id) %>% 
   summarize(pct = sum(percent_cover)) %>% 
   mutate(site_type = ifelse(pct>=75,"ref","test"))
+
+write.table(sitetype.df, file.path(root.dir, "data/compile_2016-17/LGSS_16-17_landuse.csv"),sep=",", row.names = FALSE)
+
 
 ```
 

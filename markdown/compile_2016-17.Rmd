@@ -9,7 +9,7 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-
+### For abiotic data ###
 Find the R-project root directory to simplify file path designations.
 ```{r}
 root.dir <- rprojroot::find_root("lgss.Rproj")
@@ -36,9 +36,103 @@ FSmerge <- merge(field_data,sites_tbl,by="BAS_LOC_RM", all=FALSE)
 
 ```
 
-
 ```{r}
 write.table(FSmerge, file.path(root.dir, "data/compile_2016-17/LGSS_16-17_field-Sites_merge.csv"),sep=",", row.names = FALSE)
 
+```
+
+### For 2016-17 bug data (long format to matrix for PRIMER import) ###
+
+Specify the file path to the XLS file.
+```{r}
+root.dir <- rprojroot::find_root("lgss.Rproj")
+
+bugs.path <- file.path(root.dir,
+                            "data",
+                            "compile_2016-17",
+                            "LGSS_BUGS_2016_2017_IDSs_fixed.xlsx")
+```
+
+Identify all of the sheets in the XLS file.
+```{r}
+sheet.vec <- readxl::excel_sheets(bugs.path)
+```
+
+Read in 2016 and 2017 bugs sheets (long format), bind, and create site ID field
+```{r}
+bugs2016.df <- readxl::read_excel(bugs.path, sheet = "LGSS 2016")
+bugs2017.df <- readxl::read_excel(bugs.path, sheet = "LGSS 2017")
+
+bugs201617.df <-rbind(bugs2016.df,bugs2017.df)
+
+#Format fields to add leading, and keep trailing zeros.
+bugs201617.df$BASIN <- as.numeric(bugs201617.df$BASIN)
+bugs201617.df$BASIN <- formatC(bugs201617.df$BASIN, width = 2, format = "d", flag = "0")
+
+bugs201617.df$RIVMILE <- as.numeric(bugs201617.df$RIVMILE)
+bugs201617.df$RIVMILE <- formatC( bugs201617.df$RIVMILE, format='f', digits=1 )
+
+#Create BAS_LOC_RM field
+bugs201617.df$BAS_LOC_RM <- paste0(bugs201617.df$BASIN,"-",bugs201617.df$LOCATION,"-",bugs201617.df$RIVMILE)
+
+
+```
+
+Transform bugs from long to matrix
+```{r}
+library(tidyverse)
+bugmatrix1617.df <- bugs201617.df %>% 
+  dplyr::select(BAS_LOC_RM, MACRO_GENSPECIES, INDIV) %>% 
+  group_by(BAS_LOC_RM, MACRO_GENSPECIES) %>% 
+  summarise(INDIV = sum(INDIV)) %>% 
+  # mutate(MACRO_GENSPECIES = str_replace_all(MACRO_GENSPECIES, " ", "_")) %>% 
+  spread(MACRO_GENSPECIES, INDIV, fill = 0)
+
+#Rename repeat site (already sampled in 2015)
+bugmatrix1617.df$BAS_LOC_RM <- gsub("07-HARB-0.5", "07-HARB-0.5_b",bugmatrix1617.df$BAS_LOC_RM)
+
+#Count total to check if >200
+# bugmatrix1617.df$total <- rowSums(bugmatrix1617.df[,2:280])
+
+#Replace spaces in column names to match 2015 data
+# names(bugmatrix1617.df) <- gsub(x = names(bugmatrix1617.df), pattern = "\\ ", replacement = ".")
+  
+# write.table(bugmatrix1617.df, file.path(root.dir, "data/LG_2016-17_BUGS.csv"),sep=",", row.names = FALSE)
+
+
+```
+
+Bind 2015 bugs with 2016-17
+```{r}
+bugmatrix2015.df <- read.csv(file.path(root.dir, "data", "2015_bugs.csv"), stringsAsFactors = FALSE, check.names = FALSE)
+#Replace NAs with 0s
+bugmatrix2015.df[is.na(bugmatrix2015.df)] <- 0
+#Rename repeat site (also sampled in 2016-17 dataset)
+bugmatrix2015.df$BAS_LOC_RM <- gsub("07-HARB-0.5", "07-HARB-0.5_a",bugmatrix2015.df$BAS_LOC_RM)
+
+LG_all_bugs.df <- dplyr::bind_rows(bugmatrix2015.df, bugmatrix1617.df)
+LG_all_bugs.df[is.na(LG_all_bugs.df)] <- 0
+LG_all_bugs.df <- LG_all_bugs.df[order(LG_all_bugs.df$BAS_LOC_RM),] 
+
+write.table(LG_all_bugs.df, file.path(root.dir, "data/LG_ALL_BUGS.csv"),sep=",", row.names = FALSE)
+
+```
+
+Invesitgating why bind results in different number of taxa when converting spaces to decimals (line 98)... 
+```{r}
+# bugmatrix2015.df.chkFALSE <- read.csv(file.path(root.dir, "data", "2015_bugs.csv"), check.names = FALSE) %>% 
+#   dplyr::bind_rows(bugmatrix1617.df)
+# names(bugmatrix2015.df.chkFALSE) <- str_replace_all(names(bugmatrix2015.df.chkFALSE), " ", "_")
+# 
+# bugmatrix2015.df.chkTRUE <- read.csv(file.path(root.dir, "data", "2015_bugs.csv"), check.names = TRUE) %>% 
+#     dplyr::bind_rows(bugmatrix1617.df)
+# 
+# 
+# test <- data.frame(name = names(LG_all_bugs.df))
+# test2 <- data.frame(name = names(bugmatrix2015.df))
+# 
+# anti.df <- anti_join(test, test2)
+# 
+# name!names(bugmatrix2015.df) %in% names(bugmatrix1617.df)
 ```
 
