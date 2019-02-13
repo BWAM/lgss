@@ -17,6 +17,7 @@ abiotic.df <- read.csv(file.path(root.dir, "data/Compile_env_data", "LGSS_2015_e
 
 abiotic.df$BAS_LOC_RM <- NULL 
 
+#Split data for more legible plots
 abiotic.dfsmall.1 <- abiotic.df[,c(1:6)]
 abiotic.dfsmall.2 <- abiotic.df[,c(7:12)]
 abiotic.habitat <- abiotic.df[,c(13:25)]
