@@ -1,0 +1,86 @@
+---
+title: "Untitled"
+author: "Zachary M. Smith"
+date: "January 5, 2019"
+output: html_document
+---
+
+```{r}
+metrics.vec <- c("rich_toe_family",
+                      "rich_ept_macro_genspecies",
+                      "rich_genus", 
+                      "rich_insecta",
+                      "pct_ept",
+                      "pct_gammaridae",
+                      "pct_physidae")
+
+metrics.vec <- sensitivity.df %>% 
+  filter(de >= 75) %>% 
+  pull(metric)
+```
+
+```{r}
+sub.df <- metrics.long %>% 
+  filter(metric %in% metrics.vec) %>% 
+  group_by(metric) %>% 
+  mutate(min = min(value),
+         max = max(value),
+         score = (value - min) / (max - min) * 100) %>% 
+  select(-min, -max, -value) %>% 
+  spread(metric, score) #%>% 
+  # filter(lg_region == "Adirondacks")
+```
+
+```{r}
+selected.df <- sub.df %>% 
+  left_join(condition.df, by = c("bas_loc_rm", "site_condition", "lg_region")) %>% 
+  select(site_condition, metrics.vec) %>% 
+  mutate(site_condition = if_else(site_condition == "ref", 1, 0))
+
+
+logistic <- glm(site_condition ~ ., data = selected.df, family = "binomial")
+
+selected.df$predicted <- predict(logistic, newdata = selected.df, type="response")
+
+coef.df <- summary(logistic)$coefficients %>% 
+  as_tibble() %>% 
+  mutate(metric = rownames(summary(logistic)$coefficients)) %>% 
+  filter(`Pr(>|z|)` < 0.1,
+         metric != "(Intercept)") %>% 
+  pull(metric)
+
+
+selected.df <- sub.df  %>% 
+  left_join(condition.df, by = c("bas_loc_rm", "site_condition", "lg_region")) %>% 
+  select(site_condition, coef.df) %>% 
+  mutate(site_condition = if_else(site_condition == "ref", 1, 0))
+
+
+logistic <- glm(site_condition ~ ., data = selected.df, family = "binomial")
+
+selected.df$predicted <- predict(logistic, newdata = selected.df, type="response")
+
+```
+
+```{r}
+tp <- nrow(selected.df[selected.df$site_condition == 1 & selected.df$predicted >= 0.5, ])
+ref.n <- nrow(selected.df[selected.df$site_condition == 1, ])
+tp.pct <- tp / ref.n * 100
+
+fp <- nrow(selected.df[selected.df$site_condition == 0 & selected.df$predicted < 0.5, ])
+test.n <- nrow(selected.df[selected.df$site_condition == 0, ])
+fp.pct <- fp / test.n * 100
+
+(tp.pct + fp.pct) / 2
+```
+
+```{r}
+ggplot(selected.df, aes(x=predicted, y=site_condition)) + geom_point() + 
+  stat_smooth(method="glm", method.args=list(family="binomial"), se=FALSE)
+```
+
+```{r}
+ggplot(selected.df, aes(as.factor(site_condition), predicted)) +
+  geom_boxplot()
+```
+

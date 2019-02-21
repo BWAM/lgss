@@ -1,0 +1,392 @@
+---
+title: "Introduction to mmir: DRAFT"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 5
+author: Zachary M. Smith
+---
+
+Create a data frame that will store the calculated metrics. This should include a unique site ID and possibly a few other important columns, such as stream gradient classification column (e.g., Reference and Degraded). I recommend not carrying all of the site information through the metric calculation process because it can easily be appended at the end of the calculation process or at another later step. This will reduce clutter, allowing you to focus on the metric values, and will help you manage memory allocation. Additionally, do __NOT__ alter the order of the unique identifier. The output from each metric function is a vector in the order of the supplied data frame of taxonomic counts (in this case `taxa.df`). If the unique identifier is rearranged, no error will appear but the metric values will be associated with incorrect unique identifier.
+```{r}
+metrics.key <- taxa.df %>% 
+  select(bas_loc_rm) %>% 
+  distinct()
+```
+
+## Input Variable Definitions
+
+Standard input variable definitions for functions in the __mmir__ package.
+
+* `long.df` = A data frame in a long data format, where each row represents a unique sampling event and taxon.
+* `key.col` = A single column that represents a unique ID or key (i.e., site ID) that can be used to group the data. This variable should be input using NSE syntax (i.e., not quoted).
+* `low.taxa.col` = A single column that represents a lower resolution taxonomic rank than the taxonomic rank specified for `taxa.col`. This variable should be input using NSE syntax (i.e., not quoted).
+* `taxa.col` = A single column that represents a higher resolution taxonomic rank than the taxonomic rank specified for `low.taxa.col`. This variable should be input using NSE syntax (i.e., not quoted).
+* `taxon` = A object or vector, generally a character string or a character vector, that is used subsets the data frame to only include rows that match the string(s) in `taxa.col`.
+* `count.col` = A single numeric column that represents taxonomic counts. This variable should be input using NSE syntax (i.e., not quoted).
+
+## Richness Metrics
+
+Richness refers to the number of unique taxa. Typically, richness is used to refer to the number of unique species found in a sample but richness can be calculated for any taxonomic rank (e.g., order, family, genus).
+
+### Community Richness
+
+`taxa_rich()` is used to calculate richness. A long format data frame containing taxonomic counts is specified as the `long.df` variable (`taxa.df`). The name of a unique ID column is specified for the `unique.id.col` variable (`bas_loc_rm`). Note that this is done with NSE syntax (i.e., no quotes). The `low.taxa.col` and `high.taxa.col` refer to low resolution and high resolution taxonomic rank columns of interest. `high.taxa.col` is required but `low.taxa.col` is only necessary when calculating subgroup richness. Furthermore, the `taxon` variable is only necessary for specifying which taxon or taxa will be used to calculate subgroup richness; therefore, when calculating community richness, `taxon` should be set to `NULL`. In this example family-level and genus-level community richness are calculated and appended to `metrics.key`. `DT::datatable()` is only used to present interactive tables in this document.
+```{r}
+hier.vec <-  c("class", "order", "family", "genus", "macro_genspecies")
+# taxa.i <- "order"
+rich.df <- purrr::map(hier.vec, function(taxa.i) {
+  quo.taxa.i <- rlang::quo(taxa.i)
+  rich.sub <- dplyr::tibble(
+    rich = taxa_rich(long.df = taxa.df,
+                           unique.id.col = bas_loc_rm,
+                           low.taxa.col = !!quo.taxa.i,
+                           taxon = NULL)
+  )
+  names(rich.sub) <- paste(names(rich.sub), taxa.i, sep = "_")
+  return(rich.sub)
+  }) %>% 
+  bind_cols(metrics.key, .)
+
+DT::datatable(rich.df, options = list(scrollX = TRUE))  
+```
+
+### Subgroup Richness
+
+`taxa_rich()` can also be used to calculate subgroup richness, which refers to calculating the richness of only select set of taxa. In the example below Ephemeroptera (Mayfly) richness is calculated at the family- and genus-levels. More than one taxonomic group can be specified, as shown for `rich_ept_gen` (`taxon = c("ephemeroptera", "plecoptera", "trichoptera")`). The `taxon` variable is used to filter the data frame based on character string matches found in specified `low.taxa.col`. In the example, the `taxa.df` data frame is subset to only include rows where the `order` column specifies "ephemeroptera". The `high.taxa.col` (e.g., `family` or `genus`) is then used to find the number of unique ephemeroptera taxa at this specified taxonomic level. If `taxon` was set to "baetidae" (a family of ephmeroptera) in the example below, then `taxa_rich()` would return all zeros because the character string "baetidae" would never be found in the order-level column.
+```{r}
+subrich.df <- purrr::map(c("family", "genus", "macro_genspecies"), function(taxa.i) {
+  quo.taxa.i <- rlang::enquo(taxa.i)
+  subrich.sub <- dplyr::tibble(
+    rich_ep = taxa_rich(taxa.df, bas_loc_rm, order, !!quo.taxa.i,
+                             taxon = c("ephemeroptera",
+                                       "plecoptera")),
+    rich_et = taxa_rich(taxa.df, bas_loc_rm, order, !!quo.taxa.i,
+                             taxon = c("ephemeroptera",
+                                       "trichoptera")),
+    rich_pt = taxa_rich(taxa.df, bas_loc_rm, order, !!quo.taxa.i,
+                             taxon = c("plecoptera",
+                                       "trichoptera")),
+    rich_ept = taxa_rich(taxa.df, bas_loc_rm, order, !!quo.taxa.i,
+                             taxon = c("ephemeroptera",
+                                       "plecoptera",
+                                       "trichoptera")),
+    rich_toe = taxa_rich(taxa.df, bas_loc_rm, order, !!quo.taxa.i,
+                             taxon = c("trichoptera",
+                                       "odonata",
+                                       "ephemeroptera")),
+    rich_cote = taxa_rich(taxa.df, bas_loc_rm, order, !!quo.taxa.i,
+                             taxon = c("coleoptera",
+                                       "odonata",
+                                       "trichoptera",
+                                       "ephemeroptera")),
+    rich_potec = taxa_rich(taxa.df, bas_loc_rm, order, !!quo.taxa.i,
+                             taxon = c("plecoptera",
+                                       "odonata",
+                                       "trichoptera", 
+                                        "ephemeroptera",
+                                       "coleoptera")),
+    rich_mol = taxa_rich(taxa.df, bas_loc_rm, phylum, !!quo.taxa.i,
+                             taxon = c("mollusca")),
+    rich_amphi = taxa_rich(taxa.df, bas_loc_rm, order, !!quo.taxa.i,
+                             taxon = c("amphipoda")),
+    rich_crust = taxa_rich(taxa.df, bas_loc_rm, subphylum, !!quo.taxa.i,
+                             taxon = c("crustacea")),
+    rich_mollusca_amphipoda = rich_mol + rich_amphi,
+    rich_crustacea_mollusca = rich_crust + rich_mol
+  ) %>% 
+    select(-rich_mol, -rich_amphi, -rich_crust)
+  names(subrich.sub) <- paste(names(subrich.sub), taxa.i, sep = "_")
+  return(subrich.sub)
+  }) %>% 
+  bind_cols(metrics.key, .)
+
+DT::datatable(subrich.df, options = list(scrollX = TRUE))  
+```
+### Percent Richness
+
+```{r}
+pct.rich.df <- purrr::map(hier.vec, function(taxa.i) {
+  quo.taxa.i <- rlang::enquo(taxa.i)
+  pct.rich.sub <- dplyr::tibble(
+    pct_rich_ep = taxa_pct_rich(taxa.df,
+                                bas_loc_rm,
+                                order,
+                                !!quo.taxa.i,
+                                taxon = c("ephemeroptera", "plecoptera")),
+    pct_rich_et = taxa_pct_rich(taxa.df,
+                                bas_loc_rm,
+                                order,
+                                !!quo.taxa.i,
+                                taxon = c("ephemeroptera", "trichoptera")),
+    pct_rich_pt = taxa_pct_rich(taxa.df,
+                                bas_loc_rm,
+                                order,
+                                !!quo.taxa.i,
+                                taxon = c("plecoptera", "trichoptera")),
+    pct_rich_ept = taxa_pct_rich(taxa.df,
+                                 bas_loc_rm,
+                                 order,
+                                 !!quo.taxa.i,
+                                 taxon = c("ephemeroptera", "plecoptera", "trichoptera")),
+    pct_rich_cote = taxa_pct_rich(taxa.df,
+                                  bas_loc_rm,
+                                  order,
+                                  !!quo.taxa.i,
+                                  taxon = c("coleoptera", "odonata",
+                                            "trichoptera", "ephemeroptera")),
+    pct_rich_potec = taxa_pct_rich(taxa.df,
+                                   bas_loc_rm,
+                                   order, 
+                                   !!quo.taxa.i,
+                                   taxon = c("plecoptera","odonata", "trichoptera", 
+                                             "ephemeroptera", "coleoptera")),
+    pct_rich_mol = taxa_pct_rich(taxa.df,
+                                   bas_loc_rm,
+                                   phylum, 
+                                   !!quo.taxa.i,
+                                   taxon = "mollusca"),
+    pct_rich_amphi = taxa_pct_rich(taxa.df,
+                                   bas_loc_rm,
+                                   order, 
+                                   !!quo.taxa.i,
+                                   taxon = "amphipoda"),
+    pct_rich_crust = taxa_pct_rich(taxa.df,
+                                   bas_loc_rm,
+                                   subphylum, 
+                                   !!quo.taxa.i,
+                                   taxon = "crustacea"),
+    pct_rich_mollusca_amphipoda = pct_rich_mol + pct_rich_amphi,
+    pct_rich_crustacea_mollusca = pct_rich_crust + pct_rich_mol
+  )
+  names(pct.rich.sub) <- paste(names(pct.rich.sub), taxa.i, sep = "_")
+  return(pct.rich.sub)
+  }) %>% 
+  bind_cols(metrics.key, .)
+
+DT::datatable(pct.rich.df, options = list(scrollX = TRUE))  
+```
+
+## Diversity Metrics
+
+Diversity metric in general combine the measure of taxonomic evenness and taxonomic richness. __ADD EVENNESS DESCRIPTION__.
+A number of diversity metrics can be calculated using `taxa_div()`: _Shannon-Wiener Diversity_ ("shannon"), _Simpson's Diversity_ ("simpson"), _Margalef's Diversity_ ("margalef"), _Menhinick's Diversity_ ("menhinick"), and _Pielou Evenness_ ("pielou").
+
+### Community Diversity
+
+
+```{r}
+div.df <- purrr::map(c("order", "family", "genus", "macro_genspecies"), function(taxa.i) {
+  quo.taxa.i <- rlang::quo(!!rlang::sym(taxa.i))
+  purrr::map(c("shannon", "simpson", "margalef", "menhinick", "pielou"), function(job.i) {
+    div.sub <- dplyr::tibble(
+    temp = taxa_div(long.df = taxa.df,
+                       unique.id.col = bas_loc_rm,
+                       count.col = count,
+                       high.taxa.col = !!quo.taxa.i,
+                       job = job.i,
+                       low.taxa.col = NULL,
+                       taxon = NULL,
+                       base.log = 2)
+    )
+    
+    names(div.sub) <- paste(job.i, taxa.i, sep = "_")
+    return(div.sub)
+  }) %>% 
+    dplyr::bind_cols()
+
+  }) %>% 
+  bind_cols(metrics.key, .)
+
+DT::datatable(div.df, options = list(scrollX = TRUE))  
+```
+
+## Community Metrics
+
+### Percentages
+
+`taxa_pct()` calculates the percentage of the sample represented by a taxon or taxa. The example below shows how to calculate the percentage of a single taxon, Ephemeroptera (`pct_ephemeroptera`), and multiple taxa, EPT (`pct_ept`). Remember that `taxon.col` refers to the name of the column that contains the taxon or taxa of interest. The `taxon` variable is then used to specify these taxon or taxa.
+```{r}
+pct.df <- metrics.key %>% 
+  dplyr::mutate(
+    pct_ep = taxa_pct(long.df = taxa.df,
+                      unique.id.col = bas_loc_rm,
+                      count.col = count,
+                      taxon.col = order,
+                      taxon = c("ephemeroptera", "plecoptera")),
+    pct_et = taxa_pct(long.df = taxa.df,
+                      unique.id.col = bas_loc_rm,
+                      count.col = count,
+                      taxon.col = order,
+                      taxon = c("ephemeroptera", "trichoptera")),
+    pct_pt = taxa_pct(long.df = taxa.df,
+                      unique.id.col = bas_loc_rm,
+                      count.col = count,
+                      taxon.col = order,
+                      taxon = c("plecoptera", "trichoptera")),
+    pct_ept = taxa_pct(long.df = taxa.df,
+                       unique.id.col = bas_loc_rm,
+                       count.col = count,
+                       taxon.col = order,
+                       taxon = c("ephemeroptera", "plecoptera", "trichoptera")),
+    pct_toe = taxa_pct(long.df = taxa.df,
+                        unique.id.col = bas_loc_rm,
+                        count.col = count,
+                        taxon.col = order,
+                        taxon = c("trichoptera", "odonata", "ephemeroptera")),
+    pct_cote = taxa_pct(long.df = taxa.df,
+                        unique.id.col = bas_loc_rm,
+                        count.col = count,
+                        taxon.col = order,
+                        taxon = c("coleoptera", "odonata", "trichoptera", "ephemeroptera")),
+    pct_potec = taxa_pct(long.df = taxa.df,
+                         unique.id.col = bas_loc_rm,
+                         count.col = count,
+                         taxon.col = order,
+                         taxon = c("plecoptera", "odonata",
+                                   "trichoptera","ephemeroptera", "coleoptera")),
+    pct_ephemeroptera_no_baetidae = taxa_pct(long.df = taxa.df,
+                                             unique.id.col = bas_loc_rm,
+                                             count.col = count,
+                                             taxon.col = order,
+                                             taxon = "ephemeroptera",
+                                             exclusion.col = family,
+                                             exclusion.vec = "baetidae"),
+    pct_ept_no_baetidae = taxa_pct(long.df = taxa.df,
+                       unique.id.col = bas_loc_rm,
+                       count.col = count,
+                       taxon.col = order,
+                       taxon = c("ephemeroptera", "plecoptera", "trichoptera"),
+                       exclusion.col = family,
+                       exclusion.vec = "baetidae"),
+    pct_diptera_no_tanytarsini = taxa_pct(long.df = taxa.df,
+                                          unique.id.col = bas_loc_rm,
+                                          count.col = count,
+                                          taxon.col = order,
+                                          taxon = "diptera",
+                                          exclusion.col = tribe,
+                                          exclusion.vec = "tanytarsini"),
+    pct_chironomidae_no_tanytarsini = taxa_pct(long.df = taxa.df,
+                                          unique.id.col = bas_loc_rm,
+                                          count.col = count,
+                                          taxon.col = family,
+                                          taxon = "chironomidae",
+                                          exclusion.col = tribe,
+                                          exclusion.vec = "tanytarsini"),
+    pct_mol = taxa_pct(long.df = taxa.df,
+                       unique.id.col = bas_loc_rm,
+                       count.col = count,
+                       taxon.col = phylum,
+                       taxon = "mollusca"),
+    pct_amphi = taxa_pct(long.df = taxa.df,
+                         unique.id.col = bas_loc_rm,
+                         count.col = count,
+                         taxon.col = order,
+                         taxon = "amphipoda"),
+    pct_mollusca_amphipoda = pct_mol + pct_amphi,
+    pct_crust = taxa_pct(long.df = taxa.df,
+                         unique.id.col = bas_loc_rm,
+                         count.col = count,
+                         taxon.col = subphylum,
+                         taxon = "crustacea"),
+    pct_crustacea_mollusca = pct_crust + pct_mol
+  ) %>% 
+  select(-pct_mol, - pct_amphi, - pct_crust)
+
+DT::datatable(pct.df, options = list(scrollX = TRUE))  
+```
+
+### Percent Dominance
+
+```{r}
+dom.df <- purrr::map(c("order", "family", "genus", "macro_genspecies"), function(taxa.i) {
+  quo.taxa.i <- rlang::quo(!!rlang::sym(taxa.i))
+  purrr::map(1:5, function(level.i) {
+    dom.sub <- dplyr::tibble(
+      dom = taxa_dom(long.df = taxa.df,
+                     unique.id.col = bas_loc_rm, 
+                     count.col = count, 
+                     taxon.col = !!quo.taxa.i,
+                     dom.level = level.i)
+    )
+    
+    names(dom.sub) <- paste(paste0("pct_dom", level.i), taxa.i, sep = "_")
+    return(dom.sub)
+  }) %>% 
+    dplyr::bind_cols()
+
+  }) %>% 
+  bind_cols(metrics.key, .)
+
+DT::datatable(dom.df, options = list(scrollX = TRUE))  
+```
+
+## Tolerance
+
+```{r}
+tol.df <- metrics.key %>% 
+  dplyr::mutate(
+    hbi_macrogenspecies = taxa_tol_index(long.df = taxa.df,
+                            unique.id.col = bas_loc_rm,
+                            count.col = count,
+                            taxon.col = macro_genspecies,
+                            tol.col = tol_int,
+                            na.rm = TRUE)
+  )
+```
+
+## Sequencing Metric Calculations
+
+When developing a new index, the developer usually tries to evaluate as many metrics as possible to obtain the most sensitive metrics. Writing countidual lines of code for each taxon using `taxa_rich()`, `taxa_pct_rich()`, `taxa_pct()`, or `taxa_abund()` would be very time consuming and prone to typos. `taxa_seq()` was developed to make these calculations simple and safe. 
+
+This is a wrapper function around the previously discussed taxa metrics (`taxa_rich()`, `taxa_pct_rich()`, `taxa_pct()`, or `taxa_abund()`), which loops through each taxon in the specified taxonomic rank or taxonomic attribute column(s) calculating taxon richness, taxon percent richness, taxon percentages, or taxon abundance. The input variable, `job`, is used to specify which type of metrics to calculate (i.e., "rich", "pct_rich", "pct", and "abund"). The character string used to specify the `job` will be used as a prefix for the column names (e.g., "rich_ephemeroptera" or "pct_plecoptera"). The remaining inputs are the same as the base taxa functions (`taxa_rich()`, `taxa_pct_rich()`, `taxa_pct()`, or `taxa_abund()`) that `taxa_seq()` wraps around. This also means that there will frequently be many input variables that you do not need to use. For example, if `job = "pct"`, then `hich.taxa.col`, `base.log`, and `q` do not need to be specified because these variables are only used for richness and/or diversity related calculations. It is often helpful to refer back to the base taxa function to identify the necessary inputs for the specified job. Additionally, each metric only represents a single taxon. The output will therefore not include metrics, such as the percentage of EPT taxa or the richness of Gathers' and Filter Feeder taxa. These metrics will need to be calculated countidually using the base taxa functions.
+
+The example below calculates taxa richness, percent taxa richness, taxa percentage, and taxa abundance for all of the taxa under the order and family columns. The `taxa.cols` input variable could be reduced to just one column (`taxa.cols = "family"`) or could be expanded to include as many taxonomic rank and/or taxonomic attribute columns as you want (`taxa.cols = c("class", order", "suborder", "family", "tolerance_values", "functional_feeding_groups", "habits")`). I suggest specifying all of your taxonomic rank and taxonomic attribute columns. This will create a lot of output, could potentially take awhile to calculate, and the majority of the metrics will have very poor metric sensitivity; however, the `sensitivity()` function (See [Calculate Metric Sensitivity]) will allow you to quickly filter out poorly performing metrics. Calculating a large amount of metrics will give you more opptertunities to identify patterns that reflect your defined disturbance gradient. I used this function during the development of the Chessie BIBI and I found several metrics that are not commonly used to have high metric sensitivity values. For example, the percent of Systellognatha (a suborder of Plecoptera) was more sensitive than the commonly used percent of Plecoptera metric. This extensive exploration of your data also comes with the danger of overfitting your index. To prevent this issue please use index validation procedure (e.g., Hold-Out validation or Cross Validation) during your index development.
+```{r}
+# taxa.cols <- c("class", "subclass", "infraclass",
+#                "superorder", "order", "suborder", "infraorder",
+#                "superfamily", "family", "subfamily",
+#                "tribe", "subtribe",
+#                "genus", "subgenus",
+#                "species", "subspecies",
+#                "tol_char", "ffg")
+taxa.cols <- c("class", 
+               "order",
+               "family", 
+               "genus", 
+               "species", 
+               "tol_char",
+               "ffg")
+
+seq.df <- purrr::map(c("rich", "pct_rich", "pct"), function(job.i) {
+  # quo.taxa.i <- rlang::quo(!!rlang::sym(taxa.i)) 
+  print(job.i)
+  seq.sub <- taxa_seq(long.df = taxa.df,
+             unique.id.col = bas_loc_rm,
+             count.col = count,
+             taxa.cols = taxa.cols,
+             high.taxa.col = "macro_genspecies",
+             job = job.i)
+  return(seq.sub)
+  }) %>% 
+  bind_cols(metrics.key, .)
+```
+
+## Run All Metrics
+
+Below is an example of how to put all of the metrics together into a single data frame. When calculating so many metrics I recommend breaking the script into chunks, as was done above, becuase it can be difficult to debug one large code chunk. Imagine all of the script above crammed into one `dplyr::bind_cols()` call. `plyr::join_all()` allows multiple data frames with the same key(s) to be joined at once. This function just requires that the various data frames be in a list format for the input but the output is a single data frame. `by` refers to the key column(s).
+
+The metrics `pct_ephemeroptera` and `abund_ephemeroptera` are duplicated from the `taxa_pct()`, `taxa_abund()`, and `taxa_seq()` examples. Therefore, `dplyr::select()` is used to remove these columns from `pct.df` and `abund.df`
+```{r}
+metrics.wide <- list(rich.df,
+                     subrich.df,
+                     pct.rich.df,
+                     div.df, 
+                     pct.df,
+                     dom.df,
+                     tol.df,
+                     seq.df) %>% 
+  plyr::join_all(by = c("bas_loc_rm"))
+```
+

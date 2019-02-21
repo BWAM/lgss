@@ -1,0 +1,250 @@
+---
+title: "Abiotic_corr_matrices"
+author: "Gavin Lemley"
+date: "January 24, 2019"
+output: html_document
+---
+
+Find the R-project root directory to simplify file path designations.
+```{r}
+root.dir <- rprojroot::find_root("lgss.Rproj")
+```
+
+Load in data table
+```{r}
+
+abiotic.df <- read.csv(file.path(root.dir, "data/Compile_env_data", "LGSS_2015_env_numerical_ALL.csv"))
+
+abiotic.df$BAS_LOC_RM <- NULL 
+
+#Split data for more legible plots
+abiotic.dfsmall.1 <- abiotic.df[,c(1:6)]
+abiotic.dfsmall.2 <- abiotic.df[,c(7:12)]
+abiotic.habitat <- abiotic.df[,c(13:25)]
+abiotic.dfsmall.4 <- abiotic.df[,c(26:33)]
+
+abiotic.nohabitat <- abiotic.df[ -c(13:25) ]
+
+```
+
+Plot correlation matrix
+```{r}
+pairs(abiotic.df[,1:6], pch = 19)
+```
+
+Using package psych 
+```{r}
+psych::pairs.panels(abiotic.dfsmall.1[,-5], 
+             method = "pearson", # correlation method
+             hist.col = "#00AFBB",
+             density = TRUE,  # show density plots
+             ellipses = TRUE # show correlation ellipses
+             )
+psych::pairs.panels(abiotic.dfsmall.2[,-5], 
+             method = "pearson", # correlation method
+             hist.col = "#00AFBB",
+             density = TRUE,  # show density plots
+             ellipses = TRUE # show correlation ellipses
+             )
+psych::pairs.panels(abiotic.habitat[,-5], 
+             method = "pearson", # correlation method
+             hist.col = "#00AFBB",
+             density = TRUE,  # show density plots
+             ellipses = TRUE # show correlation ellipses
+             )
+psych::pairs.panels(abiotic.dfsmall.4[,-5], 
+             method = "pearson", # correlation method
+             hist.col = "#00AFBB",
+             density = TRUE,  # show density plots
+             ellipses = TRUE # show correlation ellipses
+             )
+```
+
+Functions sent from Brian
+```{r}
+#function from "pairs function help file" to calculate correlation between variables, also shown on pg 535 in Zuur 2009
+panel.cor <- function(x, y, digits = 2, prefix = "", cex.cor, ...)
+{
+  usr <- par("usr"); on.exit(par(usr))
+  par(usr = c(0, 1, 0, 1))
+  r <- abs(cor(x, y))
+  txt <- format(c(r, 0.123456789), digits = digits)[1]
+  txt <- paste0(prefix, txt)
+  if(missing(cex.cor)) cex.cor <- 0.8/strwidth(txt)
+  text(0.5, 0.5, txt, cex = cex.cor * r)
+}
+
+#function from "pairs function help" file to produce histogram of each variable, also shown on pg 535 in Zuur 2009
+panel.hist <- function(x, ...)
+{
+  usr <- par("usr"); on.exit(par(usr))
+  par(usr = c(usr[1:2], 0, 1.5) )
+  h <- hist(x, plot = FALSE)
+  breaks <- h$breaks; nB <- length(breaks)
+  y <- h$counts; y <- y/max(y)
+  rect(breaks[-nB], 0, breaks[-1], y, col = "cyan", ...)
+}
+
+#From page 535 of Zuur 2009 book, matrix of all covariates (and the response variable) to look for colinearity
+  #covariates with high corelations (e.g. >0.6) should potentially be excluded
+# AllVars <- cbind(BAP$FINAL_SCORE, BAP$Depth, BAP$Temp, BAP$SpC, 
+#                  BAP$pH, BAP$DO, BAP$Secchi, BAP$perTOC, BAP$Phi, BAP$perDreissena,
+#                  BAP$chinumsurv, BAP$chiavewieght,BAP$chiavebiom,BAP$hynumsurv,BAP$hyavewieght,BAP$hyavebiom)
+# colnames(AllVars) <- c("BAP", "Depth", "Temp", "SpC", "pH", "DO", "Secchi", "perTOC", "Phi", "%Dreissena",
+#                        "chi#","chiW","chiB","hya#","hyaW","hyaB")
+pairs(abiotic.dfsmall.1, upper.panel = panel.cor, diag.panel = panel.hist)
+
+```
+
+Using corrplot package
+```{r,fig.width=20, fig.height=20}
+M<-cor(abiotic.df, use = "complete.obs" )
+head(round(M,2))
+
+# See http://www.sthda.com/english/wiki/visualize-correlation-matrix-using-correlogram for different graph styles
+
+corrplot::corrplot(M, method="circle")
+
+col <- colorRampPalette(c("#BB4444", "#EE9988", "#FFFFFF", "#77AADD", "#4477AA"))
+corrplot::corrplot(M, method="color", col=col(200),  
+         type="upper", order="hclust", 
+         addCoef.col = "black", # Add coefficient of correlation
+         tl.col="black", tl.srt=45, #Text label color and rotation
+         # Combine with significance
+         # p.mat = p.mat, sig.level = 0.01, insig = "blank", 
+         # hide correlation coefficient on the principal diagonal
+         diag=FALSE 
+         )
+
+
+
+```
+
+Corrplot for corr values limited to >0.5 
+```{r,fig.width=20, fig.height=20}
+
+M.df <- as.data.frame(M)
+M.df <- apply(M.df,2,abs)
+col.i <- 1
+keep.vec <- sapply(1:ncol(M.df), function(col.i){
+  sub.vec <- M.df[, col.i]
+  any(sub.vec > 0.5 & sub.vec < 1)
+})
+smallmatrix.df <- M[keep.vec,keep.vec]
+
+
+col <- colorRampPalette(c("#BB4444", "#EE9988", "#FFFFFF", "#77AADD", "#4477AA"))
+corrplot::corrplot(smallmatrix.df, method="color", col=col(200),  
+         type="upper", order="hclust", 
+         addCoef.col = "black", # Add coefficient of correlation
+         tl.col="black", tl.srt=45, #Text label color and rotation
+         # Combine with significance
+         # p.mat = p.mat, sig.level = 0.01, insig = "blank", 
+         # hide correlation coefficient on the principal diagonal
+         diag=FALSE 
+         )
+```
+
+Corrplot for corr values limited to >0.7 
+```{r,fig.width=10, fig.height=10}
+
+M.df <- as.data.frame(M)
+M.df <- apply(M.df,2,abs)
+col.i <- 1
+keep.vec <- sapply(1:ncol(M.df), function(col.i){
+  sub.vec <- M.df[, col.i]
+  any(sub.vec > 0.7 & sub.vec < 1)
+})
+smallmatrix.df <- M[keep.vec,keep.vec]
+
+
+col <- colorRampPalette(c("#BB4444", "#EE9988", "#FFFFFF", "#77AADD", "#4477AA"))
+corrplot::corrplot(smallmatrix.df, method="color", col=col(200),  
+         type="upper", order="hclust", 
+         addCoef.col = "black", # Add coefficient of correlation
+         tl.col="black", tl.srt=45, #Text label color and rotation
+         # Combine with significance
+         # p.mat = p.mat, sig.level = 0.01, insig = "blank", 
+         # hide correlation coefficient on the principal diagonal
+         diag=FALSE 
+         )
+```
+
+
+### Below chunks look at DF without habitat variables 
+
+Using corrplot package
+```{r,fig.width=20, fig.height=20}
+M<-cor(abiotic.nohabitat, use = "complete.obs" )
+head(round(M,2))
+
+# See http://www.sthda.com/english/wiki/visualize-correlation-matrix-using-correlogram for different graph styles
+
+corrplot::corrplot(M, method="circle")
+
+col <- colorRampPalette(c("#BB4444", "#EE9988", "#FFFFFF", "#77AADD", "#4477AA"))
+corrplot::corrplot(M, method="color", col=col(200),  
+         type="upper", order="hclust", 
+         addCoef.col = "black", # Add coefficient of correlation
+         tl.col="black", tl.srt=45, #Text label color and rotation
+         # Combine with significance
+         # p.mat = p.mat, sig.level = 0.01, insig = "blank", 
+         # hide correlation coefficient on the principal diagonal
+         diag=FALSE 
+         )
+
+
+
+```
+
+Corrplot for corr values limited to >0.5 
+```{r,fig.width=10, fig.height=10}
+
+M.df <- as.data.frame(M)
+M.df <- apply(M.df,2,abs)
+col.i <- 1
+keep.vec <- sapply(1:ncol(M.df), function(col.i){
+  sub.vec <- M.df[, col.i]
+  any(sub.vec > 0.5 & sub.vec < 1)
+})
+smallmatrix.df <- M[keep.vec,keep.vec]
+
+
+col <- colorRampPalette(c("#BB4444", "#EE9988", "#FFFFFF", "#77AADD", "#4477AA"))
+corrplot::corrplot(smallmatrix.df, method="color", col=col(200),  
+         type="upper", order="hclust", 
+         addCoef.col = "black", # Add coefficient of correlation
+         tl.col="black", tl.srt=45, #Text label color and rotation
+         # Combine with significance
+         # p.mat = p.mat, sig.level = 0.01, insig = "blank", 
+         # hide correlation coefficient on the principal diagonal
+         diag=FALSE 
+         )
+```
+
+Corrplot for corr values limited to >0.7 
+```{r,fig.width=10, fig.height=10}
+
+M.df <- as.data.frame(M)
+M.df <- apply(M.df,2,abs)
+col.i <- 1
+keep.vec <- sapply(1:ncol(M.df), function(col.i){
+  sub.vec <- M.df[, col.i]
+  any(sub.vec > 0.7 & sub.vec < 1)
+})
+smallmatrix.df <- M[keep.vec,keep.vec]
+
+
+col <- colorRampPalette(c("#BB4444", "#EE9988", "#FFFFFF", "#77AADD", "#4477AA"))
+corrplot::corrplot(smallmatrix.df, method="color", col=col(200),  
+         type="upper", order="hclust", 
+         addCoef.col = "black", # Add coefficient of correlation
+         tl.col="black", tl.srt=45, #Text label color and rotation
+         # Combine with significance
+         # p.mat = p.mat, sig.level = 0.01, insig = "blank", 
+         # hide correlation coefficient on the principal diagonal
+         diag=FALSE 
+         )
+```
+
+

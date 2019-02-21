@@ -1,0 +1,40 @@
+---
+title: "Untitled"
+author: "Zachary M. Smith"
+date: "January 30, 2019"
+output: html_document
+---
+
+# Overview
+
+This document was created to provide an example of how to develop an MMI or IBI using the __mmir__ R-package.
+
+# Preparation
+
+Install the __tidyverse__ packages developed by R Studio. This is a collection of packages that make it easier to import, manipulate, and plot data. The package, __devtools__, must be installed to use the `devtools::install_github()` function. __plyr__ will need to be installed to use `plyr::join_all()`. You will also need to install the __DT__ package if you want to create the interactive tables found below.
+```{r, eval=FALSE}
+install.packages("tidyverse", "devtools", "plyr", "DT")
+```
+
+Only the __tidyverse__ packages will be loaded into the environment to avoid any potential conflicts. The majority of functions in this document will be called using `::`. A package is specified on the left side of `::` and a function within that package is specified to the right of `::` (`package::function()`). For example, `dplyr::filter()` specifies that we are using the `filter()` function from the __dplyr__ package and not the `filter()` function from the __stats__ package. It is generally not necessary to use `::` in your own scripts but in this document I hope it clarifies where the function comes from and aids in your understanding of the script.
+```{r, messages=FALSE, warning=FALSE}
+suppressPackageStartupMessages(
+  library(tidyverse)
+)
+```
+
+Install the Multi-Metric Index (MMI) package, __mmir__, that I am developing from Git Hub.  Make sure you install the development version of __mmir__ (`ref = "dev"`).
+```{r, eval=FALSE}
+devtools::install_github("zsmith27/mmir", ref = "dev", force = TRUE, quiet = TRUE)
+devtools::install_github("zsmith27/toolbox", force = TRUE, quiet = TRUE)
+```
+
+Once __mmir__ is installed, load the packages with `library()`.
+```{r}
+library(mmir)
+```
+
+Find project root directory. This will make it easier to specify file paths later in this document.
+```{r}
+root.dir <- rprojroot::find_root("lgss.Rproj")
+```

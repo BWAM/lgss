@@ -1,0 +1,30 @@
+---
+title: "Untitled"
+author: "Zachary M. Smith"
+date: "February 7, 2019"
+output: html_document
+---
+
+# Metric Sensitivity
+
+```{r}
+condition.df <- file.path(root.dir, 
+                          "data",
+                          "LG_ALL_site_subsetting.csv") %>% 
+  # readxl::read_excel(sheet = "FieldData") %>% 
+  data.table::fread() %>% 
+  rename_all(tolower) %>% 
+  select(bas_loc_rm, site_con_1, lg_region) %>% 
+  rename(site_condition = site_con_1) 
+```
+
+
+## Long Data Transformation
+
+If you followed the steps above your metrics are stored in a wide data format (see `metrics.wide`); however, to simplify the metric sensitivity calculations the data needs to be transformed to a long data format. This can be easily done with the __tidyr__ (installed and loaded with __tidyverse__) function, `tidyr::gather()`. The first input variable refers to the wide data frame (`metrics.wide`). The second input specifies the name of column that will hold the current column names. The third input specifies the name of the column that will hold the values from each column. At the end of the function the key column(s) need to be dropped (`-bas_loc_rm, -condition`).
+```{r}
+metrics.long <- tidyr::gather(metrics.wide, metric, value, -bas_loc_rm)  %>% 
+  left_join(condition.df, by = "bas_loc_rm")
+
+DT::datatable(head(metrics.long, 500), options = list(scrollX = TRUE))
+```

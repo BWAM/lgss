@@ -1,0 +1,16 @@
+Value,Land_cover_class,Condensed_class
+11,Open Water,Water
+21,Developed - Open Space,Developed
+22,Developed - Low Intensity,Developed
+23,Developed - Medium Intensity,Developed
+24,Developed - High Intensity,Developed
+31,Barren Land (Rock/Sand/Clay ,Developed
+41,Deciduous Forest,Natural
+42,Evergreen Forest,Natural
+43,Mixed Forest,Natural
+52,Shrub/Scrub,Natural
+71,Grassland/Herbaceous,Natural
+81,Pasture/Hay,Agricultural 
+82,Cultivated Crops,Agricultural 
+90,Woody Wetlands,Wetland
+95,Emergent Herbaceous Wetlands,Wetland
