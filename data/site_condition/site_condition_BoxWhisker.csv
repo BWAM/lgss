@@ -1,0 +1,131 @@
+﻿BAS_LOC_RM,LG_reg_v2,COND,LU_pct_nat_wetlnd
+01-BLKE-0.1,Great Lakes,,52.45
+01-FISN-2.4,Great Lakes,2132,65.28
+01-GILL-0.3,Great Lakes,476,26.96
+01-GOTC-0.2,Great Lakes,2108,37.72
+01-LSIS-2.0,Great Lakes,909,64.99
+01-MURD-20.0,Great Lakes,636,42.21
+01-PION-0.9,Great Lakes,711,40.92
+01-PLUT_N_T4-1.0,Great Lakes,664,41.88
+01-STYB_T5-0.3,Southern Tier,282,48.02
+01-TONA-103.5,Southern Tier,487,43.86
+01-VBUR-0.4,Great Lakes,827,47.35786742
+02-BLBA-0.4,Southern Tier,387,42.48155854
+02-CASS-25.6,Southern Tier,284,70.48312071
+02-CASS-33.3,Southern Tier,401,60.02418867
+02-RAWS-0.8,Southern Tier,304,77.2955077
+03-BEAG-1.8,Great Lakes,820,39.26
+03-BEEK-4.5,Great Lakes,615,45.77231631
+03-CHMO-8.6,Great Lakes,506,44.57
+03-EMIL_E_T6-0.4,Great Lakes,802,31.4
+03-FOMI_S-0.1,Great Lakes,834,51.21
+03-FOMI-5.5,Great Lakes,908,41.85
+03-GUFF-1.8,Great Lakes,373,39.12
+03-HRTB-2.2,Great Lakes,718,27.67
+03-JEDO_T3-0.4,Great Lakes,879,17.2
+03-JOHN-13.7,Great Lakes,694,36.42
+03-LSAM_N-7.9,Great Lakes,97,94.48
+03-MIDL-2.4,Great Lakes,939,28.46
+03-SAND_T21-4.0,Adirondacks,95,94.55
+03-TELV-12.8,Great Lakes,739,49.15
+03-YANT_T1c-0.2,Great Lakes,779,33.81
+04-BLAK_T7-3.0,Great Lakes,970,38.72
+04-JCOX-4.6,Great Lakes,837,18.7
+04-OATK-46.2,Southern Tier,574,42.03
+04-SPRG-10.1,Great Lakes,722,16.99
+05-CAMB-11.2,Southern Tier,136,53.97
+05-CBRO-1.8,Southern Tier,706,17.81246129
+05-STEO-35.7,Southern Tier,635,63.91620453
+05-WINI_T2-1.2,Southern Tier,380,83.55
+06-FABS-5.0,Southern Tier,560,35.45
+06-FLYS-0.7,Southern Tier,393,42.65
+06-MADB-0.1,Southern Tier,211,66.79
+06-NING-7.7,Southern Tier,84,88.73
+07-BLDY-0.1,Great Lakes,2592,10.73872087
+07-BUTL-3.5,Great Lakes,610,42.64
+07-CANA-32.8,Great Lakes,536,48.31096654
+07-COWA_T10-0.9,Great Lakes,551,37.24045546
+07-GEDD-1.4,Great Lakes,2267,33.71872161
+07-HARB-0.5_a,Great Lakes,2085,32.69
+07-HARB-0.5_b,Great Lakes,2435,32.6882092
+07-HENC_T4-1.2,Southern Tier,406,31.12373737
+07-JACB-1.9,Southern Tier,730,15.42558342
+07-LITR-0.2,Great Lakes,119,89.28960792
+07-MUDE-4.4,Great Lakes,470,33.74
+07-MUSK-0.5,Great Lakes,508,33.88
+07-NINE-0.7,Great Lakes,2743,42.37388366
+07-NORB_T10-1.5,Great Lakes,724,33.89121339
+07-ONON_W_T7-1.5,Great Lakes,817,6.4
+07-POBK_T4-1.5,Great Lakes,1478,5.74
+07-SNDR-1.5,Great Lakes,2708,12.53776435
+07-WBOT-0.3,Great Lakes,1145,43.24
+08-BARE_T5-0.5,Adirondacks,70,92.2
+08-BENE-0.2,Adirondacks,17.6,98.451491
+08-BLAC-2.5,Adirondacks,59,88.92
+08-MURM-3.4,Adirondacks,48,90.38836407
+09-ALLE-1.9,Adirondacks,290,74.65
+09-BLCH-0.2,Adirondacks,164,97.59
+09-BRND-2.5,Adirondacks,309,72.6
+09-CEDL-0.1,Adirondacks,339,89.34
+09-ENGL-17.6,Adirondacks,111,93.78
+09-FARR-3.1,Adirondacks,213,74.02
+09-JEWT-3.1,Adirondacks,350,60.45
+09-LSAL_T1-1.0,Adirondacks,573,39.32
+09-LSUK-11.3,Adirondacks,345,83.46
+09-PIKC-8.7,Adirondacks,211,90.64
+09-PLMB-12.4,Adirondacks,65,96.82
+09-SCKE-16.4,Adirondacks,564,49.33
+09-TRAY-2.9,Adirondacks,284,78.53
+09-WSCK-3.4,Adirondacks,2003,36.93
+10-ARNO-0.1,Adirondacks,286,69.4
+10-COLW-0.7,Adirondacks,166,93.57
+10-MILC-6.3,Adirondacks,82,95.94
+10-NSAR_T7-0.8,Adirondacks,71,99.14
+10-PUTM_T5-0.3,Adirondacks,136,95.1
+10-TWOB-3.6,Adirondacks,120,90.49
+10-URIL-0.4,Adirondacks,314,78.38
+11-GORN-6.0,Hudson Valley,310,74.73
+11-MOSE-12.8,Hudson Valley,417.6,48.88648147
+11-ROWL-0.5,Hudson Valley,489.4,75.668924
+11-SRUN-3.8,Hudson Valley,1309,38.27
+11-TOMH-12.2,Hudson Valley,245,76.28672528
+12-ALPL_T11-2.1,Hudson Valley,285,78.35
+12-BARK-0.6,Southern Tier,604,38.59
+12-TEET-0.8,Adirondacks,18,99.3
+13-BASC_T17-2.4,Hudson Valley,175,83.99044205
+13-BLKH-8.2,Hudson Valley,333,77.61403362
+13-BLKK-1.1,Hudson Valley,459.8,64.33028866
+13-EBCR-16.3,Hudson Valley,412.3,77.86028639
+13-FISH-16.3,Hudson Valley,506.2,66.90818262
+13-IDNK-0.5,Hudson Valley,236,82.20159583
+13-NOST-0.3,Hudson Valley,443,66.38345995
+13-QKER-1.0,Hudson Valley,517,40.55
+13-RHIN-4.3,Hudson Valley,496,49.53301127
+13-SPRO-9.2,Hudson Valley,414,63.75
+13-WALK_T25-1.5,Hudson Valley,340,28.73
+13-WBLKK-8.9,Hudson Valley,398,68.78
+14-HURL-2.8,Hudson Valley,147,77.66
+14-WLAK-5.8,Hudson Valley,208,80.88
+15-HACK-3.3,Hudson Valley,538,29.12
+15-MAWA-3.7,Hudson Valley,483,69.34
+15-RAMA-13.7,Hudson Valley,1140,50.04
+16-AMEN_T2-1.1,Hudson Valley,533,48.46
+16-BOGH-0.3,Hudson Valley,161,96.38
+16-SWEL-0.1,Hudson Valley,233.6,61.67307437
+16-SWMP-6.8,Hudson Valley,528.1,73.75332573
+16-WEBA_T4-1.3,Hudson Valley,424,74.55
+16-WEBA-23.3,Hudson Valley,258,57.67
+17-BRWN-0.9,Long Island,288,1.09
+17-BVDC-0.4,Long Island,275,45.44
+17-CARL-0.8,Long Island,240,11.87
+17-CARM-12.9,Long Island,218,25.66
+17-CARM-9.0,Long Island,202,28.75
+17-GREN-0.8,Long Island,230,1.17
+17-MASS-1.2,Long Island,388,12.89
+17-MBUR-2.1,Long Island,573,0.26
+17-MUDL-1.4,Long Island,320,14.5
+17-NISS_E-2.6,Long Island,522,9.13
+17-NISS-4.7,Long Island,179,12.99
+17-PECN-8.9,Long Island,63,58.55
+17-SAMP-2.1,Long Island,262,13.99
+17-TERR-0.2,Long Island,127,37.37

@@ -1,0 +1,131 @@
+FID,BAS_LOC_RM,LATITUDE,LONGITUDE,LU_pct_nat,site_con_1,ER_US_L4CO,ER_US_L3CO,ER_L4_KEY,ER_L3_KEY,LG_region
+0,01-BLKE-0.1,43.050179999999997,-78.711699999999993,52.452847720000001,test,83c,83,83c  Ontario Lowlands,83  Eastern Great Lakes Lowlands,Great Lakes
+1,01-FISN-2.4,43.158130000000000,-78.979799999999997,65.279868620000002,test,83c,83,83c  Ontario Lowlands,83  Eastern Great Lakes Lowlands,Great Lakes
+2,01-GILL-0.3,43.082889999999999,-79.025099999999995,26.964362390000002,test,83c,83,83c  Ontario Lowlands,83  Eastern Great Lakes Lowlands,Great Lakes
+3,01-GOTC-0.2,43.034059999999997,-78.707229999999996,37.717164359999998,test,83c,83,83c  Ontario Lowlands,83  Eastern Great Lakes Lowlands,Great Lakes
+4,01-LSIS-2.0,42.669460000000001,-79.027490000000000,64.992405590000004,test,83a,83,83a  Erie/Ontario Lake Plain,83  Eastern Great Lakes Lowlands,Great Lakes
+5,01-MURD-20.0,42.963369999999998,-78.389139999999998,42.213850250000000,test,83c,83,83c  Ontario Lowlands,83  Eastern Great Lakes Lowlands,Great Lakes
+6,01-PION-0.9,42.631059999999998,-79.073160000000001,40.922190200000003,test,83a,83,83a  Erie/Ontario Lake Plain,83  Eastern Great Lakes Lowlands,Great Lakes
+7,01-PLUT_N_T4-1.0,42.910499909999999,-78.622477730000000,41.880249839999998,test,83a,83,83a  Erie/Ontario Lake Plain,83  Eastern Great Lakes Lowlands,Great Lakes
+8,01-STYB_T5-0.3,42.771500000000003,-78.273799999999994,48.023005030000000,test,60f,60,60f  Cattaraugus Hills,60  Northern Allegheny Plateau,Other
+9,01-TONA-103.5,42.690480000000001,-78.363619999999997,43.855581319999999,test,60f,60,60f  Cattaraugus Hills,60  Northern Allegheny Plateau,Other
+10,01-VBUR-0.4,42.447420000000001,-79.404070000000004,47.357867419999998,test,83a,83,83a  Erie/Ontario Lake Plain,83  Eastern Great Lakes Lowlands,Great Lakes
+11,02-BLBA-0.4,42.058329999999998,-79.731939999999994,42.481558540000002,test,61c,61,61c  Low Lime Drift Plain,61  Erie Drift Plain,Other
+12,02-CASS-25.6,42.243920000000003,-79.306470000000004,70.483120709999994,test,61c,61,61c  Low Lime Drift Plain,61  Erie Drift Plain,Other
+13,02-CASS-33.3,42.311950000000003,-79.298919999999995,60.024188670000001,test,61c,61,61c  Low Lime Drift Plain,61  Erie Drift Plain,Other
+14,02-RAWS-0.8,42.268752999999997,-78.301010000000005,77.295507700000002,ref,60e,60,60e  Glaciated Allegheny Hills,60  Northern Allegheny Plateau,Other
+15,03-BEAG-1.8,43.354688000000003,-78.018375000000006,39.260782720000002,test,83a,83,83a  Erie/Ontario Lake Plain,83  Eastern Great Lakes Lowlands,Great Lakes
+16,03-BEEK-4.5,43.243124000000002,-76.899615999999995,45.772316310000001,test,83a,83,83a  Erie/Ontario Lake Plain,83  Eastern Great Lakes Lowlands,Great Lakes
+17,03-CHMO-8.6,44.156770000000002,-76.040679999999995,44.571323659999997,test,83c,83,83c  Ontario Lowlands,83  Eastern Great Lakes Lowlands,Great Lakes
+18,03-EMIL_E_T6-0.4,43.186599999999999,-78.575299999999999,31.395348840000000,test,83c,83,83c  Ontario Lowlands,83  Eastern Great Lakes Lowlands,Great Lakes
+19,03-FOMI_S-0.1,43.230879999999999,-79.016599999999997,51.214866970000003,test,83a,83,83a  Erie/Ontario Lake Plain,83  Eastern Great Lakes Lowlands,Great Lakes
+20,03-FOMI-5.5,43.209130000000002,-79.026359999999997,41.851553050000000,test,83a,83,83a  Erie/Ontario Lake Plain,83  Eastern Great Lakes Lowlands,Great Lakes
+21,03-GUFF-1.8,44.052430000000001,-76.093310000000002,39.115418890000001,test,83c,83,83c  Ontario Lowlands,83  Eastern Great Lakes Lowlands,Great Lakes
+22,03-HRTB-2.2,43.838600000000000,-76.015129999999999,27.671079620000000,test,83c,83,83c  Ontario Lowlands,83  Eastern Great Lakes Lowlands,Great Lakes
+23,03-JEDO_T3-0.4,43.226799999999997,-78.467100000000002,17.195767199999999,test,83c,83,83c  Ontario Lowlands,83  Eastern Great Lakes Lowlands,Great Lakes
+24,03-JOHN-13.7,43.305897000000002,-78.409278000000000,36.418202559999997,test,83a,83,83a  Erie/Ontario Lake Plain,83  Eastern Great Lakes Lowlands,Great Lakes
+25,03-LSAM_N-7.9,43.413434000000002,-76.065263000000002,94.475318729999998,ref,83c,83,83c  Ontario Lowlands,83  Eastern Great Lakes Lowlands,Great Lakes
+26,03-MIDL-2.4,43.164594000000001,-78.494596000000001,28.460268800000001,test,83c,83,83c  Ontario Lowlands,83  Eastern Great Lakes Lowlands,Great Lakes
+27,03-SAND_T21-4.0,43.840609999999998,-75.794669999999996,94.552018380000007,ref,58af,58,58af  Tug Hill Transition,58  Northeastern Highlands,Adirondacks
+28,03-TELV-12.8,43.223529999999997,-78.958110000000005,49.146945510000002,test,83a,83,83a  Erie/Ontario Lake Plain,83  Eastern Great Lakes Lowlands,Great Lakes
+29,03-YANT_T1c-0.2,43.328260000000000,-77.975420000000000,33.813219830000001,test,83a,83,83a  Erie/Ontario Lake Plain,83  Eastern Great Lakes Lowlands,Great Lakes
+30,04-BLAK_T7-3.0,43.111699999999999,-77.789500000000004,38.718832350000000,test,83c,83,83c  Ontario Lowlands,83  Eastern Great Lakes Lowlands,Great Lakes
+31,04-JCOX-4.6,42.836100000000002,-77.775300000000001,18.703646480000000,test,83c,83,83c  Ontario Lowlands,83  Eastern Great Lakes Lowlands,Great Lakes
+32,04-OATK-46.2,42.773159999999997,-78.124110000000002,42.025801629999997,test,60d,60,60d  Finger Lakes Uplands and Gorges,60  Northern Allegheny Plateau,Other
+33,04-SPRG-10.1,42.862699999999997,-77.632400000000004,16.994501450000001,test,83c,83,83c  Ontario Lowlands,83  Eastern Great Lakes Lowlands,Great Lakes
+34,05-CAMB-11.2,42.289520000000003,-77.509041999999994,53.968253969999999,test,60a,60,60a  Glaciated Low Allegheny Plateau,60  Northern Allegheny Plateau,Other
+35,05-CBRO-1.8,42.063690000000001,-76.785839999999993,17.812461290000002,test,60a,60,60a  Glaciated Low Allegheny Plateau,60  Northern Allegheny Plateau,Other
+36,05-STEO-35.7,42.286169999999998,-77.624399999999994,63.916204530000002,test,60a,60,60a  Glaciated Low Allegheny Plateau,60  Northern Allegheny Plateau,Other
+37,05-WINI_T2-1.2,42.143867999999998,-76.939462000000006,83.547770700000001,test,60a,60,60a  Glaciated Low Allegheny Plateau,60  Northern Allegheny Plateau,Other
+38,06-FABS-5.0,42.850099999999998,-76.000600000000006,35.452322740000000,test,60d,60,60d  Finger Lakes Uplands and Gorges,60  Northern Allegheny Plateau,Other
+39,06-FLYS-0.7,42.613230000000001,-75.531700000000001,42.650954599999999,test,60a,60,60a  Glaciated Low Allegheny Plateau,60  Northern Allegheny Plateau,Other
+40,06-MADB-0.1,42.664330000000000,-75.488529999999997,66.794065880000005,test,60a,60,60a  Glaciated Low Allegheny Plateau,60  Northern Allegheny Plateau,Other
+41,06-NING-7.7,42.644959999999998,-75.981750000000005,88.731771980000005,ref,60a,60,60a  Glaciated Low Allegheny Plateau,60  Northern Allegheny Plateau,Other
+42,07-BLDY-0.1,43.096390000000000,-76.201669999999993,10.738720870000000,test,83c,83,83c  Ontario Lowlands,83  Eastern Great Lakes Lowlands,Great Lakes
+43,07-BUTL-3.5,43.131000000000000,-76.754999999999995,42.644790950000001,test,83c,83,83c  Ontario Lowlands,83  Eastern Great Lakes Lowlands,Great Lakes
+44,07-CANA-32.8,42.886699999999998,-77.265979999999999,48.310966540000003,test,83c,83,83c  Ontario Lowlands,83  Eastern Great Lakes Lowlands,Great Lakes
+45,07-COWA_T10-0.9,43.091923000000001,-75.675723000000005,37.240455460000000,test,83c,83,83c  Ontario Lowlands,83  Eastern Great Lakes Lowlands,Great Lakes
+46,07-GEDD-1.4,43.057609999999997,-76.233760000000004,33.718721610000003,test,83c,83,83c  Ontario Lowlands,83  Eastern Great Lakes Lowlands,Great Lakes
+47,07-HARB-0.5_a,43.056100000000001,-76.185299999999998,32.688209200000003,test,83c,83,83c  Ontario Lowlands,83  Eastern Great Lakes Lowlands,Great Lakes
+48,07-HARB-0.5_b,43.056100000000001,-76.185299999999998,32.688209200000003,test,83c,83,83c  Ontario Lowlands,83  Eastern Great Lakes Lowlands,Great Lakes
+49,07-HENC_T4-1.2,42.471924999999999,-76.741382999999999,31.123737370000001,test,60d,60,60d  Finger Lakes Uplands and Gorges,60  Northern Allegheny Plateau,Other
+50,07-JACB-1.9,42.683204000000003,-77.051365000000004,15.425583420000001,test,60d,60,60d  Finger Lakes Uplands and Gorges,60  Northern Allegheny Plateau,Other
+51,07-LITR-0.2,43.290830000000000,-75.717500000000001,89.289607919999995,ref,83c,83,83c  Ontario Lowlands,83  Eastern Great Lakes Lowlands,Great Lakes
+52,07-MUDE-4.4,43.162300000000002,-76.182299999999998,33.740290219999999,test,83c,83,83c  Ontario Lowlands,83  Eastern Great Lakes Lowlands,Great Lakes
+53,07-MUSK-0.5,43.093572000000002,-76.533984000000004,33.883287500000002,test,83c,83,83c  Ontario Lowlands,83  Eastern Great Lakes Lowlands,Great Lakes
+54,07-NINE-0.7,43.080829999999999,-76.226669999999999,42.373883659999997,test,83c,83,83c  Ontario Lowlands,83  Eastern Great Lakes Lowlands,Great Lakes
+55,07-NORB_T10-1.5,42.972000000000001,-76.561000000000007,33.891213389999997,test,83c,83,83c  Ontario Lowlands,83  Eastern Great Lakes Lowlands,Great Lakes
+56,07-ONON_W_T7-1.5,42.990400000000001,-76.236800000000002,6.401766004000000,test,83c,83,83c  Ontario Lowlands,83  Eastern Great Lakes Lowlands,Great Lakes
+57,07-POBK_T4-1.5,42.972000000000001,-76.927000000000007,5.744125326000000,test,83c,83,83c  Ontario Lowlands,83  Eastern Great Lakes Lowlands,Great Lakes
+58,07-SNDR-1.5,43.086939999999998,-76.079719999999995,12.537764350000000,test,83c,83,83c  Ontario Lowlands,83  Eastern Great Lakes Lowlands,Great Lakes
+59,07-WBOT-0.3,43.096294000000000,-76.388572999999994,43.236530850000001,test,83c,83,83c  Ontario Lowlands,83  Eastern Great Lakes Lowlands,Great Lakes
+60,08-BARE_T5-0.5,43.524287000000001,-75.135703000000007,92.203608250000002,ref,58ab,58,58ab  Northern and Western Adirondack Foothills,58  Northeastern Highlands,Adirondacks
+61,08-BENE-0.2,43.676110000000001,-74.708340000000007,98.451491000000004,ref,58aa,58,58aa  Acid Sensitive Adirondacks,58  Northeastern Highlands,Adirondacks
+62,08-BLAC-2.5,43.875340000000001,-75.373199999999997,88.917064730000007,ref,58ab,58,58ab  Northern and Western Adirondack Foothills,58  Northeastern Highlands,Adirondacks
+63,08-MURM-3.4,43.884000000000000,-75.347200000000001,90.388364069999994,ref,58ab,58,58ab  Northern and Western Adirondack Foothills,58  Northeastern Highlands,Adirondacks
+64,09-ALLE-1.9,44.796340000000001,-74.718850000000003,74.650569630000007,ref,83e,83,83e  Upper St. Lawrence Valley,83  Eastern Great Lakes Lowlands,Adirondacks
+65,09-BLCH-0.2,44.070050000000002,-75.487470000000002,97.591874000000004,ref,58ab,58,58ab  Northern and Western Adirondack Foothills,58  Northeastern Highlands,Adirondacks
+66,09-BRND-2.5,44.849719999999998,-75.164169999999999,72.602836379999999,test,83d,83,83d  St. Lawrence Lowlands,83  Eastern Great Lakes Lowlands,Adirondacks
+67,09-CEDL-0.1,44.372079999999997,-75.215959999999995,89.339361240000002,ref,83e,83,83e  Upper St. Lawrence Valley,83  Eastern Great Lakes Lowlands,Adirondacks
+68,09-ENGL-17.6,44.959029999999998,-73.877949999999998,93.775287890000001,ref,83e,83,83e  Upper St. Lawrence Valley,83  Eastern Great Lakes Lowlands,Adirondacks
+69,09-FARR-3.1,44.860059999999997,-74.560299999999998,74.017100009999993,test,83e,83,83e  Upper St. Lawrence Valley,83  Eastern Great Lakes Lowlands,Adirondacks
+70,09-JEWT-3.1,44.333889999999997,-75.790279999999996,60.453379490000003,test,83d,83,83d  St. Lawrence Lowlands,83  Eastern Great Lakes Lowlands,Adirondacks
+71,09-LSAL_T1-1.0,44.961191999999997,-74.495154999999997,39.317507419999998,test,83d,83,83d  St. Lawrence Lowlands,83  Eastern Great Lakes Lowlands,Adirondacks
+72,09-LSUK-11.3,44.773229999999998,-75.237819999999999,83.464912279999993,test,83d,83,83d  St. Lawrence Lowlands,83  Eastern Great Lakes Lowlands,Adirondacks
+73,09-PIKC-8.7,44.918908000000002,-74.615907260000000,90.635902840000000,ref,83d,83,83d  St. Lawrence Lowlands,83  Eastern Great Lakes Lowlands,Adirondacks
+74,09-PLMB-12.4,44.327302000000003,-75.091868000000005,96.822086720000001,test,58ab,58,58ab  Northern and Western Adirondack Foothills,58  Northeastern Highlands,Adirondacks
+75,09-SCKE-16.4,44.727290000000004,-75.354190000000003,49.330917200000002,test,83d,83,83d  St. Lawrence Lowlands,83  Eastern Great Lakes Lowlands,Adirondacks
+76,09-TRAY-2.9,44.610480000000003,-75.117350000000002,78.525979399999997,ref,83d,83,83d  St. Lawrence Lowlands,83  Eastern Great Lakes Lowlands,Adirondacks
+77,09-WSCK-3.4,44.061572140000003,-75.827123310000005,36.934978260000001,test,83d,83,83d  St. Lawrence Lowlands,83  Eastern Great Lakes Lowlands,Adirondacks
+78,10-ARNO-0.1,44.596460000000000,-73.512000000000000,69.403499969999999,test,83b,83,83b  Champlain Lowlands,83  Eastern Great Lakes Lowlands,Adirondacks
+79,10-COLW-0.7,44.327579999999998,-73.480289999999997,93.571346899999995,ref,83b,83,83b  Champlain Lowlands,83  Eastern Great Lakes Lowlands,Adirondacks
+80,10-MILC-6.3,44.053220000000003,-73.539680000000004,95.937476110000006,ref,83b,83,83b  Champlain Lowlands,83  Eastern Great Lakes Lowlands,Adirondacks
+81,10-NSAR_T7-0.8,44.570619999999998,-73.973939999999999,99.138549889999993,ref,58ad,58,58ad  Central Adirondacks,58  Northeastern Highlands,Adirondacks
+82,10-PUTM_T5-0.3,43.936001900000001,-73.536708290000007,95.101799940000006,ref,58ac,58,58ac  Eastern Adirondack Foothills,58  Northeastern Highlands,Adirondacks
+83,10-TWOB-3.6,44.412329999999997,-74.111440000000002,90.487995040000001,ref,58ad,58,58ad  Central Adirondacks,58  Northeastern Highlands,Adirondacks
+84,10-URIL-0.4,44.652329999999999,-73.522360000000006,78.378946810000002,ref,83b,83,83b  Champlain Lowlands,83  Eastern Great Lakes Lowlands,Adirondacks
+85,11-GORN-6.0,43.012698989999997,-73.924860659999993,74.726716220000000,ref,83f,83,83f  Mohawk Valley,83  Eastern Great Lakes Lowlands,Other
+86,11-MOSE-12.8,43.210106000000003,-73.507521999999994,48.886481470000000,test,59i,59,59i  Hudson Valley,59  Northeastern Coastal Zone,Other
+87,11-ROWL-0.5,43.069499999999998,-73.827280000000002,75.668924000000004,ref,59i,59,59i  Hudson Valley,59  Northeastern Coastal Zone,Other
+88,11-SRUN-3.8,43.078451999999999,-73.738041999999993,38.267984499999997,test,59i,59,59i  Hudson Valley,59  Northeastern Coastal Zone,Other
+89,11-TOMH-12.2,42.801000000000002,-73.546000000000006,76.286725279999999,ref,58x,58,58x  Taconic Foothills,58  Northeastern Highlands,Other
+90,12-ALPL_T11-2.1,42.951982000000001,-73.985737000000000,78.348294429999996,ref,59i,59,59i  Hudson Valley,59  Northeastern Coastal Zone,Other
+91,12-BARK-0.6,42.935440000000000,-75.487750000000005,38.585208999999999,test,60d,60,60d  Finger Lakes Uplands and Gorges,60  Northern Allegheny Plateau,Other
+92,12-TEET-0.8,43.315260000000002,-74.556117999999998,99.298801179999998,ref,58aa,58,58aa  Acid Sensitive Adirondacks,58  Northeastern Highlands,Adirondacks
+93,13-BASC_T17-2.4,42.535899999999998,-74.077209999999994,83.990442049999999,ref,60a,60,60a  Glaciated Low Allegheny Plateau,60  Northern Allegheny Plateau,Other
+94,13-BLKH-8.2,41.744376000000003,-73.985303999999999,77.614033620000001,ref,59i,59,59i  Hudson Valley,59  Northeastern Coastal Zone,Other
+95,13-BLKK-1.1,42.710810000000002,-73.987690000000001,64.330288659999994,test,83f,83,83f  Mohawk Valley,83  Eastern Great Lakes Lowlands,Other
+96,13-EBCR-16.3,41.477690000000003,-73.577449999999999,77.860286389999999,ref,58b,58,58b  Western New England Marble Valleys,58  Northeastern Highlands,Other
+97,13-FISH-16.3,41.587780000000002,-73.789720000000003,66.908182620000005,test,59i,59,59i  Hudson Valley,59  Northeastern Coastal Zone,Other
+98,13-IDNK-0.5,41.838830000000002,-73.934799999999996,82.201595830000002,ref,59i,59,59i  Hudson Valley,59  Northeastern Coastal Zone,Other
+99,13-NOST-0.3,42.097079999999998,-73.544939999999997,66.383459950000002,test,58b,58,58b  Western New England Marble Valleys,58  Northeastern Highlands,Other
+100,13-QKER-1.0,41.327399999999997,-74.415099999999995,40.551376529999999,test,67j,67,67j  Northern Glaciated Limestone Valleys,67  Ridge and Valley,Other
+101,13-RHIN-4.3,41.957500000000003,-73.895840000000007,49.533011270000003,test,59i,59,59i  Hudson Valley,59  Northeastern Coastal Zone,Other
+102,13-SPRO-9.2,41.644280000000002,-73.810749999999999,63.747550789999998,test,59i,59,59i  Hudson Valley,59  Northeastern Coastal Zone,Other
+103,13-WALK_T25-1.5,41.632100000000001,-74.163499999999999,28.733646010000001,test,67k,67,67k  Northern Glaciated Shale and Slate Valleys,67  Ridge and Valley,Other
+104,13-WBLKK-8.9,42.673247000000003,-73.981825000000001,68.781213469999997,test,83f,83,83f  Mohawk Valley,83  Eastern Great Lakes Lowlands,Other
+105,14-HURL-2.8,41.744500000000002,-74.667100000000005,77.656483150000000,ref,60b,60,60b  Delaware-Neversink Highlands,60  Northern Allegheny Plateau,Other
+106,14-WLAK-5.8,41.674700000000001,-74.819599999999994,80.884067520000002,ref,62b,62,62b  Low Poconos,62  North Central Appalachians,Other
+107,15-HACK-3.3,41.092500000000001,-73.960300000000004,29.115672480000001,test,64e,64,64e  Glaciated Triassic Lowlands,64  Northern Piedmont,Other
+108,15-MAWA-3.7,41.135800000000003,-74.121899999999997,69.337300229999997,test,64e,64,64e  Glaciated Triassic Lowlands,64  Northern Piedmont,Other
+109,15-RAMA-13.7,41.279100000000000,-74.149299999999997,50.039146199999998,test,58i,58,58i  Glaciated Reading Prong/Hudson Highlands,58  Northeastern Highlands,Other
+110,16-AMEN_T2-1.1,41.848100000000002,-73.552300000000002,48.461205030000002,test,58b,58,58b  Western New England Marble Valleys,58  Northeastern Highlands,Other
+111,16-BOGH-0.3,41.754800000000003,-73.516300000000001,96.379257440000003,ref,58e,58,58e  Berkshire Transition,58  Northeastern Highlands,Other
+112,16-SWEL-0.1,41.734610000000004,-73.580669999999998,61.673074370000002,test,58b,58,58b  Western New England Marble Valleys,58  Northeastern Highlands,Other
+113,16-SWMP-6.8,41.646830000000001,-73.568619999999996,73.753325730000000,test,58b,58,58b  Western New England Marble Valleys,58  Northeastern Highlands,Other
+114,16-WEBA_T4-1.3,41.929110000000001,-73.526370000000000,74.554904350000001,ref,58b,58,58b  Western New England Marble Valleys,58  Northeastern Highlands,Other
+115,16-WEBA-23.3,41.993600000000001,-73.512600000000006,57.666355240000001,test,58b,58,58b  Western New England Marble Valleys,58  Northeastern Highlands,Other
+116,17-BRWN-0.9,40.746470000000002,-73.076790000000003,1.091764706000000,test,84a,84,84a  Cape Cod/Long Island,84  Atlantic Coastal Pine Barrens,Long Island
+117,17-BVDC-0.4,40.778060000000004,-72.915830000000000,45.436858860000001,test,84a,84,84a  Cape Cod/Long Island,84  Atlantic Coastal Pine Barrens,Long Island
+118,17-CARL-0.8,40.702108000000003,-73.328316999999998,11.869678040000000,test,84a,84,84a  Cape Cod/Long Island,84  Atlantic Coastal Pine Barrens,Long Island
+119,17-CARM-12.9,40.863275999999999,-72.942206999999996,25.663753679999999,test,84a,84,84a  Cape Cod/Long Island,84  Atlantic Coastal Pine Barrens,Long Island
+120,17-CARM-9.0,40.829999999999998,-72.906940000000006,28.754338420000000,test,84a,84,84a  Cape Cod/Long Island,84  Atlantic Coastal Pine Barrens,Long Island
+121,17-GREN-0.8,40.741489999999999,-73.093170000000001,1.168605838000000,test,84a,84,84a  Cape Cod/Long Island,84  Atlantic Coastal Pine Barrens,Long Island
+122,17-MASS-1.2,40.681669999999997,-73.460560000000001,12.887168630000000,test,84a,84,84a  Cape Cod/Long Island,84  Atlantic Coastal Pine Barrens,Long Island
+123,17-MBUR-2.1,40.658299999999997,-73.602670000000003,0.264324030000000,test,59g,59,59g  Long Island Sound Coastal Lowland,59  Northeastern Coastal Zone,Long Island
+124,17-MUDL-1.4,40.767220000000002,-72.980549999999994,14.500039900000001,test,84a,84,84a  Cape Cod/Long Island,84  Atlantic Coastal Pine Barrens,Long Island
+125,17-NISS_E-2.6,40.850149999999999,-73.183099999999996,9.132675930000000,test,84a,84,84a  Cape Cod/Long Island,84  Atlantic Coastal Pine Barrens,Long Island
+126,17-NISS-4.7,40.858423000000002,-73.210680999999994,12.988517079999999,test,59g,59,59g  Long Island Sound Coastal Lowland,59  Northeastern Coastal Zone,Long Island
+127,17-PECN-8.9,40.903610000000000,-72.764719999999997,58.547145800000003,test,84a,84,84a  Cape Cod/Long Island,84  Atlantic Coastal Pine Barrens,Long Island
+128,17-SAMP-2.1,40.727159999999998,-73.312550000000002,13.991479660000000,test,84a,84,84a  Cape Cod/Long Island,84  Atlantic Coastal Pine Barrens,Long Island
+129,17-TERR-0.2,40.809440000000002,-72.774169999999998,37.369744879999999,test,84a,84,84a  Cape Cod/Long Island,84  Atlantic Coastal Pine Barrens,Long Island

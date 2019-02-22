@@ -1,0 +1,25 @@
+---
+title: "Untitled"
+author: "Zachary M. Smith"
+date: "January 2, 2019"
+output: html_document
+---
+
+`r format(Sys.Date(), "%m-%d-%Y")`
+
+```{r, child = 'sections/01_intro.Rmd'}
+
+```
+
+```{r, child = 'sections/02_taxa_prep.Rmd'}
+
+```
+
+```{r, child = 'sections/03_metric_calc.Rmd'}
+
+```
+
+```{r, child = 'sections/metric_sensitivity.Rmd'}
+
+```
+

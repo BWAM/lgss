@@ -1,0 +1,45 @@
+---
+title: "site_condition"
+author: "Gavin Lemley"
+date: "February 21, 2019"
+output: html_document
+---
+
+Find the R-project root directory to simplify file path designations.
+```{r}
+root.dir <- rprojroot::find_root("lgss.Rproj")
+```
+
+Load in data table
+```{r}
+library(tidyverse)
+
+site.condition <- read.csv(file.path(root.dir, "data/site_condition", "site_condition_BoxWhisker.csv"))
+
+site.condition %>%
+  mutate(LG_reg_v2 = forcats::fct_reorder(LG_reg_v2, COND, mean)) %>%
+  ggplot(aes(LG_reg_v2, COND)) + 
+  geom_boxplot()
+
+# For reordering by name (enter in list c())
+# site.condition %>%
+#   mutate(LG_reg_v2 = factor(LG_reg_v2, levels = c())) %>%
+#   ggplot(aes(LG_reg_v2, COND)) + 
+#   geom_boxplot()
+
+site.condition %>%
+  mutate(LG_reg_v2 = forcats::fct_reorder(LG_reg_v2, LU_pct_nat_wetlnd, mean)) %>%
+  ggplot(aes(LG_reg_v2, LU_pct_nat_wetlnd)) + 
+  geom_boxplot() 
+
+site.condition %>%
+  mutate(LG_reg_v2 = forcats::fct_reorder(LG_reg_v2, LU_pct_nat_wetlnd, mean)) %>%
+  ggplot(aes(LG_reg_v2, LU_pct_nat_wetlnd)) + 
+  geom_boxplot() + geom_jitter(aes(color = COND))
+
+site.condition %>%
+  mutate(LG_reg_v2 = forcats::fct_reorder(LG_reg_v2, COND, mean)) %>%
+  ggplot(aes(LG_reg_v2, COND)) + 
+  geom_boxplot() + geom_jitter(aes(color = LU_pct_nat_wetlnd))
+
+```

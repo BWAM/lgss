@@ -1,0 +1,47 @@
+---
+title: "Untitled"
+author: "Zachary M. Smith"
+date: "December 21, 2018"
+output: html_document
+---
+`r format(Sys.Date(), "%m-%d-%Y")`
+
+# Overview
+
+This document was created to import the land cover data calculated by C. Stoll and G. Lemley for the LGSS project.
+
+# Preparation
+
+Import the necessary packages.
+```{r}
+library(tidyverse)
+library(readxl)
+```
+
+Find the R-project root directory to simplify file path designations.
+```{r}
+root.dir <- rprojroot::find_root("lgss.Rproj")
+```
+
+Specify the file path to the XLS file.
+```{r}
+landcover.path <- file.path(root.dir,
+                            "data",
+                            "Batch_Land_Cover_Output_12212018.xls")
+```
+
+Identify all of the sheets in the XLS file.
+```{r}
+sheet.vec <- readxl::excel_sheets(landcover.path)
+```
+
+Import all of the sheets in the XLS file and bind them into a single data frame. The sheet name is used to generate the `site_id` column. The prefix "Basin_" is dropped from the `site_id` column.
+```{r}
+landcover.df <- purrr::map_df(sheet.vec, function(sheet.i) {
+  readxl::read_xls(landcover.path,
+                   sheet = sheet.i) %>% 
+    mutate(site_id = sheet.i,
+           site_id = str_replace(site_id, "Basin_", ""))
+})
+```
+

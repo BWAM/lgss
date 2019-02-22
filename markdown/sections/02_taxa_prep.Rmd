@@ -1,0 +1,59 @@
+---
+title: "Untitled"
+author: "Zachary M. Smith"
+date: "January 30, 2019"
+output: html_document
+---
+
+```{r}
+attributes.df <- data.table::fread(file.path(root.dir, 
+                                             "data",
+                                             "macro_taxa_hier_attributes_2018-12-04.csv"))
+# attributes.df[attributes.df == ""]  <- NA 
+
+# attributes.df2 <- fill_taxa(attributes.df,
+#                             fill.id.col = final_id,
+#                             kingdom:subspecies)
+```
+
+```{r}
+# taxa.df <- readxl::read_excel(file.path(root.dir,
+#                                         "data",
+#                                         "2015_LGSS_bugs_only.xlsx"),
+#                               sheet = "Bugs") %>% 
+  
+taxa.df <- read_csv(file.path(root.dir, 
+                              "data",
+                              # "BUGS.csv")) %>%
+                              "LG_ALL_BUGS_v3.csv")) %>%
+  # select(-X461, -'Grand Total') %>%
+  gather(final_id, count, -BAS_LOC_RM) %>% 
+  filter(!is.na(count),
+         count > 0) %>% 
+  mutate(final_id = str_replace_all(final_id," ", "_"),
+         final_id = str_to_lower(final_id)) %>% 
+  rename_all(tolower)
+
+
+```
+
+
+```{r}
+missing.df <- taxa.df %>% 
+  select(final_id) %>% 
+  distinct() %>% 
+  anti_join(attributes.df, by = c("final_id" = "macro_genspecies"))
+```
+
+```{r}
+taxa.df <- taxa.df %>% 
+  rename(macro_genspecies = final_id) %>% 
+  left_join(attributes.df, by = "macro_genspecies") #%>% 
+  # fill_taxa(taxa.df, final_id, kingdom:subspecies)
+```
+
+```{r}
+# taxa.df <- taxa.df %>%
+#   filter(!stringr::str_detect(bas_loc_rm, "17-"))
+```
+
