@@ -11,13 +11,13 @@ output: html_document
 condition.df <- file.path(root.dir, 
                           "data",
                           "site_condition",
-                          "LG_ALL_site_subsetting_2-21-19.csv") %>% 
+                          "LG_ALL_site_subsetting_2-21-19_2.csv") %>% 
                           # "LG_ALL_site_subsetting") %>% 
     # readxl::read_excel(sheet = "FieldData") %>% 
   data.table::fread() %>% 
-  rename_all(tolower) %>% 
+  rename_all(tolower) 
   # select(bas_loc_rm, site_con_1, lg_region) %>% 
-  rename(site_condition = site_con_1) 
+  # rename(site_condition = site_con_1) 
 
 
 # Reassigned these below from Great Lakes to ADK region/reference in source file instead of deleteing as per below.
