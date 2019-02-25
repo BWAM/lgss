@@ -11,7 +11,7 @@ output: html_document
 condition.df <- file.path(root.dir, 
                           "data",
                           "site_condition",
-                          "LG_ALL_site_subsetting_2-21-19_2.csv") %>% 
+                          "LG_ALL_site_subsetting_2-24-19.csv") %>% 
                           # "LG_ALL_site_subsetting") %>% 
     # readxl::read_excel(sheet = "FieldData") %>% 
   data.table::fread() %>% 

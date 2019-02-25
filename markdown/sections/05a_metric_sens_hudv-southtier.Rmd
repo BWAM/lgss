@@ -45,7 +45,7 @@ DT::datatable(sw.sens.df, options = list(scrollX = TRUE))
 #### Plotting
 
 Plot Barbour et al. (1996) values greater than or equal to 2.
-```{r, fig.width=10, fig.height=20}
+```{r, fig.width=10, fig.height=1.75}
 metrics.vec <- c("pct_et",
                  "pct_rich_cote_family",
                  "rich_toe_family",
@@ -55,17 +55,18 @@ metrics.vec <- c("pct_et",
                  )
 
 sw.sens.df %>% 
-  # filter(metric %in% metrics.vec) %>% 
+  filter(metric %in% metrics.vec) %>%
   # filter(barbour == 3) %>%
-  filter(de >= 70) %>%
+  # filter(de >= 70) %>%
   inner_join(reg.df, by = "metric") %>% 
   mutate(metric = factor(metric, levels = unique(metric))) %>% 
   ggplot(aes(site_condition, value)) +
   geom_boxplot() +
   # geom_jitter() +
-  facet_wrap(~metric, ncol = 3, scales = "free")
+  facet_wrap(~metric, ncol = 6, scales = "free")
   # Use line below instead for plotting metrics for each region side-by-side
   # facet_wrap(~metric + lg_reg_v2, ncol = 3, scales = "free")
+
 
 ```
 
@@ -94,9 +95,12 @@ index.df <- sub.df %>%
 ```
 
 ```{r}
+theme_set(theme_grey(base_size = 20)) 
 index.df %>% 
   ggplot(aes(site_condition, index_score)) +
   geom_boxplot() 
+
+
 ```
 
 ```{r}

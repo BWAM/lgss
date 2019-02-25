@@ -45,7 +45,7 @@ DT::datatable(sw.sens.df, options = list(scrollX = TRUE))
 #### Plotting
 
 Plot Barbour et al. (1996) values greater than or equal to 2.
-```{r, fig.width=10, fig.height=20}
+```{r, fig.width=10, fig.height=40}
 metrics.vec <- c("",
                  "",
                  "",
@@ -56,7 +56,7 @@ metrics.vec <- c("",
 
 sw.sens.df %>% 
   # filter(metric %in% metrics.vec) %>% 
-  # filter(barbour == 3) %>%
+  filter(barbour == 3) %>%
   filter(de >= 100) %>%
   inner_join(reg.df, by = "metric") %>% 
   mutate(metric = factor(metric, levels = unique(metric))) %>% 
