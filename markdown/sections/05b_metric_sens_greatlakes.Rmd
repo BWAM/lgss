@@ -45,12 +45,10 @@ DT::datatable(sw.sens.df, options = list(scrollX = TRUE))
 #### Plotting
 
 Plot Barbour et al. (1996) values greater than or equal to 2.
-```{r, fig.width=10, fig.height=1.75}
+```{r, fig.width=10, fig.height=10}
 metrics.vec <- c("pct_dom1_order",
-                 "rich_gastropoda",
                  "rich_family",
                  "shannon_family",
-                 "simpson_order",
                  "rich_scraper"
                  )
 
@@ -63,9 +61,11 @@ sw.sens.df %>%
   ggplot(aes(site_condition, value)) +
   geom_boxplot() +
   # geom_jitter() +
-  facet_wrap(~metric, ncol = 6, scales = "free")
+  facet_wrap(~metric, ncol = 5, scales = "free")
   # Use line below instead for plotting metrics for each region side-by-side
   # facet_wrap(~metric + lg_reg_v2, ncol = 3, scales = "free")
+
+ggsave(filename = "GL_metrics_2_export.png", width = 7, height = 1.5, units = "in", path = 'C:/Users/gmlemley/OneDrive - New York State Office of Information Technology Services/Projects/LGSS/NAB, NEAEB/Figs/Box plots')
 
 ```
 
@@ -94,11 +94,13 @@ index.df <- sub.df %>%
 ```
 
 ```{r}
-theme_set(theme_grey(base_size = 20)) 
+theme_set(theme_grey(base_size = 10)) 
 
 index.df %>% 
   ggplot(aes(site_condition, index_score)) +
   geom_boxplot() 
+
+ggsave(filename = "GL_IBI_2_export.png", width = 3, height = 2.5, units = "in", path = 'C:/Users/gmlemley/OneDrive - New York State Office of Information Technology Services/Projects/LGSS/NAB, NEAEB/Figs/Box plots')
 ```
 
 ```{r}
