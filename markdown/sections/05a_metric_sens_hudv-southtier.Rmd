@@ -10,7 +10,7 @@ output: html_document
 ## Calculate Metric Sensitivity
 
 ```{r}
-reg.df <- metrics.long %>% 
+reg.df.hvst <- metrics.long %>% 
   filter(lg_reg_v2 %in% c("Hudson Valley", "Southern Tier"))
 
 ```
@@ -31,7 +31,7 @@ Balanced Discrimination Efficiency (BDE) attempts to update the DE method by thr
 
 Use the `sensitivity()` function to calculate three types of metric sensitivity measures: 1) Barbour et al. (1996) method, 2) Discrimination Efficiency (DE), and 3) Balanced Discrimination Efficiency (BDE). 
 ```{r}
-sw.sens.df <- reg.df %>% 
+sw.sens.df.hvst <- reg.df.hvst %>% 
   sensitivity(
     metric.col = metric,
     value.col = value,
@@ -39,41 +39,53 @@ sw.sens.df <- reg.df %>%
     ref.cond = "ref",
     deg.cond = "deg")
 
-DT::datatable(sw.sens.df, options = list(scrollX = TRUE))
+DT::datatable(sw.sens.df.hvst, options = list(scrollX = TRUE))
 ```
 
 #### Plotting
 
 Plot Barbour et al. (1996) values greater than or equal to 2.
-```{r, fig.width=10, fig.height=1.75}
-metrics.vec <- c("pct_et",
+```{r, fig.width=13, fig.height=14}
+sw.sens.df.hvst %>% 
+  # filter(metric %in% metrics.vec2.hvst) %>%
+  filter(barbour > 1) %>%
+  filter(de >= 70) %>%
+  inner_join(reg.df.hvst, by = "metric") %>% 
+  arrange(desc(de)) %>% 
+  mutate(metric = factor(metric, levels = unique(metric))) %>% 
+  ggplot(aes(site_condition, value, fill = site_condition)) +
+  theme(axis.title.x=element_blank()) +
+  scale_fill_manual(values=c("red", "orange", "green")) +
+  geom_boxplot() +
+  # geom_jitter() +
+  facet_wrap(~metric, ncol = 5, scales = "free")
+  # Use line below instead for plotting metrics for each region side-by-side
+  # facet_wrap(~metric + lg_reg_v2, ncol = 3, scales = "free")
+
+# ggsave(filename = "HV+ST_metrics_2_export_color.png", width = 7, height = 1.5, units = "in", path = 'C:/Users/gmlemley/OneDrive - New York State Office of Information Technology Services/Projects/LGSS/NAB, NEAEB/Figs/Box plots')
+```
+
+Final chosen metrics
+```{r}
+metrics.vec.hvst <- c("pct_et",
                  "pct_rich_cote_family",
                  "pct_filterer",
                  "shannon_genus"
                  )
 
-sw.sens.df %>% 
-  filter(metric %in% metrics.vec) %>%
-  # filter(barbour == 3) %>%
-  # filter(de >= 70) %>%
-  inner_join(reg.df, by = "metric") %>% 
-  mutate(metric = factor(metric, levels = unique(metric))) %>% 
-  ggplot(aes(site_condition, value, fill = site_condition)) +
-  theme(axis.title.x=element_blank()) +
-  scale_fill_manual(values=c("red", "orange", "forest green")) +
-  geom_boxplot() +
-  # geom_jitter() +
-  facet_wrap(~metric, ncol = 6, scales = "free")
-  # Use line below instead for plotting metrics for each region side-by-side
-  # facet_wrap(~metric + lg_reg_v2, ncol = 3, scales = "free")
-
-ggsave(filename = "HV+ST_metrics_2_export_color.png", width = 7, height = 1.5, units = "in", path = 'C:/Users/gmlemley/OneDrive - New York State Office of Information Technology Services/Projects/LGSS/NAB, NEAEB/Figs/Box plots')
+metrics.vec2.hvst <- c("pct_rich_toe_family",
+                  "pct_filterer",
+                  "shannon_genus",
+              		"pct_rich_mol_genus",
+                  "pct_dom5_genus"
+                 )
 ```
 
 
 ```{r}
-sub.df <- reg.df %>% 
-  filter(metric %in% metrics.vec) %>% 
+sub.df.hvst <- reg.df.hvst %>% 
+  filter(metric %in% metrics.vec.hvst) %>% 
+  left_join(sw.sens.df.hvst, by = "metric") %>% 
   group_by(metric) %>% 
   mutate(quant_5 = quantile(value, 0.05),
          quant_95 = quantile(value, 0.95),
@@ -84,10 +96,34 @@ sub.df <- reg.df %>%
            score > 100 ~ 100,
            score < 0 ~ 0,
            TRUE ~ score
-         )) %>% 
+         ),
+         score = if_else(disturbance == "increase", 100 - score, score)) %>% 
   select(-min, -max, -value)
 
-index.df <- sub.df %>% 
+sub.df2.hvst <- reg.df.hvst %>% 
+  filter(metric %in% metrics.vec2.hvst) %>% 
+  left_join(sw.sens.df.hvst, by = "metric") %>% 
+  group_by(metric) %>% 
+  mutate(quant_5 = quantile(value, 0.05),
+         quant_95 = quantile(value, 0.95),
+         min = min(value),
+         max = max(value),
+         score = (value - quant_5) / (quant_95 - quant_5) * 100,
+         score = case_when(
+           score > 100 ~ 100,
+           score < 0 ~ 0,
+           TRUE ~ score
+         ),
+         score = if_else(disturbance == "increase", 100 - score, score)) %>% 
+  select(-min, -max, -value)
+
+index.df.hvst <- sub.df.hvst %>% 
+  # spread(metric, score) %>% 
+  group_by(bas_loc_rm, site_condition, lg_reg_v2) %>% 
+  summarise(index_score = mean(score)) %>% 
+  ungroup()
+
+index.df2.hvst <- sub.df2.hvst %>% 
   # spread(metric, score) %>% 
   group_by(bas_loc_rm, site_condition, lg_reg_v2) %>% 
   summarise(index_score = mean(score)) %>% 
@@ -96,16 +132,21 @@ index.df <- sub.df %>%
 
 ```{r}
 theme_set(theme_grey(base_size = 10)) 
-index.df %>% 
+index.df.hvst %>% 
   ggplot(aes(site_condition, index_score)) +
   geom_boxplot() 
 
-ggsave(filename = "HV+ST_IBI_2_export.png", width = 3, height = 2.5, units = "in", path = 'C:/Users/gmlemley/OneDrive - New York State Office of Information Technology Services/Projects/LGSS/NAB, NEAEB/Figs/Box plots')
+
+index.df2.hvst %>% 
+  ggplot(aes(site_condition, index_score)) +
+  geom_boxplot() 
+
+# ggsave(filename = "HV+ST_IBI_2_export.png", width = 3, height = 2.5, units = "in", path = 'C:/Users/gmlemley/OneDrive - New York State Office of Information Technology Services/Projects/LGSS/NAB, NEAEB/Figs/Box plots')
 
 ```
 
 ```{r}
-index.df %>% 
+index.df.hvst %>% 
   # filter(site_condition == "ref") %>% 
   ggplot(aes(lg_reg_v2, index_score, fill = site_condition)) +
   geom_boxplot()
@@ -114,10 +155,10 @@ index.df %>%
 
 
 ```{r}
-selected.df <- sub.df %>% 
+selected.df <- sub.df.hvst %>% 
   spread(metric, score) %>% 
-  left_join(condition.df, by = c("bas_loc_rm", "site_condition", "lg_region")) %>% 
-  select(site_condition, metrics.vec) %>% 
+  left_join(condition.df, by = c("bas_loc_rm", "site_condition", "lg_reg_v2")) %>% 
+  select(site_condition, metrics.vec.hvst) %>% 
   mutate(site_condition = if_else(site_condition == "ref", 1, 0))
 
 
@@ -133,7 +174,7 @@ coef.df <- summary(logistic)$coefficients %>%
   pull(metric)
 
 
-selected.df <- sub.df  %>% 
+selected.df <- sub.df.hvst  %>% 
   spread(metric, score) %>% 
   left_join(condition.df, by = c("bas_loc_rm", "site_condition", "lg_region")) %>% 
   select(site_condition, coef.df) %>% 
@@ -147,7 +188,7 @@ selected.df$predicted <- predict(logistic, newdata = selected.df, type="response
 ```
 
 ```{r, fig.width=10, fig.height=4}
-sw.sens.df %>% 
+sw.sens.df.hvst %>% 
   filter(metric %in% coef.df) %>% 
   inner_join(metrics.long, by = "metric") %>% 
   mutate(metric = factor(metric, levels = unique(metric))) %>% 
@@ -157,7 +198,7 @@ sw.sens.df %>%
 ```
 
 ```{r, fig.width=10, fig.height=4}
-sw.sens.df %>% 
+sw.sens.df.hvst %>% 
   filter(metric %in% coef.df) %>% 
   inner_join(metrics.long, by = "metric") %>% 
   mutate(metric = factor(metric, levels = unique(metric))) %>% 

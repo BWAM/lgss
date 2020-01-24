@@ -46,19 +46,13 @@ DT::datatable(sw.sens.df, options = list(scrollX = TRUE))
 
 Plot Barbour et al. (1996) values greater than or equal to 2.
 ```{r, fig.width=10, fig.height=1.75}
-metrics.vec <- c("pct_rich_mollusca_amphipoda_family",
-                 "pct_insecta",
-                 "rich_intolerant",
-                 "rich_et_macro_genspecies"
-                 )
-
-
 sw.sens.df %>% 
   filter(metric %in% metrics.vec) %>%
   # filter(barbour == 3) %>%
   # filter(de >= 80) %>%
   inner_join(reg.df, by = "metric") %>% 
   mutate(metric = factor(metric, levels = unique(metric))) %>% 
+  arrange(desc(de)) %>%
   ggplot(aes(site_condition, value)) +
   geom_boxplot() +
   # geom_jitter() +
@@ -70,10 +64,25 @@ ggsave(filename = "ADK_metrics_2_export.png", width = 7, height = 1.5, units = "
 
 ```
 
+```{r}
+metrics.vec <- c("pct_rich_mollusca_amphipoda_family",
+                 "pct_insecta",
+                 "rich_intolerant",
+                 "rich_et_macro_genspecies"
+                 )
+
+metrics.vec2 <- c("pct_rich_mollusca_amphipoda_family",
+                 "pct_insecta",
+                 "rich_intolerant",
+                 "rich_et_macro_genspecies"
+                 )
+```
+
 
 ```{r}
 sub.df <- reg.df %>% 
   filter(metric %in% metrics.vec) %>% 
+  left_join(sw.sens.df, by = "metric") %>% 
   group_by(metric) %>% 
   mutate(quant_5 = quantile(value, 0.05),
          quant_95 = quantile(value, 0.95),
@@ -84,10 +93,34 @@ sub.df <- reg.df %>%
            score > 100 ~ 100,
            score < 0 ~ 0,
            TRUE ~ score
-         )) %>% 
+         ),
+         score = if_else(disturbance == "increase", 100 - score, score)) %>% 
+  select(-min, -max, -value)
+
+sub.df2 <- reg.df %>% 
+  filter(metric %in% metrics.vec2) %>% 
+  left_join(sw.sens.df, by = "metric") %>% 
+  group_by(metric) %>% 
+  mutate(quant_5 = quantile(value, 0.05),
+         quant_95 = quantile(value, 0.95),
+         min = min(value),
+         max = max(value),
+         score = (value - quant_5) / (quant_95 - quant_5) * 100,
+         score = case_when(
+           score > 100 ~ 100,
+           score < 0 ~ 0,
+           TRUE ~ score
+         ),
+         score = if_else(disturbance == "increase", 100 - score, score)) %>% 
   select(-min, -max, -value)
 
 index.df <- sub.df %>% 
+  # spread(metric, score) %>% 
+  group_by(bas_loc_rm, site_condition, lg_reg_v2) %>% 
+  summarise(index_score = mean(score)) %>% 
+  ungroup()
+
+index.df2 <- sub.df2 %>% 
   # spread(metric, score) %>% 
   group_by(bas_loc_rm, site_condition, lg_reg_v2) %>% 
   summarise(index_score = mean(score)) %>% 
@@ -100,14 +133,24 @@ index.df %>%
   ggplot(aes(site_condition, index_score)) +
   geom_boxplot() 
 
-ggsave(filename = "ADK_IBI_2_export.png", width = 3, height = 2.5, units = "in", path = 'C:/Users/gmlemley/OneDrive - New York State Office of Information Technology Services/Projects/LGSS/NAB, NEAEB/Figs/Box plots')
+index.df2 %>% 
+  ggplot(aes(site_condition, index_score)) +
+  geom_boxplot() 
+
+# ggsave(filename = "GL_IBI_2_export.png", width = 3, height = 2.5, units = "in", path = 'C:/Users/gmlemley/OneDrive - New York State Office of Information Technology Services/Projects/LGSS/NAB, NEAEB/Figs/Box plots')
 ```
 
 ```{r}
+theme_set(theme_grey(base_size = 10)) 
 index.df %>% 
-  # filter(site_condition == "ref") %>% 
-  ggplot(aes(lg_reg_v2, index_score, fill = site_condition)) +
-  geom_boxplot()
+  ggplot(aes(site_condition, index_score)) +
+  geom_boxplot() 
+
+index.df2 %>% 
+  ggplot(aes(site_condition, index_score)) +
+  geom_boxplot() 
+
+# ggsave(filename = "GL_IBI_2_export.png", width = 3, height = 2.5, units = "in", path = 'C:/Users/gmlemley/OneDrive - New York State Office of Information Technology Services/Projects/LGSS/NAB, NEAEB/Figs/Box plots')
 ```
 
 

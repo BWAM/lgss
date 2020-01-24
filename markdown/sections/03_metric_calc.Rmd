@@ -94,7 +94,9 @@ subrich.df <- purrr::map(c("family", "genus", "macro_genspecies"), function(taxa
     rich_crust = taxa_rich(taxa.df, bas_loc_rm, subphylum, !!quo.taxa.i,
                              taxon = c("crustacea")),
     rich_mollusca_amphipoda = rich_mol + rich_amphi,
-    rich_crustacea_mollusca = rich_crust + rich_mol
+    rich_crustacea_mollusca = rich_crust + rich_mol,
+    rich_chironominae = taxa_rich(taxa.df, bas_loc_rm, subfamily, !!quo.taxa.i,
+                             taxon = c("chironominae"))
   ) %>% 
     select(-rich_mol, -rich_amphi, -rich_crust)
   names(subrich.sub) <- paste(names(subrich.sub), taxa.i, sep = "_")
@@ -130,6 +132,12 @@ pct.rich.df <- purrr::map(hier.vec, function(taxa.i) {
                                  order,
                                  !!quo.taxa.i,
                                  taxon = c("ephemeroptera", "plecoptera", "trichoptera")),
+    pct_rich_toe = taxa_pct_rich(taxa.df,
+                                  bas_loc_rm,
+                                  order,
+                                  !!quo.taxa.i,
+                                  taxon = c("odonata",
+                                            "trichoptera", "ephemeroptera")),
     pct_rich_cote = taxa_pct_rich(taxa.df,
                                   bas_loc_rm,
                                   order,
@@ -158,7 +166,10 @@ pct.rich.df <- purrr::map(hier.vec, function(taxa.i) {
                                    !!quo.taxa.i,
                                    taxon = "crustacea"),
     pct_rich_mollusca_amphipoda = pct_rich_mol + pct_rich_amphi,
-    pct_rich_crustacea_mollusca = pct_rich_crust + pct_rich_mol
+    pct_rich_crustacea_mollusca = pct_rich_crust + pct_rich_mol,
+    pct_rich_chironominae = taxa_pct_rich(taxa.df, bas_loc_rm, subfamily, !!quo.taxa.i,
+                             taxon = c("chironominae"))
+
   )
   names(pct.rich.sub) <- paste(names(pct.rich.sub), taxa.i, sep = "_")
   return(pct.rich.sub)

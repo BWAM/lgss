@@ -45,7 +45,7 @@ DT::datatable(sw.sens.df, options = list(scrollX = TRUE))
 #### Plotting
 
 Plot Barbour et al. (1996) values greater than or equal to 2.
-```{r, fig.width=10, fig.height=10}
+```{r, fig.width=13, fig.height=10}
 metrics.vec <- c("pct_dom1_order",
                  "rich_family",
                  "shannon_family",
@@ -53,26 +53,43 @@ metrics.vec <- c("pct_dom1_order",
                  )
 
 sw.sens.df %>% 
-  filter(metric %in% metrics.vec) %>%
-  # filter(barbour == 3) %>%
-  # filter(de >= 80) %>%
+  # filter(metric %in% metrics.vec) %>%
+  filter(barbour > 1) %>%
+  filter(de >= 80) %>%
   inner_join(reg.df, by = "metric") %>% 
+  arrange(desc(de)) %>% 
   mutate(metric = factor(metric, levels = unique(metric))) %>% 
-  ggplot(aes(site_condition, value)) +
+  ggplot(aes(site_condition, value, fill = site_condition)) +
   geom_boxplot() +
+  scale_fill_manual(values=c("red", "orange", "forest green")) +
   # geom_jitter() +
   facet_wrap(~metric, ncol = 5, scales = "free")
   # Use line below instead for plotting metrics for each region side-by-side
   # facet_wrap(~metric + lg_reg_v2, ncol = 3, scales = "free")
 
-ggsave(filename = "GL_metrics_2_export.png", width = 7, height = 1.5, units = "in", path = 'C:/Users/gmlemley/OneDrive - New York State Office of Information Technology Services/Projects/LGSS/NAB, NEAEB/Figs/Box plots')
+# ggsave(filename = "GL_metrics_2_export.png", width = 7, height = 1.5, units = "in", path = 'C:/Users/gmlemley/OneDrive - New York State Office of Information Technology Services/Projects/LGSS/NAB, NEAEB/Figs/Box plots')
 
+```
+
+```{r}
+metrics.vec <- c("pct_dom1_order",
+                 "rich_family",
+                 "shannon_family",
+                 "rich_scraper"
+                 )
+
+metrics.vec2 <- c("pct_dom1_order",
+                 "rich_family",
+                 "shannon_family",
+                 "rich_scraper"
+                 )
 ```
 
 
 ```{r}
 sub.df <- reg.df %>% 
   filter(metric %in% metrics.vec) %>% 
+  left_join(sw.sens.df, by = "metric") %>% 
   group_by(metric) %>% 
   mutate(quant_5 = quantile(value, 0.05),
          quant_95 = quantile(value, 0.95),
@@ -83,10 +100,34 @@ sub.df <- reg.df %>%
            score > 100 ~ 100,
            score < 0 ~ 0,
            TRUE ~ score
-         )) %>% 
+         ),
+         score = if_else(disturbance == "increase", 100 - score, score)) %>% 
+  select(-min, -max, -value)
+
+sub.df2 <- reg.df %>% 
+  filter(metric %in% metrics.vec2) %>% 
+  left_join(sw.sens.df, by = "metric") %>% 
+  group_by(metric) %>% 
+  mutate(quant_5 = quantile(value, 0.05),
+         quant_95 = quantile(value, 0.95),
+         min = min(value),
+         max = max(value),
+         score = (value - quant_5) / (quant_95 - quant_5) * 100,
+         score = case_when(
+           score > 100 ~ 100,
+           score < 0 ~ 0,
+           TRUE ~ score
+         ),
+         score = if_else(disturbance == "increase", 100 - score, score)) %>% 
   select(-min, -max, -value)
 
 index.df <- sub.df %>% 
+  # spread(metric, score) %>% 
+  group_by(bas_loc_rm, site_condition, lg_reg_v2) %>% 
+  summarise(index_score = mean(score)) %>% 
+  ungroup()
+
+index.df2 <- sub.df2 %>% 
   # spread(metric, score) %>% 
   group_by(bas_loc_rm, site_condition, lg_reg_v2) %>% 
   summarise(index_score = mean(score)) %>% 
@@ -95,12 +136,15 @@ index.df <- sub.df %>%
 
 ```{r}
 theme_set(theme_grey(base_size = 10)) 
-
 index.df %>% 
   ggplot(aes(site_condition, index_score)) +
   geom_boxplot() 
 
-ggsave(filename = "GL_IBI_2_export.png", width = 3, height = 2.5, units = "in", path = 'C:/Users/gmlemley/OneDrive - New York State Office of Information Technology Services/Projects/LGSS/NAB, NEAEB/Figs/Box plots')
+index.df2 %>% 
+  ggplot(aes(site_condition, index_score)) +
+  geom_boxplot() 
+
+# ggsave(filename = "GL_IBI_2_export.png", width = 3, height = 2.5, units = "in", path = 'C:/Users/gmlemley/OneDrive - New York State Office of Information Technology Services/Projects/LGSS/NAB, NEAEB/Figs/Box plots')
 ```
 
 ```{r}

@@ -45,7 +45,7 @@ DT::datatable(sw.sens.df, options = list(scrollX = TRUE))
 #### Plotting
 
 Plot Barbour et al. (1996) values greater than or equal to 2.
-```{r, fig.width=10, fig.height=30}
+```{r, fig.width=10, fig.height=20}
 metrics.vec <- c("pct_et",
                  "pct_rich_cote_family",
                  "rich_toe_family",
@@ -59,6 +59,7 @@ sw.sens.df %>%
   # filter(barbour == 3) %>%
   filter(de >= 70) %>%
   inner_join(reg.df, by = "metric") %>% 
+  arrange(desc(de)) %>% 
   mutate(metric = factor(metric, levels = unique(metric))) %>% 
   ggplot(aes(site_condition, value)) +
   geom_boxplot() +
