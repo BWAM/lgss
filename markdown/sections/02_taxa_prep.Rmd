@@ -52,19 +52,6 @@ taxa.df <- taxa.df %>%
   # fill_taxa(taxa.df, final_id, kingdom:subspecies)
 ```
 
-
-```{r, eval=FALSE}
-taxa.df <- read.csv(file.path(root.dir, "data", "LGSS_merge.csv"),
-                    stringsAsFactors = FALSE) %>% 
-  # toolbox::prep_df() %>% 
-  # rename("FINAL_ID" = "GENSPECIES") %>% 
-  mutate(FINAL_ID = str_replace_all(GENSPECIES," ", "_"),
-         FINAL_ID = str_to_upper(FINAL_ID)) %>% 
-  left_join(attributes.df, by = "FINAL_ID") %>% 
-  rename_all(tolower) %>% 
-  mutate_if(is.character,tolower)
-```
-
 ```{r}
 # taxa.df <- taxa.df %>%
 #   filter(!stringr::str_detect(bas_loc_rm, "17-"))

@@ -10,12 +10,20 @@ output: html_document
 ```{r}
 condition.df <- file.path(root.dir, 
                           "data",
-                          "LG_ALL_site_subsetting.csv") %>% 
-  # readxl::read_excel(sheet = "FieldData") %>% 
+                          "site_condition",
+                          "LG_ALL_site_subsetting_2-24-19.csv") %>% 
+                          # "LG_ALL_site_subsetting") %>% 
+    # readxl::read_excel(sheet = "FieldData") %>% 
   data.table::fread() %>% 
-  rename_all(tolower) %>% 
-  select(bas_loc_rm, site_con_1, lg_region) %>% 
-  rename(site_condition = site_con_1) 
+  rename_all(tolower) 
+  # select(bas_loc_rm, site_con_1, lg_region) %>% 
+  # rename(site_condition = site_con_1) 
+
+
+# Reassigned these below from Great Lakes to ADK region/reference in source file instead of deleteing as per below.
+# condition.df <- condition.df[!grepl("03-LSAM_N-7.9", condition.df$bas_loc_rm),]
+# condition.df <- condition.df[!grepl("07-LITR-0.2", condition.df$bas_loc_rm),]
+
 ```
 
 

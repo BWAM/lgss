@@ -1,0 +1,131 @@
+BAS_LOC_RM,LG_reg_v2,site_con_1
+01-BLKE-0.1,Great Lakes,test
+01-FISN-2.4,Great Lakes,test
+01-GILL-0.3,Great Lakes,test
+01-GOTC-0.2,Great Lakes,test
+01-LSIS-2.0,Great Lakes,test
+01-MURD-20.0,Great Lakes,ref
+01-PION-0.9,Great Lakes,ref
+01-PLUT_N_T4-1.0,Great Lakes,ref
+01-VBUR-0.4,Great Lakes,test
+03-BEAG-1.8,Great Lakes,test
+03-BEEK-4.5,Great Lakes,ref
+03-CHMO-8.6,Great Lakes,ref
+03-EMIL_E_T6-0.4,Great Lakes,test
+03-FOMI_S-0.1,Great Lakes,test
+03-FOMI-5.5,Great Lakes,test
+03-GUFF-1.8,Great Lakes,ref
+03-HRTB-2.2,Great Lakes,test
+03-JEDO_T3-0.4,Great Lakes,test
+03-JOHN-13.7,Great Lakes,test
+03-LSAM_N-7.9,Adirondacks,ref
+03-MIDL-2.4,Great Lakes,test
+03-TELV-12.8,Great Lakes,ref
+03-YANT_T1c-0.2,Great Lakes,test
+04-BLAK_T7-3.0,Great Lakes,test
+04-JCOX-4.6,Great Lakes,test
+04-SPRG-10.1,Great Lakes,test
+07-BLDY-0.1,Great Lakes,test
+07-BUTL-3.5,Great Lakes,ref
+07-CANA-32.8,Great Lakes,ref
+07-COWA_T10-0.9,Great Lakes,test
+07-GEDD-1.4,Great Lakes,test
+07-HARB-0.5_a,Great Lakes,test
+07-HARB-0.5_b,Great Lakes,test
+07-LITR-0.2,Adirondacks,ref
+07-MUDE-4.4,Great Lakes,test
+07-MUSK-0.5,Great Lakes,test
+07-NINE-0.7,Great Lakes,test
+07-NORB_T10-1.5,Great Lakes,test
+07-ONON_W_T7-1.5,Great Lakes,test
+07-POBK_T4-1.5,Great Lakes,test
+07-SNDR-1.5,Great Lakes,test
+07-WBOT-0.3,Great Lakes,test
+12-TEET-0.8,Adirondacks,ref
+10-NSAR_T7-0.8,Adirondacks,ref
+08-BENE-0.2,Adirondacks,ref
+09-BLCH-0.2,Adirondacks,ref
+09-PLMB-12.4,Adirondacks,ref
+10-MILC-6.3,Adirondacks,ref
+10-PUTM_T5-0.3,Adirondacks,ref
+03-SAND_T21-4.0,Adirondacks,ref
+09-ENGL-17.6,Adirondacks,ref
+10-COLW-0.7,Adirondacks,ref
+08-BARE_T5-0.5,Adirondacks,ref
+09-PIKC-8.7,Adirondacks,ref
+10-TWOB-3.6,Adirondacks,ref
+08-MURM-3.4,Adirondacks,ref
+09-CEDL-0.1,Adirondacks,test
+08-BLAC-2.5,Adirondacks,ref
+09-LSUK-11.3,Adirondacks,test
+09-TRAY-2.9,Adirondacks,test
+10-URIL-0.4,Adirondacks,test
+09-ALLE-1.9,Adirondacks,test
+09-FARR-3.1,Adirondacks,test
+09-BRND-2.5,Adirondacks,test
+10-ARNO-0.1,Adirondacks,test
+09-JEWT-3.1,Adirondacks,test
+09-SCKE-16.4,Adirondacks,test
+09-LSAL_T1-1.0,Adirondacks,test
+09-WSCK-3.4,Adirondacks,test
+01-STYB_T5-0.3,Southern Tier,test
+01-TONA-103.5,Southern Tier,test
+02-BLBA-0.4,Southern Tier,test
+02-CASS-25.6,Southern Tier,test
+02-CASS-33.3,Southern Tier,test
+02-RAWS-0.8,Southern Tier,test
+04-OATK-46.2,Southern Tier,test
+05-CAMB-11.2,Southern Tier,test
+05-CBRO-1.8,Southern Tier,test
+05-STEO-35.7,Southern Tier,test
+05-WINI_T2-1.2,Southern Tier,test
+06-FABS-5.0,Southern Tier,test
+06-FLYS-0.7,Southern Tier,test
+06-MADB-0.1,Southern Tier,test
+06-NING-7.7,Southern Tier,ref
+07-HENC_T4-1.2,Southern Tier,test
+07-JACB-1.9,Southern Tier,test
+11-GORN-6.0,Hudson Valley,test
+11-MOSE-12.8,Hudson Valley,test
+11-ROWL-0.5,Hudson Valley,test
+11-SRUN-3.8,Hudson Valley,test
+11-TOMH-12.2,Hudson Valley,ref
+12-ALPL_T11-2.1,Hudson Valley,test
+12-BARK-0.6,Southern Tier,test
+13-BASC_T17-2.4,Hudson Valley,ref
+13-BLKH-8.2,Hudson Valley,test
+13-BLKK-1.1,Hudson Valley,test
+13-EBCR-16.3,Hudson Valley,test
+13-FISH-16.3,Hudson Valley,test
+13-IDNK-0.5,Hudson Valley,ref
+13-NOST-0.3,Hudson Valley,test
+13-QKER-1.0,Hudson Valley,test
+13-RHIN-4.3,Hudson Valley,test
+13-SPRO-9.2,Hudson Valley,test
+13-WALK_T25-1.5,Hudson Valley,test
+13-WBLKK-8.9,Hudson Valley,test
+14-HURL-2.8,Hudson Valley,ref
+14-WLAK-5.8,Hudson Valley,ref
+15-HACK-3.3,Hudson Valley,test
+15-MAWA-3.7,Hudson Valley,test
+15-RAMA-13.7,Hudson Valley,test
+16-AMEN_T2-1.1,Hudson Valley,test
+16-BOGH-0.3,Hudson Valley,ref
+16-SWEL-0.1,Hudson Valley,test
+16-SWMP-6.8,Hudson Valley,test
+16-WEBA_T4-1.3,Hudson Valley,test
+16-WEBA-23.3,Hudson Valley,test
+17-BRWN-0.9,Long Island,test
+17-BVDC-0.4,Long Island,test
+17-CARL-0.8,Long Island,test
+17-CARM-12.9,Long Island,test
+17-CARM-9.0,Long Island,ref
+17-GREN-0.8,Long Island,test
+17-MASS-1.2,Long Island,test
+17-MBUR-2.1,Long Island,test
+17-MUDL-1.4,Long Island,test
+17-NISS_E-2.6,Long Island,test
+17-NISS-4.7,Long Island,test
+17-PECN-8.9,Long Island,ref
+17-SAMP-2.1,Long Island,test
+17-TERR-0.2,Long Island,ref

@@ -9,6 +9,13 @@ output: html_document
 
 ## Calculate Metric Sensitivity
 
+```{r}
+reg.df <- metrics.long %>% 
+  filter(lg_reg_v2 == "Long Island")
+
+```
+
+
 ### State-Wide Metric Sensitivity
 
 Barbour et al. (1996) created a visual method for evaluating metric response to a defined disturbance gradient.
@@ -24,14 +31,13 @@ Balanced Discrimination Efficiency (BDE) attempts to update the DE method by thr
 
 Use the `sensitivity()` function to calculate three types of metric sensitivity measures: 1) Barbour et al. (1996) method, 2) Discrimination Efficiency (DE), and 3) Balanced Discrimination Efficiency (BDE). 
 ```{r}
-sw.sens.df <- metrics.long %>% 
-  # filter(region == "Adirondacks") %>% 
+sw.sens.df <- reg.df %>% 
   sensitivity(
     metric.col = metric,
     value.col = value,
     condition.col = site_condition,
     ref.cond = "ref",
-    deg.cond = "test")
+    deg.cond = "deg")
 
 DT::datatable(sw.sens.df, options = list(scrollX = TRUE))
 ```
@@ -39,101 +45,52 @@ DT::datatable(sw.sens.df, options = list(scrollX = TRUE))
 #### Plotting
 
 Plot Barbour et al. (1996) values greater than or equal to 2.
-```{r, fig.width=10, fig.height=15}
-metrics.vec <- c("rich_insecta",
-                    "pct_rich_crustacea_mollusca_genus",
-                    "pct_rich_et_family",
-                    "pct_rich_insecta",
-                    "pct_rich_amphi_macro_genspecies",
-                    "pct_ept")
-# Zach's previous picks:
-# metrics.vec <- c("pct_rich_mollusca_amphipoda_macro_genspecies",
-#                     "rich_insecta",
-#                     "pct_rich_cote_family",
-#                     "rich_intolerant",
-#                     "pct_rich_amphi_macro_genspecies",
-#                     "pct_ept")
+```{r, fig.width=10, fig.height=40}
+metrics.vec <- c("",
+                 "",
+                 "",
+                 "",
+                 "",
+                 ""
+                 )
+
 sw.sens.df %>% 
   # filter(metric %in% metrics.vec) %>% 
-  filter(barbour == 3) %>% 
-  inner_join(metrics.long, by = "metric") %>% 
+  filter(barbour == 3) %>%
+  filter(de >= 100) %>%
+  inner_join(reg.df, by = "metric") %>% 
   mutate(metric = factor(metric, levels = unique(metric))) %>% 
   ggplot(aes(site_condition, value)) +
   geom_boxplot() +
+  # geom_jitter() +
   facet_wrap(~metric, ncol = 3, scales = "free")
-```
-
-
-
-```{r}
-sens.metrics.vec <- sw.sens.df %>% 
-  filter(de >= 70) %>% 
-  pull(metric)
+  # Use line below instead for plotting metrics for each region side-by-side
+  # facet_wrap(~metric + lg_reg_v2, ncol = 3, scales = "free")
 
 ```
 
-```{r}
-ref.df <- metrics.long %>% 
-  filter(metric %in% metrics.vec,
-         site_condition == "ref") %>% 
-  group_by(metric) %>% 
-  summarize(ref_q00 = quantile(value, 0.00),
-            ref_q05 = quantile(value, 0.05),
-            ref_q25 = quantile(value, 0.25),
-            ref_q50 = quantile(value, 0.50),
-            ref_q75 = quantile(value, 0.75),
-            ref_q95 = quantile(value, 0.95),
-            ref_q100 = quantile(value, 1.00))
-
-
-test.df <- metrics.long %>%
-  filter(metric %in% metrics.vec,
-         site_condition == "test") %>%
-  group_by(metric) %>%
-  summarize(test_q00 = quantile(value, 0.00),
-            test_q05 = quantile(value, 0.05),
-            test_q25 = quantile(value, 0.25),
-            test_q50 = quantile(value, 0.50),
-            test_q75 = quantile(value, 0.75),
-            test_q95 = quantile(value, 0.95),
-            test_q100 = quantile(value, 1.00))
-```
 
 ```{r}
-sub.df <- metrics.long %>% 
-  filter(metric %in% metrics.vec) %>% 
-  left_join(ref.df, by = "metric") %>% 
-  left_join(test.df, by = "metric") %>% 
-  mutate(disturbance = case_when(
-    ref_q50 > test_q50 ~ "inc",
-    ref_q50 < test_q50 ~ "dec",
-    ref_q50 == test_q50  ~ "equ",
-    TRUE ~ "ERROR"
-  ))
-
-# test <- score_metrics(metrics.df = sub.df,
-#                       scoring.method = "all_gradient_5_95",
-#                       sensitivity.df = data.frame(sensitivity.df),
-#                       sensitivity.colname = "de",
-#                       sensitivity.threshold = 0.7,
-#                       first.metric = "pct_ept",
-#                       condition.colname = "site_condition",
-#                       ref.cond = "ref")
-```
-
-```{r}
-sub.df <- metrics.long %>% 
+sub.df <- reg.df %>% 
   filter(metric %in% metrics.vec) %>% 
   group_by(metric) %>% 
-  mutate(min = min(value),
+  mutate(quant_5 = quantile(value, 0.05),
+         quant_95 = quantile(value, 0.95),
+         min = min(value),
          max = max(value),
-         score = (value - min) / (max - min) * 100) %>% 
+         score = (value - quant_5) / (quant_95 - quant_5) * 100,
+         score = case_when(
+           score > 100 ~ 100,
+           score < 0 ~ 0,
+           TRUE ~ score
+         )) %>% 
   select(-min, -max, -value)
 
 index.df <- sub.df %>% 
   # spread(metric, score) %>% 
-  group_by(bas_loc_rm, site_condition, lg_region) %>% 
-  summarise(index_score = mean(score))
+  group_by(bas_loc_rm, site_condition, lg_reg_v2) %>% 
+  summarise(index_score = mean(score)) %>% 
+  ungroup()
 ```
 
 ```{r}
@@ -145,7 +102,7 @@ index.df %>%
 ```{r}
 index.df %>% 
   # filter(site_condition == "ref") %>% 
-  ggplot(aes(lg_region, index_score, fill = site_condition)) +
+  ggplot(aes(lg_reg_v2, index_score, fill = site_condition)) +
   geom_boxplot()
 ```
 
@@ -155,28 +112,26 @@ index.df %>%
 selected.df <- sub.df %>% 
   spread(metric, score) %>% 
   left_join(condition.df, by = c("bas_loc_rm", "site_condition", "lg_region")) %>% 
-  # select(site_condition, metrics.vec) %>% 
-  mutate(site_condition = if_else(site_condition == "ref", 1, 0)) %>% 
-  filter(lg_region %in% "Great Lakes")
+  select(site_condition, metrics.vec) %>% 
+  mutate(site_condition = if_else(site_condition == "ref", 1, 0))
 
 
-logistic <- glm(site_condition ~ .,
-                data = selected.df %>% select(site_condition, metrics.vec), family = "binomial")
+logistic <- glm(site_condition ~ ., data = selected.df, family = "binomial")
 
-selected.df$predicted <- predict(logistic, newdata = selected.df, type = "response")
+selected.df$predicted <- predict(logistic, newdata = selected.df, type="response")
 
-coef.vec <- summary(logistic)$coefficients %>% 
+coef.df <- summary(logistic)$coefficients %>% 
   as_tibble() %>% 
   mutate(metric = rownames(summary(logistic)$coefficients)) %>% 
   filter(`Pr(>|z|)` < 0.1,
-         metric != "(Intercept)") %>%
+         metric != "(Intercept)") %>% 
   pull(metric)
 
 
 selected.df <- sub.df  %>% 
   spread(metric, score) %>% 
   left_join(condition.df, by = c("bas_loc_rm", "site_condition", "lg_region")) %>% 
-  select(site_condition, coef.vec) %>% 
+  select(site_condition, coef.df) %>% 
   mutate(site_condition = if_else(site_condition == "ref", 1, 0))
 
 
@@ -188,7 +143,7 @@ selected.df$predicted <- predict(logistic, newdata = selected.df, type="response
 
 ```{r, fig.width=10, fig.height=4}
 sw.sens.df %>% 
-  filter(metric %in% coef.vec) %>% 
+  filter(metric %in% coef.df) %>% 
   inner_join(metrics.long, by = "metric") %>% 
   mutate(metric = factor(metric, levels = unique(metric))) %>% 
   ggplot(aes(site_condition, value)) +
@@ -225,13 +180,6 @@ ggplot(selected.df, aes(x=predicted, y=site_condition)) + geom_point() +
 
 ```{r}
 ggplot(selected.df, aes(as.factor(site_condition), predicted)) +
-  geom_boxplot() +
-  geom_jitter()
-```
-
-
-```{r}
-ggplot(selected.df, aes(as.factor(site_condition), predicted, fill = lg_region)) +
   geom_boxplot() +
   geom_jitter()
 ```

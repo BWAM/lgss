@@ -1,0 +1,68 @@
+---
+title: "site_condition"
+author: "Gavin Lemley"
+date: "February 21, 2019"
+output: html_document
+---
+
+Find the R-project root directory to simplify file path designations.
+```{r}
+root.dir <- rprojroot::find_root("lgss.Rproj")
+```
+
+Load in data table
+```{r}
+library(tidyverse)
+
+# site.condition <- read.csv(file.path(root.dir, "data/site_condition", "site_condition_BoxWhisker.csv"))
+site.condition <- file.path(root.dir, 
+                          "data",
+                          "site_condition",
+                          "site_condition_BoxWhisker.csv") %>% 
+  data.table::fread() %>% 
+  rename(pct_natural_landcover = LU_pct_nat_wetlnd) %>% 
+  rename(Sp_Conductance_uScm = COND) %>% 
+  rename(Region = LG_reg_v2)
+
+  theme_set(theme_grey(base_size = 15)) 
+
+
+site.condition %>%
+  # mutate(Region = forcats::fct_reorder(Region, Sp_Conductance_uScm, mean)) %>%
+    mutate(Region = factor(Region, levels = 
+                             c("Adirondacks", "Hudson Valley", "Southern Tier", "Great Lakes", "Long Island" ))) %>%
+  ggplot(aes(Region, Sp_Conductance_uScm)) + 
+  # scale_x_continuous(breaks=scales::pretty_breaks(n = 10)) +
+  geom_boxplot()
+
+
+# For reordering by name (enter in list c())
+# site.condition %>%
+#   mutate(Region = factor(Region, levels = c())) %>%
+#   ggplot(aes(Region, Sp_Conductance_uScm)) + 
+#   geom_boxplot()
+
+site.condition %>%
+  # mutate(Region = forcats::fct_reorder(Region, pct_natural_landcover, mean)) %>%
+  mutate(Region = factor(Region, levels = 
+                             c("Adirondacks", "Hudson Valley", "Southern Tier", "Great Lakes", "Long Island" ))) %>%
+  ggplot(aes(Region, pct_natural_landcover)) + 
+  geom_boxplot() 
+
+site.condition %>%
+  # mutate(Region = forcats::fct_reorder(Region, pct_natural_landcover, mean)) %>%
+  mutate(Region = factor(Region, levels = 
+                             c("Adirondacks", "Hudson Valley", "Southern Tier", "Great Lakes", "Long Island" ))) %>%
+
+  ggplot(aes(Region, pct_natural_landcover)) + 
+  geom_boxplot() + geom_jitter(aes(color = Sp_Conductance_uScm))
+
+site.condition %>%
+  mutate(Region = factor(Region, levels = 
+                             c("Adirondacks", "Hudson Valley", "Southern Tier", "Great Lakes", "Long Island" ))) %>%
+
+  # mutate(Region = forcats::fct_reorder(Region, Sp_Conductance_uScm, mean)) %>%
+  ggplot(aes(Region, Sp_Conductance_uScm)) + 
+  geom_boxplot() + geom_jitter(aes(color = pct_natural_landcover))
+
+```
