@@ -85,6 +85,7 @@ ref.df <- metrics.long %>%
             ref_q95 = quantile(value, 0.95),
             ref_q100 = quantile(value, 1.00))
 
+
 test.df <- metrics.long %>%
   filter(metric %in% metrics.vec,
          site_condition == "test") %>%
@@ -154,26 +155,28 @@ index.df %>%
 selected.df <- sub.df %>% 
   spread(metric, score) %>% 
   left_join(condition.df, by = c("bas_loc_rm", "site_condition", "lg_region")) %>% 
-  select(site_condition, metrics.vec) %>% 
-  mutate(site_condition = if_else(site_condition == "ref", 1, 0))
+  # select(site_condition, metrics.vec) %>% 
+  mutate(site_condition = if_else(site_condition == "ref", 1, 0)) %>% 
+  filter(lg_region %in% "Great Lakes")
 
 
-logistic <- glm(site_condition ~ ., data = selected.df, family = "binomial")
+logistic <- glm(site_condition ~ .,
+                data = selected.df %>% select(site_condition, metrics.vec), family = "binomial")
 
-selected.df$predicted <- predict(logistic, newdata = selected.df, type="response")
+selected.df$predicted <- predict(logistic, newdata = selected.df, type = "response")
 
-coef.df <- summary(logistic)$coefficients %>% 
+coef.vec <- summary(logistic)$coefficients %>% 
   as_tibble() %>% 
   mutate(metric = rownames(summary(logistic)$coefficients)) %>% 
   filter(`Pr(>|z|)` < 0.1,
-         metric != "(Intercept)") %>% 
+         metric != "(Intercept)") %>%
   pull(metric)
 
 
 selected.df <- sub.df  %>% 
   spread(metric, score) %>% 
   left_join(condition.df, by = c("bas_loc_rm", "site_condition", "lg_region")) %>% 
-  select(site_condition, coef.df) %>% 
+  select(site_condition, coef.vec) %>% 
   mutate(site_condition = if_else(site_condition == "ref", 1, 0))
 
 
@@ -185,7 +188,7 @@ selected.df$predicted <- predict(logistic, newdata = selected.df, type="response
 
 ```{r, fig.width=10, fig.height=4}
 sw.sens.df %>% 
-  filter(metric %in% coef.df) %>% 
+  filter(metric %in% coef.vec) %>% 
   inner_join(metrics.long, by = "metric") %>% 
   mutate(metric = factor(metric, levels = unique(metric))) %>% 
   ggplot(aes(site_condition, value)) +
@@ -222,6 +225,13 @@ ggplot(selected.df, aes(x=predicted, y=site_condition)) + geom_point() +
 
 ```{r}
 ggplot(selected.df, aes(as.factor(site_condition), predicted)) +
+  geom_boxplot() +
+  geom_jitter()
+```
+
+
+```{r}
+ggplot(selected.df, aes(as.factor(site_condition), predicted, fill = lg_region)) +
   geom_boxplot() +
   geom_jitter()
 ```
