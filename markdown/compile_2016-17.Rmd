@@ -5,10 +5,6 @@ date: "January 2, 2019"
 output: html_document
 ---
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-```
-
 ### For abiotic data ###
 Find the R-project root directory to simplify file path designations.
 ```{r}
@@ -75,6 +71,12 @@ bugs201617.df$RIVMILE <- formatC( bugs201617.df$RIVMILE, format='f', digits=1 )
 #Create BAS_LOC_RM field
 bugs201617.df$BAS_LOC_RM <- paste0(bugs201617.df$BASIN,"-",bugs201617.df$LOCATION,"-",bugs201617.df$RIVMILE)
 
+# Create year field for troubleshooting missing data in ITS tables
+bugs201617.df_TEMP <- bugs201617.df %>% 
+  mutate(YEAR = format(as.Date(COLL_DATE, format="%m/%d/%Y"),"%Y")) %>% 
+  select(BAS_LOC_RM, YEAR) %>% 
+  distinct() %>% 
+  select(YEAR)
 
 ```
 

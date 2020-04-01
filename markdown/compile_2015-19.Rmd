@@ -14,71 +14,133 @@ root.dir <- rprojroot::find_root("lgss.Rproj")
 
 ```
 
-Load in data tables, subset, and add fields
+Load in ITS data tables, subset, and add fields
+### NOT USING B/C MUCH LG DATA MISSING FROM ITS TABLES ###
 ```{r}
 
+# Load joined data from Keleigh
 bugs.all <- read_csv(file.path(root.dir, "data/2015-2019", "raw.macrolab.gavin.csv")) %>% 
   mutate(COLL_DATE_T = as.Date(COLL_DATE_T, format = "%m/%d/%Y")) %>%
   filter(COLLECT == 9) %>%
   mutate(SITE_ID = sub('_[^_]*$', '', EVENT_ID)) 
 
-macrodata.ITS <- read_csv(file.path(root.dir, "data/2015-2019/ITS_tables", "S_MACRO_SPECIES_DATA_HISTORY.csv")) %>% 
+# Load macro species data table submitted to ITS
+macrodata.ITS <- read_csv(file.path(root.dir, "data/2015-2019/ITS_tables_03-31-2020", "S_MACRO_SPECIES_DATA_HISTORY.csv")) %>% 
   mutate(SITE_ID = sub('_[^_]*$', '', EVENT_ID)) %>% 
   mutate(SAMPLE_DATE = sub('.*\\_', '', EVENT_ID)) %>% 
   mutate(SAMPLE_DATE = as.Date(SAMPLE_DATE, format = "%Y%m%d")) 
 
-macroinfo.ITS <- read_csv(file.path(root.dir, "data/2015-2019/ITS_tables", "S_MACRO_SPECIES_SAMP_INF_HIST.csv")) %>% 
-  filter(BIOSAMPLE_COLLECT_METHOD_ID == 9) %>%
+# Load macro sample info table submitted to ITS
+macroinfo.ITS <- read_csv(file.path(root.dir, "data/2015-2019/ITS_tables_03-31-2020", "S_MACRO_SPECIES_SAMP_INF_HIST.csv")) %>% 
+  # filter(BIOSAMPLE_COLLECT_METHOD_ID == 9) %>%
   mutate(SITE_ID = sub('_[^_]*$', '', EVENT_SMAS_ID)) %>% 
   mutate(SAMPLE_DATE = sub('.*\\_', '', EVENT_SMAS_ID)) %>% 
   mutate(SAMPLE_DATE = as.Date(SAMPLE_DATE, format = "%Y%m%d")) %>% 
-  mutate(YEAR = format(as.Date(SAMPLE_DATE, format="%d/%m/%Y"),"%Y"))
-  
-macroinfo.ITS.count <- macroinfo.ITS %>% 
-  select(SITE_ID, YEAR) %>% 
-  distinct() %>% 
-  select(YEAR)
 
+# Load macro field data table submitted to ITS
+field.macro.ITS <- read_csv(file.path(root.dir, "data/2015-2019/ITS_tables_03-31-2020", "S_MACRO_FIELD_DATA_2020_03_30.csv")) 
+# %>% 
+#   filter(bugs.all$EVENT_ID %in% EVENT_ID)
 
-field.macro.ITS <- read_csv(file.path(root.dir, "data/2015-2019/ITS_tables", "S_MACRO_FIELD_DATA_2020_03_30.csv")) %>% 
-  filter(bugs.all$EVENT_ID %in% EVENT_ID)
-  mutate(SITE_ID = sub('_[^_]*$', '', EVENT_ID)) %>% 
-  mutate(SAMPLE_DATE = sub('.*\\_', '', EVENT_ID)) %>% 
-  mutate(SAMPLE_DATE = as.Date(SAMPLE_DATE, format = "%Y%m%d"))
+# Load field sampling event info table submitted to ITS
+field.eventinfo.ITS <- read_csv(file.path(root.dir, "data/2015-2019/ITS_tables_03-31-2020", "S_SAMPLE_EVENT_INFO_2020_03_30.csv"))
 
-field.eventinfo.ITS <- read_csv(file.path(root.dir, "data/2015-2019/ITS_tables", "S_SAMPLE_EVENT_INFO_2020_03_30.csv")) %>% 
-  mutate(SITE_ID = sub('_[^_]*$', '', EVENT_SMAS_ID)) %>% 
-  mutate(SAMPLE_DATE = sub('.*\\_', '', EVENT_SMAS_ID)) %>% 
-  mutate(SAMPLE_DATE = as.Date(SAMPLE_DATE, format = "%Y%m%d"))
+# Load habitat survey table submitted to ITS
+field.habitat.ITS <- read_csv(file.path(root.dir, "data/2015-2019/ITS_tables_03-31-2020", "S_HABITAT_FIELD_DATA_2020_03_13.csv"))
 
-field.habitat.ITS <- read_csv(file.path(root.dir, "data/2015-2019/ITS_tables", "S_HABITAT_FIELD_DATA_2020_03_13.csv")) %>% 
-  mutate(SITE_ID = sub('_[^_]*$', '', EVENT_SMAS_ID)) %>% 
-  mutate(SAMPLE_DATE = sub('.*\\_', '', EVENT_SMAS_ID)) %>% 
-  mutate(SAMPLE_DATE = as.Date(SAMPLE_DATE, format = "%Y%m%d"))
-
+#Load master sites table
 sites.master <- read_csv(file.path(root.dir, "data/2015-2019", "20191224_Site_Field_cleaned_final.csv"))
 
 
 ```
 
+Assessing ITS tables for missing LG data
+```{r}
+macroinfo.ITS <- macroinfo.ITS %>% 
+  mutate(YEAR = format(as.Date(SAMPLE_DATE, format="%m/%d/%Y"),"%Y"))
+
+macroinfo.ITS.2018 <- macroinfo.ITS %>% 
+  filter(YEAR == "2018") 
+
+macroinfo.ITS.LG <- macroinfo.ITS %>% 
+  filter(BIOSAMPLE_COLLECT_METHOD_ID == 9)
+
+macroinfo.ITS.LG.count <- macroinfo.ITS.LG %>% 
+  select(SITE_ID, YEAR) %>% 
+  distinct() %>% 
+  select(YEAR) 
+table(macroinfo.ITS.LG.count)
+
+
+
+
+```
+
+
 Format data further for sending to TetraTech
 ```{r}
-tt.bugs.all <- read_csv(file.path(root.dir, "data/2015-2019", "raw.macrolab.gavin.csv")) %>% 
-  select(-c(X1, LOCATION, BASIN, RIVMILE, COLL_DATE_D, SITE_LOC_ID, BASIN_T, RIVMILE_T, COLL_DATE, MSSIH_TOTAL_INDIV_CNT_IND))
-
-tt.field.macro <- field.macro %>% 
-  mutate(SITE_ID = sub('_[^_]*$', '', EVENT_ID))
-
-tt.field.eventinfo <- field.eventinfo %>% 
-  mutate(SITE_ID = sub('_[^_]*$', '', EVENT_SMAS_ID))
-
-tt.field.habitat <- field.habitat %>% 
-  mutate(SITE_ID = sub('_[^_]*$', '', EVENT_SMAS_ID))
-
-tt.sites.master <- sites.master %>% 
+# tt.bugs.all <- read_csv(file.path(root.dir, "data/2015-2019", "raw.macrolab.gavin.csv")) %>% 
+#   select(-c(X1, LOCATION, BASIN, RIVMILE, COLL_DATE_D, SITE_LOC_ID, BASIN_T, RIVMILE_T, COLL_DATE, MSSIH_TOTAL_INDIV_CNT_IND))
+# 
+# tt.field.macro <- field.macro %>% 
+#   mutate(SITE_ID = sub('_[^_]*$', '', EVENT_ID))
+# 
+# tt.field.eventinfo <- field.eventinfo %>% 
+#   mutate(SITE_ID = sub('_[^_]*$', '', EVENT_SMAS_ID))
+# 
+# tt.field.habitat <- field.habitat %>% 
+#   mutate(SITE_ID = sub('_[^_]*$', '', EVENT_SMAS_ID))
+# 
+# tt.sites.master <- sites.master %>% 
   
 
 ```
+
+Load in all raw bug data and compile
+```{r}
+# bugs.path.16.17 <- file.path(root.dir, "data", "compile_2016-17", "LGSS_BUGS_2016_2017_IDSs_fixed.xlsx")
+# bugs2016.df <- readxl::read_excel(bugs.path.16.17, sheet = "LGSS 2016")
+# bugs2017.df <- readxl::read_excel(bugs.path.16.17, sheet = "LGSS 2017")
+# bugs201617.df <-rbind(bugs2016.df,bugs2017.df) %>% 
+#   mutate(BASIN = formatC(as.numeric(BASIN), width = 2, format = "d", flag = "0")) %>% 
+#   mutate(RIVMILE = formatC(as.numeric(RIVMILE), format='f', digits=1 )) %>% 
+#   mutate(SITE_ID = paste(BASIN,LOCATION,RIVMILE, sep = "-")) %>% 
+#   mutate(COLL_DATE = as.Date(COLL_DATE, format="%m/%d/%Y"))
+#   # mutate(YEAR = format(as.Date(COLL_DATE, format="%m/%d/%Y"),"%Y"))
+# # bugs2016 <- bugs201617.df %>% 
+# #   filter(YEAR == "2016")
+# # bugs2017 <- bugs201617.df %>% 
+# #   filter(YEAR == "2017")
+# # rm(bugs2016, bugs2017)
+# rm(bugs2016.df, bugs2017.df)
+
+bugs.2018.1 <- read_xlsx(file.path(root.dir, "data", "2015-2019", "raw_macro_2018_2019",
+                                   "2018_Lakes_RBS-Scr_RMN_T4T.xlsx")) %>% 
+  rename(RIVMILE = RiverMile, SITE_ID = LOCATION) %>% 
+  mutate(LOCATION = "") %>% 
+  select(-"WAA Project ID")
+
+bugs.2018.2 <- read_xlsx(file.path(root.dir, "data", "2015-2019", "raw_macro_2018_2019",
+                                    "NYSDEC_MacroTaxa_WALK_RAS_2018.xlsx")) %>% 
+  mutate(ClientProjectName = "") %>% 
+  rename(SITE_ID = LOCATION) %>% 
+  mutate(LOCATION = "") %>% 
+  select(-"WAA Project ID")
+
+bugs.2019 <- read_csv(file.path(root.dir, "data", "2015-2019", "raw_macro_2018_2019", "2019_MacroTaxa.csv")) %>% 
+  rename(SITE_ID = SITE_LOC_ID) %>% 
+  select("WAA ID", "BASIN", "SITE_ID", "RIVMILE", "COLL_DATE", "COLLECT", "Replicate", "MACRO_GENSPECIES", "INDIV", "Stage", "TAXONOMIST", "Comments", "#_Grids", "PercentWTSorted", "TotalInd", "ClientProjectName", "LOCATION")
+
+bugs.bind.18.19 <- rbind(bugs.2018.1, bugs.2018.2, bugs.2019)
+
+# Subset ITS table to LG and see if there are extras that didn't make it into 2015-19 data 
+  # (may be 3 in 2017, 1 in 2016, and 5 in 2015)
+
+
+
+```
+
+
 
 
 Merge tables to associate site info with field data.
