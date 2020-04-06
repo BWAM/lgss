@@ -72,11 +72,11 @@ bugs201617.df$RIVMILE <- formatC( bugs201617.df$RIVMILE, format='f', digits=1 )
 bugs201617.df$BAS_LOC_RM <- paste0(bugs201617.df$BASIN,"-",bugs201617.df$LOCATION,"-",bugs201617.df$RIVMILE)
 
 # Create year field for troubleshooting missing data in ITS tables
-bugs201617.df_TEMP <- bugs201617.df %>% 
-  mutate(YEAR = format(as.Date(COLL_DATE, format="%m/%d/%Y"),"%Y")) %>% 
-  select(BAS_LOC_RM, YEAR) %>% 
-  distinct() %>% 
-  select(YEAR)
+# bugs201617.df_TEMP <- bugs201617.df %>% 
+#   mutate(YEAR = format(as.Date(COLL_DATE, format="%m/%d/%Y"),"%Y")) %>% 
+#   select(BAS_LOC_RM, YEAR) %>% 
+#   distinct() %>% 
+#   select(YEAR)
 
 ```
 
