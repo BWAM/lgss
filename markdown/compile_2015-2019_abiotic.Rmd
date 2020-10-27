@@ -1,0 +1,73 @@
+---
+title: "compile_2015-2019_abiotic"
+output: html_document
+---
+
+```{r}
+library(tidyverse)
+library(readxl)
+
+root.dir <- rprojroot::find_root("lgss.Rproj")
+
+fielddata.2015.path <- file.path(root.dir, "data", "compile_2015-2019", "field_data", "2015_LGSS_data_MASTER_oct2020_siteIDcorrections.xlsx")
+fielddata.2016.2017.path <- file.path(root.dir, "data", "compile_2015-2019", "field_data", "LGSS_16-17_MASTER_v2.xlsx")
+
+sei.path <- file.path(root.dir, "data", "compile_2015-2019", "ITS_tables_20201027", "20201019_S_SAMPLE_EVENT_INFO_all_fields.xlsx")
+
+```
+
+Read in best versions of 2015 and 2016-2017 tables
+```{r}
+
+# Full StreamStats output tables are in the same dir as in case more variables are needed.
+
+field.LU.2015 <- read_excel(fielddata.2015.path, sheet = "FieldData") # Land use data exists here
+habitat.2015 <- read_excel(fielddata.2015.path, sheet = "Habitat")
+toc.2015 <- read_excel(fielddata.2015.path, sheet = "TOC")
+grainsz.2015 <- read_excel(fielddata.2015.path, sheet = "GrainSize")
+ecoregion.2015 <- read_excel(fielddata.2015.path, sheet = "Ecoregion")
+streamstats.2015 <- read_excel(fielddata.2015.path, sheet = "StreamStats_basins") # Doesn't include all variables from original table but maybe the important ones.
+
+field.LU.2016.2017 <- read_excel(fielddata.2016.2017.path, sheet = "LG data + sites, LU, SteamStats") %>%  
+  select(1:62,84)
+habitat.2016.2017 <- read_excel(fielddata.2016.2017.path, sheet = "Habitat") 
+ecoregion.2016.2017 <- read_excel(fielddata.2016.2017.path, sheet = "LG2016-17_ecoregion_join") 
+streamstats.2016.2017 <- read_excel(fielddata.2016.2017.path, sheet = "LG data + sites, LU, SteamStats") %>%
+  select(1,86:90)
+
+```
+
+Read in 2018-2019 data from current version of SBU database and format
+```{r}
+SEI <- read_excel(sei.path, col_types = "text") 
+```
+
+Compile field data
+```{r}
+
+```
+
+Compile habitat data (or add to field table above?)
+```{r}
+
+```
+
+Compile site information (sites table + StreamStats + landuse)
+```{r}
+
+# Still need to harvest StreamStats + landuse data for 2018-2019 (do for 2020 at the same time?)
+
+
+```
+
+Check all against master sites table
+```{r}
+
+
+##  (need to add NISS-4.7 to sites table?)  
+
+
+```
+
+
+

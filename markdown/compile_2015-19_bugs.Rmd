@@ -1,0 +1,220 @@
+---
+title: "compile_2015-19"
+author: "Gavin Lemley"
+date: "3/31/20"
+output: html_document
+---
+
+Find the R-project root directory to simplify file path designations.
+```{r}
+library(tidyverse)
+library(readxl)
+
+root.dir <- rprojroot::find_root("lgss.Rproj")
+
+#Load master sites table
+sites.master <- read_csv(file.path(root.dir, "data/compile_2015-2019", "20191224_Site_Field_cleaned_final.csv"))
+
+```
+
+Load in ITS data tables, subset, and add fields
+### NOT USING B/C MUCH LG DATA MISSING FROM ITS TABLES ###
+```{r}
+
+# Load joined data from Keleigh
+bugs.all <- read_csv(file.path(root.dir, "data/compile_2015-2019", "raw.macrolab.gavin.csv")) %>% 
+  mutate(COLL_DATE_T = as.Date(COLL_DATE_T, format = "%m/%d/%Y")) %>%
+  filter(COLLECT == 9) %>%
+  mutate(SITE_ID = sub('_[^_]*$', '', EVENT_ID)) 
+
+# Load macro species data table submitted to ITS
+macrodata.ITS <- read_csv(file.path(root.dir, "data/compile_2015-2019/ITS_tables_03-31-2020", "S_MACRO_SPECIES_DATA_HISTORY.csv")) %>% 
+  mutate(SITE_ID = sub('_[^_]*$', '', EVENT_ID)) %>% 
+  mutate(SAMPLE_DATE = sub('.*\\_', '', EVENT_ID)) %>% 
+  mutate(SAMPLE_DATE = as.Date(SAMPLE_DATE, format = "%Y%m%d")) 
+
+# Load macro sample info table submitted to ITS
+macroinfo.ITS <- read_csv(file.path(root.dir, "data/compile_2015-2019/ITS_tables_03-31-2020", "S_MACRO_SPECIES_SAMP_INF_HIST.csv")) %>% 
+  # filter(BIOSAMPLE_COLLECT_METHOD_ID == 9) %>%
+  mutate(SITE_ID = sub('_[^_]*$', '', EVENT_SMAS_ID)) %>% 
+  mutate(SAMPLE_DATE = sub('.*\\_', '', EVENT_SMAS_ID)) %>% 
+  mutate(SAMPLE_DATE = as.Date(SAMPLE_DATE, format = "%Y%m%d")) 
+
+# Load macro field data table submitted to ITS
+field.macro.ITS <- read_csv(file.path(root.dir, "data/compile_2015-2019/ITS_tables_03-31-2020", "S_MACRO_FIELD_DATA_2020_03_30.csv")) 
+# %>% 
+#   filter(bugs.all$EVENT_ID %in% EVENT_ID)
+
+# Load field sampling event info table submitted to ITS
+field.eventinfo.ITS <- read_csv(file.path(root.dir, "data/compile_2015-2019/ITS_tables_03-31-2020", "S_SAMPLE_EVENT_INFO_2020_03_30.csv"))
+
+# Load habitat survey table submitted to ITS
+field.habitat.ITS <- read_csv(file.path(root.dir, "data/compile_2015-2019/ITS_tables_03-31-2020", "S_HABITAT_FIELD_DATA_2020_03_13.csv"))
+
+
+
+
+```
+
+Assessing ITS tables for missing LG data
+```{r}
+macroinfo.ITS <- macroinfo.ITS %>% 
+  mutate(YEAR = format(as.Date(SAMPLE_DATE, format="%m/%d/%Y"),"%Y"))
+
+macroinfo.ITS.2018 <- macroinfo.ITS %>% 
+  filter(YEAR == "2018") 
+
+macroinfo.ITS.LG <- macroinfo.ITS %>% 
+  filter(BIOSAMPLE_COLLECT_METHOD_ID == 9)
+
+macroinfo.ITS.LG.count <- macroinfo.ITS.LG %>% 
+  select(SITE_ID, YEAR) %>% 
+  distinct() %>% 
+  select(YEAR) 
+table(macroinfo.ITS.LG.count)
+
+
+
+
+```
+
+
+Merge 2016-2017 from source to include COLL_DATE (code copied and modified from "compile_2016-2017.Rmd")
+```{r}
+bugs.path <- file.path(root.dir,  "data", "compile_2016-17", "LGSS_BUGS_2016_2017_IDSs_fixed.xlsx")
+bugs2016.df <- readxl::read_excel(bugs.path, sheet = "LGSS 2016")
+bugs2017.df <- readxl::read_excel(bugs.path, sheet = "LGSS 2017")
+bugs201617.df <-rbind(bugs2016.df,bugs2017.df)
+
+#Format fields to add leading, and keep trailing zeros.
+bugs201617.df$BASIN <- as.numeric(bugs201617.df$BASIN)
+bugs201617.df$BASIN <- formatC(bugs201617.df$BASIN, width = 2, format = "d", flag = "0")
+bugs201617.df$RIVMILE <- as.numeric(bugs201617.df$RIVMILE)
+bugs201617.df$RIVMILE <- formatC( bugs201617.df$RIVMILE, format='f', digits=1 )
+
+#Create BAS_LOC_RM field
+bugs201617.df$SITE_ID <- paste0(bugs201617.df$BASIN,"-",bugs201617.df$LOCATION,"-",bugs201617.df$RIVMILE)
+
+#Transform from long to wide
+bugmatrix1617.df <- bugs201617.df %>% 
+  mutate(COLL_DATE = as.Date(COLL_DATE, format = "%m/%d/%Y")) %>% 
+  select(SITE_ID, COLL_DATE, REPLICATE, MACRO_GENSPECIES, INDIV) %>% 
+  group_by(SITE_ID, COLL_DATE, REPLICATE, MACRO_GENSPECIES) %>% 
+  summarise(INDIV = sum(INDIV)) %>% 
+  spread(MACRO_GENSPECIES, INDIV, fill = 0)
+
+rm(bugs2016.df, bugs2017.df, bugs201617.df)
+
+```
+
+Pull in 2015 field data to add dates, then merge matrix to 2016-2017 matrix.
+```{r}
+fielddata.2015 <- readxl::read_excel(file.path(root.dir,  "data", "compile_2015-2019", "field_data",
+                                               "2015_LGSS_alltables_Apr2020_SITEID_corrections.xlsx"), sheet = "FieldData") %>% 
+  rename(COLL_DATE = Date_FieldData) %>% 
+  rename(SITE_ID = BAS_LOC_RM) %>% 
+  mutate(COLL_DATE = as.Date(COLL_DATE)) %>% 
+  select(SITE_ID, COLL_DATE)
+
+
+bugmatrix2015.df <- read.csv(file.path(root.dir, "data", "2015_bugs_Apr2020_SITEID_corrections.csv"), stringsAsFactors = FALSE, 
+                             check.names = FALSE) %>% 
+  rename(SITE_ID = BAS_LOC_RM) %>% 
+  left_join(fielddata.2015, by = "SITE_ID") %>% 
+  mutate(REPLICATE = 1) %>% 
+  select(SITE_ID, COLL_DATE, REPLICATE, everything())
+  # mutate(SITE_ID = ifelse(grepl("01-LSIS-2.0",SITE_ID),"01-LSIS-2.4",SITE_ID))  
+
+
+#Replace NAs with 0s
+bugmatrix2015.df[is.na(bugmatrix2015.df)] <- 0
+
+bugmatrix.15.16.17.df <- bind_rows(bugmatrix2015.df, bugmatrix1617.df)
+bugmatrix.15.16.17.df[is.na(bugmatrix.15.16.17.df)] <- 0
+bugmatrix.15.16.17.df <- bugmatrix.15.16.17.df[order(bugmatrix.15.16.17.df$SITE_ID),] 
+
+rm(bugmatrix1617.df, bugmatrix2015.df, fielddata.2015)
+```
+
+
+Load in raw 2018 and 2019 bug data, compile, and generate matrix. Then bind to 16-17-18 data.
+```{r}
+
+bugs.2018.1 <- read_xlsx(file.path(root.dir, "data", "compile_2015-2019", "raw_macro_2018_2019",
+                                   "2018_Lakes_RBS-Scr_RMN_T4T.xlsx"), col_types = c(Replicate="text")) %>% 
+  rename(RIVMILE = RiverMile, SITE_ID = LOCATION) %>% 
+  mutate(LOCATION = "") %>% 
+  select(-"WAA Project ID")
+
+bugs.2018.2 <- read_xlsx(file.path(root.dir, "data", "compile_2015-2019", "raw_macro_2018_2019",
+                                    "NYSDEC_MacroTaxa_WALK_RAS_2018.xlsx")) %>% 
+  mutate(ClientProjectName = "") %>% 
+  rename(SITE_ID = LOCATION) %>% 
+  mutate(LOCATION = "") %>% 
+  select(-"WAA Project ID")
+
+bugs.2019 <- read_csv(file.path(root.dir, "data", "compile_2015-2019", "raw_macro_2018_2019", "2019_MacroTaxa.csv"), col_types = c(Replicate="c")) %>% 
+  rename(SITE_ID = SITE_LOC_ID) %>% 
+  mutate(SITE_ID = ifelse(grepl("09-CHPW-11",SITE_ID),"09-CHPW-11.0",SITE_ID)) %>%   
+  
+  select("WAA ID", "BASIN", "SITE_ID", "RIVMILE", "COLL_DATE", "COLLECT", "Replicate", "MACRO_GENSPECIES", "INDIV", "Stage", "TAXONOMIST", "Comments", "#_Grids", "PercentWTSorted", "TotalInd", "ClientProjectName", "LOCATION")
+
+bugs.bind.18.19 <- rbind(bugs.2018.1, bugs.2018.2, bugs.2019) %>% 
+  filter(COLLECT %in% c("Low_Gradient", "Low Gradient", "9")) %>% 
+  rename(REPLICATE = Replicate) %>% 
+  mutate(REPLICATE = as.numeric(REPLICATE))
+
+
+#Transform from long to wide
+bugmatrix.18.19.df <- bugs.bind.18.19 %>% 
+  mutate(REPLICATE = ifelse(is.na(REPLICATE), 1, REPLICATE)) %>%
+  mutate(INDIV = as.numeric(INDIV)) %>% 
+  mutate(COLL_DATE = as.Date(COLL_DATE, format = "%m/%d/%Y")) %>% 
+  select(SITE_ID, COLL_DATE, REPLICATE, MACRO_GENSPECIES, INDIV) %>% 
+  group_by(SITE_ID, COLL_DATE, REPLICATE, MACRO_GENSPECIES) %>% 
+  summarise(INDIV = sum(INDIV)) %>% 
+  spread(MACRO_GENSPECIES, INDIV, fill = 0)
+
+bugmatrix.15to19 <- bind_rows(bugmatrix.15.16.17.df, bugmatrix.18.19.df)
+bugmatrix.15to19[is.na(bugmatrix.15to19)] <- 0
+bugmatrix.15to19 <- bugmatrix.15to19[order(bugmatrix.15to19$SITE_ID),] 
+
+# Subset ITS table to LG and see if there are extras that didn't make it into 2015-19 data 
+  # (may be 3 in 2017, 1 in 2016, and 5 in 2015)
+
+
+
+```
+
+Check sites table to see if all LG samples sites for 2015-2019 are present
+```{r}
+
+
+matchlist <- bugmatrix.15to19 %>% 
+  select(SITE_ID, COLL_DATE) %>% 
+  mutate(SITE_MATCH = SITE_ID %in% sites.master$BAS_LOC_RM)
+  
+# 5 sites not in sites table:
+
+#	01-LSIS-2.0	2015-08-05	FALSE   01-LSIS-2.4 exists in site table. Coords are on same intersection. (FIXED IN SOURCE DATA)
+#	03-GUFF-1.8	2015-07-21	FALSE   	03-GUFF-0.9 exists in sites table. Coords 600 ft away.  (FIXED IN SOURCE DATA)
+#	09-CHPW-11	2019-09-17	FALSE   MISSING RM ".0" (FIXED IN CODE ABOVE)
+#	12-TEET-0.8	2015-06-19	FALSE   	11-TEET-0.8 exists in sites table. Confirmed same site. (FIXED IN SOURCE DATA)
+#	17-NISS-4.7	2015-06-26	FALSE     17-NISS-6.0 exists in sites table. Coord are not close. Add to sites table? (NOT FIXED)
+
+
+```
+
+Export for TetraTech
+```{r}
+
+write.table(bugmatrix.15to19, file.path(root.dir, "data/compile_2015-2019/NYSDEC_LowGrad_macro_2015-2019_2020-04-09.csv"),sep=",", row.names = FALSE)
+
+
+```
+
+
+```{r}
+# Add total indiv count fields, remove those <200???
+```
+
