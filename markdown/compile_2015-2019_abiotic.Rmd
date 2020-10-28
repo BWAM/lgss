@@ -10,40 +10,276 @@ library(readxl)
 root.dir <- rprojroot::find_root("lgss.Rproj")
 
 fielddata.2015.path <- file.path(root.dir, "data", "compile_2015-2019", "field_data", "2015_LGSS_data_MASTER_oct2020_siteIDcorrections.xlsx")
-fielddata.2016.2017.path <- file.path(root.dir, "data", "compile_2015-2019", "field_data", "LGSS_16-17_MASTER_v2.xlsx")
+fielddata.2016.2017.path <- file.path(root.dir, "data", "compile_2015-2019", "field_data", "LGSS_16-17_MASTER_v2_noNA.xlsx")
 
-sei.path <- file.path(root.dir, "data", "compile_2015-2019", "ITS_tables_20201027", "20201019_S_SAMPLE_EVENT_INFO_all_fields.xlsx")
+itstable.path <- file.path(root.dir, "data", "compile_2015-2019", "ITS_tables_20201027")
 
 ```
 
-Read in best versions of 2015 and 2016-2017 tables
+Field tables: Read in best versions and join
 ```{r}
 
 # Full StreamStats output tables are in the same dir as in case more variables are needed.
 
-field.LU.2015 <- read_excel(fielddata.2015.path, sheet = "FieldData") # Land use data exists here
-habitat.2015 <- read_excel(fielddata.2015.path, sheet = "Habitat")
-toc.2015 <- read_excel(fielddata.2015.path, sheet = "TOC")
-grainsz.2015 <- read_excel(fielddata.2015.path, sheet = "GrainSize")
-ecoregion.2015 <- read_excel(fielddata.2015.path, sheet = "Ecoregion")
-streamstats.2015 <- read_excel(fielddata.2015.path, sheet = "StreamStats_basins") # Doesn't include all variables from original table but maybe the important ones.
+field.LU.2015 <- read_excel(fielddata.2015.path, sheet = "FieldData") %>% 
+  select(-BAS_LOC_RM...39, -BAS_LOC_RM_gis) %>% 
+  janitor::clean_names() %>% 
+  rename_all(tolower) %>% 
+  select(-c(basin, name, direct, descript, lat_final, long_final)) %>% 
+  rename(site_id = bas_loc_rm_1,
+         sample_date = date_field_data,
+         arrivetime = time,
+         lgs_habitat_bank = bank,
+         lgs_habitat_macrophyte = macrophyte,
+         lgs_habitat_snag = snags,
+         lgs_habitat_substrate = substrate,
+         ref_field_yn = reference_fieldsheet_question,
+         general_comment = notes,
+         macrophyte_pct = percent_macrophyte,
+         cur_spd = current,
+         cond = conduct,
+         ph = p_h,
+         do_conc = do,
+         do_pct_sat = percent_sat
+  ) %>% 
+  mutate(arrivetime = format(arrivetime, format="%H:%M"))
 
 field.LU.2016.2017 <- read_excel(fielddata.2016.2017.path, sheet = "LG data + sites, LU, SteamStats") %>%  
-  select(1:62,84)
-habitat.2016.2017 <- read_excel(fielddata.2016.2017.path, sheet = "Habitat") 
-ecoregion.2016.2017 <- read_excel(fielddata.2016.2017.path, sheet = "LG2016-17_ecoregion_join") 
-streamstats.2016.2017 <- read_excel(fielddata.2016.2017.path, sheet = "LG data + sites, LU, SteamStats") %>%
-  select(1,86:90)
+  select(1:62,84) %>% 
+  janitor::clean_names() %>% 
+  rename_all(tolower) %>% 
+  setNames(., sub("_x", "", names(.))) %>% 
+  select(-c(basin, location, rivmile, station, org_for_toxics, project, samp, secchi)) %>% 
+  rename(site_id = bas_loc_rm,
+         sample_date = coll_date,
+         embeddedness = embedd,
+         do_conc = do,
+         do_pct_sat = percent_sat,
+         algae_suspended = algae_s,
+         algae_filamentous = algae_fil,
+         algae_diaoms_presen = algae_d,
+         thickness_diatoms_present = thickness_d,
+         field_water_qlty = field_wqa,
+         lgs_habitat_bank = lgs_hab_bnk,
+         lgs_habitat_macrophyte = lgs_hab_mac,
+         lgs_habitat_snag = lgs_hab_sng,
+         lgs_habitat_substrate = lgs_hab_sub,
+         dominant_substrate = dom_substrate,
+         water_clarity_driver = wtrclr_driver,
+         land_use = landuse,
+         general_comment = notes,
+         land_use_pct_natural_wetland = lu_pct_nat_wetlnd
+  ) %>% 
+  mutate(arrivetime = format(arrivetime, format="%H:%M"))
+
+# Bind 2015 and 2016+2017 data together
+field.LU.bind <- bind_rows(field.LU.2015, field.LU.2016.2017) 
+  # select(sort(current_vars()))
+
+
+# Field names for referece (binding)
+
+# > names(field.LU.2015)
+#  [1] "bas_loc_rm_1"                  "basin"                         "name"                          "direct"                        "descript"                     
+#  [6] "lat_final"                     "long_final"                    "date_field_data"               "time"                          "bank"                         
+# [11] "macrophyte"                    "crew"                          "notes"                         "photo"                         "photo_2"                      
+# [16] "snags"                         "substrate"                     "reference_fieldsheet_question" "percent_macrophyte"            "depth"                        
+# [21] "bottom_type"                   "width"                         "dominant_substrate"            "current"                       "riffle_present"               
+# [26] "canopy"                        "land_use"                      "algae_filamentous"             "algae_suspended"               "temp"                         
+# [31] "p_h"                           "do"                            "conduct"                       "percent_sat"                   "chl_a"                        
+# [36] "water_clarity_driver"          "land_use_pct_natural_wetland"  "site_condition_v1"             "site_condition_v2"             "cond_test_250"                
+# [41] "site_condition_notes" 
+# 
+# > names(field.LU.2016.2017)
+#  [1] "bas_loc_rm"        "basin"             "coll_date"         "crew"              "arrivetime"        "samp"              "landuse"           "depth"            
+#  [9] "width"             "cur_spd"           "canopy"            "embedd"            "rock"              "rubble"            "gravel"            "sand"             
+# [17] "silt"              "clay"              "temp"              "cond"              "do"                "ph"                "percent_sat"       "salinity"         
+# [25] "secchi"            "algae_s"           "algae_fil"         "algae_d"           "thickness_d"       "macrophyte_pct"    "ephem"             "plecop"           
+# [33] "trich"             "coleop"            "megalop"           "odonata"           "chir"              "simul"             "decapod"           "gammar"           
+# [41] "mollusk"           "oligo"             "others"            "field_wqa"         "habitat"           "org_for_toxics"    "microtox"          "lgs_hab_bnk"      
+# [49] "lgs_hab_mac"       "lgs_hab_sng"       "lgs_hab_sub"       "bottom_type"       "dom_substrate"     "wtrclr_driver"     "pht_id_up"         "pht_id_dwn"       
+# [57] "notes"             "project"           "hab_present"       "lu_pct_nat_wetlnd"       
+# #          
+# > names(db.SEI)
+#  [1] "instance_id"               "row_index"                 "event_smas_id"             "event_smas_history_id"     "basin"                     "location"                 
+#  [7] "rivermile"                 "event_smas_sample_date"    "smas_arrivetime"           "crew"                      "site_type_dept_intrst"     "site_type_extrnl_sugg"    
+# [13] "site_type_lng_trm_trnd"    "site_type_mltplt"          "site_type_probabilistc"    "site_type_ras"             "site_type_reference"       "site_type_rmn"            
+# [19] "site_type_spcl_stdy"       "site_type_unassd_pwl"      "event_baseline"            "event_extent"              "disch_collect"             "total_disch"              
+# [25] "biosample_collect"         "biosample_type"            "water_chem_collect"        "chem_qaqc"                 "chem_qaqc_type"            "chem_samp_loc"            
+# [31] "chem_samp_equp"            "microtox"                  "org_for_toxics"            "depth"                     "depth_qlfr"                "width"                    
+# [37] "width_qlfr"                "speed_of_stream_current"   "spd_of_strm_current_qlfr"  "secchi"                    "secchi_qlfr"               "algae_diaoms_presen"      
+# [43] "thickness_diatoms_present" "algae_suspended"           "algae_filamentous"         "mfdh_macrophytes"          "canopy"                    "embeddedness"             
+# [49] "embeddedness_qlfr"         "rock"                      "rubble"                    "gravel"                    "sand"                      "silt"                     
+# [55] "clay"                      "land_use"                  "general_comment"           "chem_result_rcvd"          "chem_result_rcvd_note"    
+# 
+# > names(db.insitu)
+#  [1] "row_index"                  "instance_id"                "event_smas_id"              "event_smas_history_id"      "basin"                      "location"  
+#  [7] "rivermile"                  "event_smas_sample_date"     "smas_arrivetime"            "ysi_meter_id"               "chem_parameter_pcode_valid" "result"       
+#  [13] "validator_qual"             "validator_qual_reason"      "validation_date"            "qlfr_note"                 
+# 
+# > names(db.macrofield)
+#  [1] "row_index"                "instance_id"              "event_smas_id"            "event_smas_history_id"    "basin"                    "location"                
+#  [7] "rivermile"                "event_smas_sample_date"   "biosample_collect_method" "biosamp_col_method_note"  "ephemeroptera"            "plecoptera"              
+# [13] "trichoptera"              "coleoptera"               "megaloptera"              "odonata"                  "chironomidae"             "simuliidae"              
+# [19] "decapods"                 "gammaridae"               "mollusca"                 "oligochaeta"              "tipulidae"                "others"                  
+# [25] "other"                    "field_water_qlty"         "habitat"                  "lgs_habitat_bank"         "lgs_habitat_macrophyte"   "lgs_habitat_snag"        
+# [31] "lgs_habitat_substrate"    "bottom_type"              "dominant_substrate"       "water_clarity_driver"     "macro_comment" 
 
 ```
 
-Read in 2018-2019 data from current version of SBU database and format
+Habitat tables: Read in best versions and join
 ```{r}
-SEI <- read_excel(sei.path, col_types = "text") 
+habitat.2015 <- read_excel(fielddata.2015.path, sheet = "Habitat") %>% 
+  janitor::clean_names() %>% 
+  rename_all(tolower) %>% 
+  # select(-c()) %>% 
+  rename(site_id = bas_loc_rm,
+         sample_date_habitat = date_habitat,
+         epifaunal_cover = x1_epifaunal_substrate_available_cover,
+         embeddedness_pooling = x2_pool_substrate_characterization,
+         velocity_depth_regime = x3_pool_variability,
+         sediment_deposition = x4_sediment_deposition,
+         flow_status = x5_channel_flow_status,
+         channel_alteration = x6_channel_alteration,
+         riffle_bend_frequency = x7_channel_sinuosity,
+         left_bank_stability = x8_lb_stability,
+         right_bank_stability = x8_rb_stability,
+         left_bank_veg = x9_lb_vegetative_protection,
+         right_bank_veg = x9_rb_vegetative_protection,
+         left_bank_veg_zone = x10_lb_riparian_zone_width,
+         right_bank_veg_zone = x10_rb_riparian_zone_width,
+         habitat_comment = comments)
+
+# > names(db.habitat)
+#  [1] "row_index"              "event_smas_history_id"  "basin"                  "location"               "rivermile"              "event_smas_sample_date"
+#  [7] "gradient"               "epifaunal_cover"        "embeddedness_pooling"   "velocity_depth_regime"  "sediment_deposition"    "flow_status"           
+# [13] "channel_alteration"     "riffle_bend_frequency"  "left_bank_stability"    "right_bank_stability"   "left_bank_veg"          "right_bank_veg"        
+# [19] "left_bank_veg_zone"     "right_bank_veg_zone"    "habitat_comment"        "instance_id"            "event_smas_id"  
+
+# > names(habitat.2015)
+#  [1] "bas_loc_rm"                             "date_habitat"                           "x1_epifaunal_substrate_available_cover" "x2_pool_substrate_characterization"    
+#  [5] "x3_pool_variability"                    "x4_sediment_deposition"                 "x5_channel_flow_status"                 "x6_channel_alteration"                 
+#  [9] "x7_channel_sinuosity"                   "x8_lb_stability"                        "x8_rb_stability"                        "x9_lb_vegetative_protection"           
+# [13] "x9_rb_vegetative_protection"            "x10_lb_riparian_zone_width"             "x10_rb_riparian_zone_width"             "comments"                              
+
+habitat.2016.2017 <- read_excel(fielddata.2016.2017.path, sheet = "Habitat") %>% 
+  janitor::clean_names() %>% 
+  rename_all(tolower) %>% 
+  select(-c(basin, location, rivmile, bas_loc_rm, gradient)) %>% 
+  mutate(site_id_field_fixed = str_replace(site_id_field_fixed, "07-HARB-0.5_b", "07-HARB-0.5")) %>% 
+  rename(site_id = site_id_field_fixed,
+         sample_date_habitat = coll_date_habitat,
+         epifaunal_cover = epi_cover,
+         embeddedness_pooling = embedd_pool,
+         velocity_depth_regime = vel_dep_regime,
+         sediment_deposition = sed_dep,
+         channel_alteration = chan_alt,
+         riffle_bend_frequency = rif_bnd_freq,
+         left_bank_stability = l_bnk_stab,
+         right_bank_stability = r_bnk_stab,
+         left_bank_veg = l_bnk_veg,
+         right_bank_veg = r_bnk_veg,
+         left_bank_veg_zone = l_bnk_zone,
+         right_bank_veg_zone = r_bnk_zone,
+         habitat_comment = notes)
+ 
+
+# > names(habitat.2016.2017)
+#  [1] "basin"               "location"            "rivmile"             "bas_loc_rm"          "site_id_field_fixed" "coll_date_habitat"   "biosample"          
+#  [8] "gradient"            "epi_cover"           "embedd_pool"         "vel_dep_regime"      "sed_dep"             "flow_status"         "chan_alt"           
+# [15] "rif_bnd_freq"        "l_bnk_stab"          "r_bnk_stab"          "l_bnk_veg"           "r_bnk_veg"           "l_bnk_zone"          "r_bnk_zone"         
+# [22] "habitat_total_score" "notes"  
+
+
+habitat.bind <- bind_rows(habitat.2015, habitat.2016.2017) 
+  # select(sort(current_vars()))
+
+```
+
+Misc ancillary data: Load in and bind as needed.
+```{r}
+# Add these into master table (join to 2015 only). Or load into 2015 field data in above.
+toc.2015 <- read_excel(fielddata.2015.path, sheet = "TOC") %>% 
+grainsz.2015 <- read_excel(fielddata.2015.path, sheet = "GrainSize")
+
+# Need to capture these for 2018-2019 anyway; will run again for all.
+ecoregion.2015 <- read_excel(fielddata.2015.path, sheet = "Ecoregion")
+ecoregion.2016.2017 <- read_excel(fielddata.2016.2017.path, sheet = "LG2016-17_ecoregion_join") 
+
+# Some StreamStats data was pulled into master tables:
+# streamstats.2015 <- read_excel(fielddata.2015.path, sheet = "StreamStats_basins") # Doesn't include all variables from original table but maybe the important ones.
+# streamstats.2016.2017 <- read_excel(fielddata.2016.2017.path, sheet = "LG data + sites, LU, SteamStats") %>%
+#   select(1,86:90)
+
+# Loading full raw StreamStats output tables:
+streamstats.2015 <- read_csv(file.path(root.dir, "data", "compile_2015-2019", "field_data", "StreamStats_table_attributes_2015_96basins_FINAL_1-14-19.csv"))
+streamstats.2016.2017 <- read_csv(file.path(root.dir, "data", "compile_2015-2019", "field_data", "StreamStats_table_attributes_2016-17_basins_1-31-19_2.csv"))
+streamstats.bind <- bind_rows(streamstats.2015, streamstats.2016.2017)
+# NOTE: 	07-LITR-0.2 was run separately (see StreamStats_singlebasin_output_07-LITR-0.2.csv)
+
+rm(field.LU.2015, field.LU.2016.2017, fielddata.2015.path, fielddata.2016.2017.path, habitat.2015, habitat.2016.2017, streamstats.2015, streamstats.2016.2017)
+
+```
+
+Read in 2018-2019 data from current version of SBU database, filter, and format
+```{r}
+
+
+
+# Get list of 2018-2019 LG sites using habitat survey. Should be 39 based on output created in compile_2015-2019_bugs.Rmd
+
+
+
+
+db.SEI <- read_excel(file.path(itstable.path, "20201019_S_SAMPLE_EVENT_INFO_all_fields.xlsx"), col_types = "text") %>% 
+  rename_all(tolower) %>% 
+  setNames(., sub("seih_", "", names(.))) %>% 
+  rename(sample_date = event_smas_sample_date,
+         arrivetime = smas_arrivetime,
+         cur_spd = speed_of_stream_current,
+         macrophyte_pct = mfdh_macrophytes)
+
+db.habitat <- read_excel(file.path(itstable.path, "20201020_S_HABITAT_FIELD_DATA_HISTORY_all_fields.xlsx"), col_types = "text") %>% 
+  rename_all(tolower) %>% 
+  setNames(., sub("hfdh_", "", names(.)))
+
+# Trasnform from long to wide and add param names for pcodes
+db.insitu_all <- read_excel(file.path(itstable.path, "20201020_S_IN_SITU_WATER_CHEM_all_fields.xlsx"), col_types = "text")
+
+db.insitu <- read_excel(file.path(itstable.path, "20201020_S_IN_SITU_WATER_CHEM_all_fields.xlsx"), col_types = "text") %>% 
+  rename_all(tolower) %>% 
+  setNames(., sub("iswc_", "", names(.))) %>% 
+  rename(site_id = event_smas_history_id,
+         sample_date = event_smas_sample_date,
+         pcode = chem_parameter_pcode_valid) %>% 
+  select(site_id, sample_date, pcode, result) %>% 
+  mutate(sample_date = as.Date(sample_date, format = "%m/%d/%Y"),
+         year = format(sample_date, format = "%Y"))
+
+db.macrofield <- read_excel(file.path(itstable.path, "20201023_S_MACRO_FIELD_DATA_HISTORY_all_fields.xlsx"), col_types = "text") %>% 
+  rename_all(tolower) %>% 
+  setNames(., sub("mfdh_", "", names(.))) %>% 
+  rename(ephem = ephemeroptera,
+         plecop = plecoptera,
+         trich = trichoptera,
+         coleop = coleoptera,
+         megalop = megaloptera,
+         chir = chironomidae,
+         simul = simuliidae,
+         decapod = decapods,
+         gammar = gammaridae,
+         mollusk = mollusca,
+         oligo = oligochaeta
+         )
+
 ```
 
 Compile field data
 ```{r}
+field.master <- db.SEI %>% 
+  select(-instance_id, -row_index, -event_smas_id, -location, -rivermile, -site_type_dept_intrst, -site_type_extrnl_sugg, -site_type_lng_trm_trnd, -site_type_mltplt, -site_type_probabilistc, -site_type_ras, -site_type_reference, -site_type_rmn, -site_type_spcl_stdy, -site_type_unassd_pwl)
+
+# Add fields to db field list: riffle_present
 
 ```
 
@@ -52,19 +288,26 @@ Compile habitat data (or add to field table above?)
 
 ```
 
-Compile site information (sites table + StreamStats + landuse)
+Review unique values for consistency
 ```{r}
 
-# Still need to harvest StreamStats + landuse data for 2018-2019 (do for 2020 at the same time?)
+```
+
+Check sites list against master sites table
+```{r}
+db.sites <- read_excel(file.path(itstable.path, "20201023_S_SITE.xlsx")) 
+
+
+##  (need to add NISS-4.7 to sites table?)  
 
 
 ```
 
-Check all against master sites table
+
+Compile site information (sites table + StreamStats + landuse)
 ```{r}
 
-
-##  (need to add NISS-4.7 to sites table?)  
+# Still need to harvest StreamStats + landuse data for 2018-2019 (do for 2020 at the same time?)
 
 
 ```

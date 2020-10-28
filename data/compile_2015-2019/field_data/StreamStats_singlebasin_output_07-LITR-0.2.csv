@@ -1,0 +1,79 @@
+StreamStats Output Report
+
+State/Region ID,NY
+Workspace ID,NY20190131174947055000
+Latitude,43.29261
+Longitude,-75.71889
+Time,1/31/2019, 12:50:01 PM
+
+Basin Characteristics
+"Parameter Code","Parameter Description","Value","Unit"
+"DRNAREA","Area that drains to a point on a stream","51.6","square miles"
+"LAGFACTOR","Lag Factor as defined in SIR 2006-5112","1.68","dimensionless"
+"STORAGE","Percentage of area of storage (lakes ponds reservoirs wetlands)","17.2","percent"
+"FOREST","Percentage of area covered by forest","73.5","percent"
+"PRECIP","Mean Annual Precipitation","44.3","inches"
+"BSLOPCM","Mean basin slope determined by summing lengths of all contours in basin mulitplying by contour interval and dividing product by drainage area","267","feet per mi"
+"CENTROIDX","Basin centroid horizontal (x) location in state plane coordinates","432385","feet"
+"CENTROIDY","Basin centroid vertical (y) location in state plane units","4796319.4","feet"
+"CONTOUR","Total length of all elevation contours in drainage area in miles","137.63","miles"
+"CSL1085LO","10-85 slope of lower half of main channel in feet per mile.","7.46","feet per mi"
+"CSL1085UP","10-85 slope of upper half of main channel in feet per mile.","18.1","feet per mi"
+"CSL10_85","Change in elevation divided by length between points 10 and 85 percent of distance along main channel to basin divide - main channel method not known","8.93","feet per mi"
+"EL1200","Percentage of basin at or above 1200 ft elevation","0","percent"
+"JULAVPRE","Mean July Precipitation","4.19","inches"
+"JUNAVPRE","Mean June Precipitation","4.42","inches"
+"JUNMAXTMP","Maximum June Temperature, in degrees F","75.7","degrees F"
+"LC11DEV","Percentage of developed (urban) land from NLCD 2011 classes 21-24","0.54","percent"
+"LC11IMP","Average percentage of impervious area determined from NLCD 2011 impervious dataset","0.0727","percent"
+"LENGTH","Length along the main channel from the measuring location extended to the basin divide","21.4","miles"
+"MAR","Mean annual runoff for the period of record in inches","25.4","inches"
+"MAYAVPRE","Mean May Precipitation","3.96","inches"
+"MXSNO","50th percentile of seasonal maximum snow depth from Northeast Regional Climate Center atlas by Cember and Wilks, 1993","25","inches"
+"OUTLETX","Basin outlet horizontal (x) location in state plane coordinates","441685","feet"
+"OUTLETY","Basin outlet vertical (y) location in state plane coordinates","4793555","feet"
+"PRJUNAUG00","Basin average mean precip for June to August from PRISM 1971-2000","12.8","inches"
+"SLOPERATIO","Ratio of main channel slope to basin slope as defined in SIR 2006-5112","0.0335","dimensionless"
+"SSURGOA","Percentage of area of Hydrologic Soil Type A from SSURGO","19.7","percent"
+"SSURGOB","Percentage of area of Hydrologic Soil Type B from SSURGO","1.65","percent"
+
+Peak-Flow Statistics Parameters,100 Percent 2006 Full Region 1
+"Parameter Code","Parameter Name","Value","Units","Min Limit","Max Limit"
+"DRNAREA","Drainage Area","51.6","square miles","0.54","4500"
+"LAGFACTOR","Lag Factor","1.68","dimensionless","0.004","15.229"
+"STORAGE","Percent Storage","17.2","percent","0","28.92"
+"FOREST","Percent Forest","73.5","percent","23.83","99.61"
+"PRECIP","Mean Annual Precipitation","44.3","inches","29.49","56.1"
+
+Peak-Flow Statistics Flow Report,100 Percent 2006 Full Region 1
+"Statistic","Value","Unit","SE","SEp","Equiv. Yrs."
+"1.25 Year Peak Flood","796","ft^3/s","31.6","31.6","2.2"
+"1.5 Year Peak Flood","916","ft^3/s","30.3","30.3","2"
+"2 Year Peak Flood","1070","ft^3/s","29","29","2.1"
+"5 Year Peak Flood","1460","ft^3/s","27.3","27.3","3.6"
+"10 Year Peak Flood","1740","ft^3/s","27.2","27.2","5.1"
+"25 Year Peak Flood","2090","ft^3/s","28.2","28.2","6.9"
+"50 Year Peak Flood","2350","ft^3/s","29.4","29.4","8"
+"100 Year Peak Flood","2650","ft^3/s","30.8","30.8","8.8"
+"200 Year Peak Flood","2910","ft^3/s","32.5","32.5","9.4"
+"500 Year Peak Flood","3320","ft^3/s","35.1","35.1","9.8"
+
+
+
+Bankfull Statistics Parameters,100 Percent Bankfull Regions 1 and 2 SIR2009 5144
+"Parameter Code","Parameter Name","Value","Units","Min Limit","Max Limit"
+"DRNAREA","Drainage Area","51.6","square miles","0.52","396"
+
+Bankfull Statistics Flow Report,100 Percent Bankfull Regions 1 and 2 SIR2009 5144
+"Statistic","Value","Unit","PIl","PIu"
+"Bankfull Area","344","ft^2","175","679"
+"Bankfull Depth","3.88","ft","1.96","7.67"
+"Bankfull Streamflow","1410","ft^3/s","387","5140"
+"Bankfull Width","89.6","ft","43.7","184"
+
+
+USGS Data Disclaimer: Unless otherwise stated, all data, metadata and related materials are considered to satisfy the quality standards relative to the purpose for which the data were collected. Although these data and associated metadata have been reviewed for accuracy and completeness and approved for release by the U.S. Geological Survey (USGS), no warranty expressed or implied is made regarding the display or utility of the data for other purposes, nor on all computer systems, nor shall the act of distribution constitute any such warranty.
+USGS Software Disclaimer: This software has been approved for release by the U.S. Geological Survey (USGS). Although the software has been subjected to rigorous review, the USGS reserves the right to update the software as needed pursuant to further analysis and review. No warranty, expressed or implied, is made by the USGS or the U.S. Government as to the functionality of the software and related material nor shall the fact of release constitute any such warranty. Furthermore, the software is released on condition that neither the USGS nor the U.S. Government shall be held liable for any damages resulting from its authorized or unauthorized use.
+USGS Product Names Disclaimer: Any use of trade, firm, or product names is for descriptive purposes only and does not imply endorsement by the U.S. Government.
+
+Application Version: 4.3.0
