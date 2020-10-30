@@ -12,9 +12,6 @@ library(readxl)
 
 root.dir <- rprojroot::find_root("lgss.Rproj")
 
-#Load master sites table
-sites.master <- read_csv(file.path(root.dir, "data/compile_2015-2019", "20191224_Site_Field_cleaned_final.csv"))
-
 ```
 
 Load in ITS data tables, subset, and add fields
@@ -282,9 +279,10 @@ Check full bug list against master taxa table and reformat/update accordingly
 Check sites table to see if all LG samples sites for 2015-2019 are present
 ```{r}
 
+sites.master <- read_excel(file.path(itstable.path, "20201030_S_SITE.xlsx"))
 
 matchlist <- bugmatrix.15to19 %>% 
-  select(site_id, coll_date) %>% 
+  select(site_id, sample_date) %>% 
   mutate(SITE_MATCH = site_id %in% sites.master$BAS_LOC_RM)
   
 # 5 sites not in sites table:
