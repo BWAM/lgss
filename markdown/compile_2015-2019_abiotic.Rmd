@@ -12,7 +12,7 @@ root.dir <- rprojroot::find_root("lgss.Rproj")
 fielddata.2015.path <- file.path(root.dir, "data", "compile_2015-2019", "field_data", "2015_LGSS_data_MASTER_oct2020_siteIDcorrections.xlsx")
 fielddata.2016.2017.path <- file.path(root.dir, "data", "compile_2015-2019", "field_data", "LGSS_16-17_MASTER_v2_noNA.xlsx")
 
-itstable.path <- file.path(root.dir, "data", "compile_2015-2019", "ITS_tables_20201027")
+itstable.path <- file.path(root.dir, "data", "compile_2015-2019", "ITS_tables_20201030")
 
 ```
 
@@ -197,9 +197,9 @@ habitat.bind <- bind_rows(habitat.2015, habitat.2016.2017)
 ```
 
 Misc ancillary data: Load in and bind as needed.
-```{r}
+```{r eval = FALSE}
 # Add these into master table (join to 2015 only). Or load into 2015 field data in above.
-toc.2015 <- read_excel(fielddata.2015.path, sheet = "TOC") %>% 
+toc.2015 <- read_excel(fielddata.2015.path, sheet = "TOC")  
 grainsz.2015 <- read_excel(fielddata.2015.path, sheet = "GrainSize")
 
 # Need to capture these for 2018-2019 anyway; will run again for all.
@@ -221,45 +221,42 @@ rm(field.LU.2015, field.LU.2016.2017, fielddata.2015.path, fielddata.2016.2017.p
 
 ```
 
-Read in 2018-2019 data from current version of SBU database, filter, and format
+Read in current version of SBU DB tables, filter to LG 2018-2019, and format as needed
 ```{r}
-
-
-
-# Get list of 2018-2019 LG sites using habitat survey. Should be 39 based on output created in compile_2015-2019_bugs.Rmd
-
-
-
-
-db.SEI <- read_excel(file.path(itstable.path, "20201019_S_SAMPLE_EVENT_INFO_all_fields.xlsx"), col_types = "text") %>% 
+# Read in bug data to get list of events for gathering associated data
+db.mssih.events <- read_csv(file.path(itstable.path, "20201029_S_MACRO_SPECIES_SAMP_INF_HIST.csv"))  %>% 
   rename_all(tolower) %>% 
-  setNames(., sub("seih_", "", names(.))) %>% 
-  rename(sample_date = event_smas_sample_date,
-         arrivetime = smas_arrivetime,
-         cur_spd = speed_of_stream_current,
-         macrophyte_pct = mfdh_macrophytes)
-
-db.habitat <- read_excel(file.path(itstable.path, "20201020_S_HABITAT_FIELD_DATA_HISTORY_all_fields.xlsx"), col_types = "text") %>% 
-  rename_all(tolower) %>% 
-  setNames(., sub("hfdh_", "", names(.)))
-
-# Trasnform from long to wide and add param names for pcodes
-db.insitu_all <- read_excel(file.path(itstable.path, "20201020_S_IN_SITU_WATER_CHEM_all_fields.xlsx"), col_types = "text")
-
-db.insitu <- read_excel(file.path(itstable.path, "20201020_S_IN_SITU_WATER_CHEM_all_fields.xlsx"), col_types = "text") %>% 
-  rename_all(tolower) %>% 
-  setNames(., sub("iswc_", "", names(.))) %>% 
+  setNames(., sub("mssih_", "", names(.))) %>% 
   rename(site_id = event_smas_history_id,
-         sample_date = event_smas_sample_date,
-         pcode = chem_parameter_pcode_valid) %>% 
-  select(site_id, sample_date, pcode, result) %>% 
+         sample_date = event_smas_sample_date) %>% 
   mutate(sample_date = as.Date(sample_date, format = "%m/%d/%Y"),
-         year = format(sample_date, format = "%Y"))
+         year = format(sample_date, format = "%Y")) %>% 
+  filter(year %in% c("2018", "2019"),
+         biosample_collect_method %in% "Low-Gradient",
+         # biosample_collect_method_num == 9 (filter result matches above)
+         replicate == 1
+         ) %>% 
+  mutate(linked_id_validator = substr(linked_id_validator,1,nchar(linked_id_validator)-4)) %>% 
+  rename(event_id = linked_id_validator) %>% 
+  select(event_id) %>% 
+  # Fix bad bug sample date
+  mutate(event_id = str_replace(event_id, "04-WCONI-0.6_20190722", "04-WCONI-0.6_20190723"))
+
+### Get surveys that match bug sample event_ids
 
 db.macrofield <- read_excel(file.path(itstable.path, "20201023_S_MACRO_FIELD_DATA_HISTORY_all_fields.xlsx"), col_types = "text") %>% 
   rename_all(tolower) %>% 
-  setNames(., sub("mfdh_", "", names(.))) %>% 
-  rename(ephem = ephemeroptera,
+  setNames(., sub("mfdh_", "", names(.))) %>%
+  rename(sample_date = event_smas_sample_date,
+         event_id = event_smas_id) %>%
+  filter(event_id %in% db.mssih.events$event_id) %>% 
+  # filtering by the criteria below yields 5 more surveys than bugs present. Look into missing bugs later.
+  # mutate(sample_date = as.Date(sample_date, format = "%m/%d/%Y"),
+  #        year = format(sample_date, format = "%Y")) %>%
+  # filter(year %in% c("2018", "2019"),
+  #        biosample_collect_method %in% "Low-Gradient") %>%
+  rename(site_id = event_smas_history_id,
+         ephem = ephemeroptera,
          plecop = plecoptera,
          trich = trichoptera,
          coleop = coleoptera,
@@ -271,8 +268,118 @@ db.macrofield <- read_excel(file.path(itstable.path, "20201023_S_MACRO_FIELD_DAT
          mollusk = mollusca,
          oligo = oligochaeta
          )
+  
+
+db.SEI <- read_excel(file.path(itstable.path, "20201019_S_SAMPLE_EVENT_INFO_all_fields.xlsx"), col_types = "text") %>% 
+  rename_all(tolower) %>% 
+  setNames(., sub("seih_", "", names(.))) %>% 
+  rename(sample_date = event_smas_sample_date,
+         event_id = event_smas_id,
+         arrivetime = smas_arrivetime,
+         cur_spd = speed_of_stream_current,
+         macrophyte_pct = mfdh_macrophytes) %>%
+  filter(event_id %in% db.mssih.events$event_id) 
+
+db.insitu <- read_excel(file.path(itstable.path, "20201030_S_IN_SITU_WATER_CHEM_all_fields.xlsx"), col_types = "text") %>% 
+  rename_all(tolower) %>% 
+  setNames(., sub("iswc_", "", names(.))) %>% 
+  rename(site_id = event_smas_history_id,
+         event_id = event_smas_id,
+         sample_date = event_smas_sample_date,
+         pcode = chem_parameter_pcode_valid) %>% 
+  filter(event_id %in% db.mssih.events$event_id) 
+  # select(site_id, sample_date, pcode, result) %>% 
+
+
+db.habitat <- read_excel(file.path(itstable.path, "20201020_S_HABITAT_FIELD_DATA_HISTORY_all_fields.xlsx"), col_types = "text") %>% 
+  rename_all(tolower) %>% 
+  setNames(., sub("hfdh_", "", names(.))) %>% 
+  rename(site_id = event_smas_history_id,
+         sample_date = event_smas_sample_date,
+         event_id = event_smas_id) %>% 
+  filter(event_id %in% db.mssih.events$event_id) 
+
 
 ```
+
+
+Get list of 2018-2019 LG sites from Habitat survey and cross-check against 2015-2019 bug matrix from compile_2015-2019_bugs.Rmd
+# Clean up this chunk after using pieces for above
+```{r}
+
+# Get list of 2018-2019 LG sites from the macro field survey. Expecting 39 based on output created in compile_2015-2019_bugs.Rmd
+
+
+# List all 2018-2019 LG macro field surveys present
+db.macrofield.LGlist.18.19 <-  db.macrofield %>% 
+  select(event_smas_id, site_id, sample_date, biosample_collect_method, habitat, lgs_habitat_bank, lgs_habitat_macrophyte, lgs_habitat_snag, lgs_habitat_substrate, dominant_substrate) %>% 
+  mutate(sample_date = as.Date(sample_date, format = "%m/%d/%Y"),
+         year = format(sample_date, format = "%Y")) %>% 
+  filter(year %in% c("2018", "2019"),
+         biosample_collect_method %in% "Low-Gradient") %>%
+  select(site_id, sample_date)
+
+missingbugs_raw <- anti_join(db.macrofield.LGlist.17.18, bugs.bind.18.19.sitedate)
+missingbugs_macrofield <- anti_join(bugs.bind.18.19.sitedate, db.macrofield.LGlist.17.18)
+
+# See what bugs are present in the ITS tables
+
+
+
+db.mssih.LG1819 <- db.mssih  %>% 
+  mutate(sample_date = as.Date(sample_date, format = "%m/%d/%Y"),
+         year = format(sample_date, format = "%Y")) %>% 
+  filter(year %in% c("2018", "2019"),
+         biosample_collect_method %in% "Low-Gradient",
+         # biosample_collect_method_num == 9 (filter result matches above)
+         replicate == 1
+         ) %>% 
+  select(site_id, sample_date)
+
+missingbugs_raw <- anti_join(db.mssih.LG1819, bugs.bind.18.19.sitedate)
+# All 39 samples present in 2018-2019 raw files are present in DB!
+
+# Get list of 2018-2019 LG sites using habitat survey. Expecting 39 based on output created in compile_2015-2019_bugs.Rmd
+
+db.habitat <- read_excel(file.path(itstable.path, "20201020_S_HABITAT_FIELD_DATA_HISTORY_all_fields.xlsx"), col_types = "text") %>% 
+  rename_all(tolower) %>% 
+  setNames(., sub("hfdh_", "", names(.))) %>% 
+  rename(site_id = event_smas_history_id,
+         sample_date = event_smas_sample_date)
+
+# List ALL LG habitat surveys present
+# db.habitat.LGlist <-  db.habitat %>%
+#   select(site_id, sample_date, gradient, habitat_comment, event_smas_id) %>% 
+#   mutate(sample_date = as.Date(sample_date, format = "%m/%d/%Y"),
+#          year = format(sample_date, format = "%Y")) %>% 
+#   filter(gradient %in% "Low")
+
+# > unique(db.habitat.LGlist$year)
+#  [1] "2008" "2009" "2010" "2011" "2012" "2013" "2014" "2015" "2016" "2017" "2018" "2019"
+
+# List all 2018-2019 LG habitat surveys present
+db.habitat.LGlist.17.18 <-  db.habitat %>% 
+  select(site_id, sample_date, gradient, habitat_comment, event_smas_id) %>% 
+  mutate(sample_date = as.Date(sample_date, format = "%m/%d/%Y"),
+         year = format(sample_date, format = "%Y")) %>% 
+  filter(year %in% c("2018", "2019"),
+         gradient %in% "Low") %>% 
+  select(site_id, sample_date)
+
+# 57 presesnt! 18 possible missing from bugs (not sampled?). 
+
+# Get list of bug samples from 2018-2019 bug matrix compiled in compile_2015-2019_bugs.Rmd and cross-check against 2018-2019 list here
+bugs.bind.18.19.sitedate <- bugs.bind.18.19 %>% 
+  rename_all(tolower) %>% 
+  rename(sample_date = coll_date) %>% 
+  mutate(sample_date = as.Date(sample_date, format = "%m/%d/%Y")) %>% 
+  select(site_id, sample_date) %>% 
+  distinct()
+
+missingbugs_hab <- anti_join(bugs.bind.18.19.sitedate, db.habitat.LGlist.17.18)
+
+```
+
 
 Compile field data
 ```{r}

@@ -19,7 +19,7 @@ sites.master <- read_csv(file.path(root.dir, "data/compile_2015-2019", "20191224
 
 Load in ITS data tables, subset, and add fields
 ### NOT USING B/C MUCH LG DATA MISSING FROM ITS TABLES ###
-```{r}
+```{r eval = FALSE}
 
 # Load joined data from Keleigh
 bugs.all <- read_csv(file.path(root.dir, "data/compile_2015-2019", "raw.macrolab.gavin.csv")) %>% 
@@ -57,7 +57,7 @@ field.habitat.ITS <- read_csv(file.path(root.dir, "data/compile_2015-2019/ITS_ta
 ```
 
 Assessing ITS tables for missing LG data
-```{r}
+```{r eval = FALSE}
 macroinfo.ITS <- macroinfo.ITS %>% 
   mutate(YEAR = format(as.Date(SAMPLE_DATE, format="%m/%d/%Y"),"%Y"))
 
@@ -110,9 +110,9 @@ rm(bugs2016.df, bugs2017.df, bugs201617.df)
 Pull in 2015 field data to add dates, then merge matrix to 2016-2017 matrix.
 ```{r}
 fielddata.2015 <- readxl::read_excel(file.path(root.dir,  "data", "compile_2015-2019", "field_data",
-                                               "2015_LGSS_alltables_Apr2020_SITEID_corrections.xlsx"), sheet = "FieldData") %>% 
+                                               "2015_LGSS_data_MASTER_oct2020_siteIDcorrections.xlsx"), sheet = "FieldData") %>% 
   rename(COLL_DATE = Date_FieldData) %>% 
-  rename(SITE_ID = BAS_LOC_RM) %>% 
+  rename(SITE_ID = BAS_LOC_RM...1) %>% 
   mutate(COLL_DATE = as.Date(COLL_DATE)) %>% 
   select(SITE_ID, COLL_DATE)
 
@@ -138,7 +138,8 @@ rm(bugmatrix1617.df, bugmatrix2015.df, fielddata.2015)
 
 
 Load in raw 2018 and 2019 bug data, compile, and generate matrix. Then bind to 16-17-18 data.
-```{r}
+# NO LONGER IN USE. Replaced with code block below. 
+```{r eval = FALSE}
 
 bugs.2018.1 <- read_xlsx(file.path(root.dir, "data", "compile_2015-2019", "raw_macro_2018_2019",
                                    "2018_Lakes_RBS-Scr_RMN_T4T.xlsx"), col_types = c(Replicate="text")) %>% 
@@ -186,13 +187,105 @@ bugmatrix.15to19 <- bugmatrix.15to19[order(bugmatrix.15to19$SITE_ID),]
 
 ```
 
+
+Load in 2018 and 2019 bug data from ITS tables 
+```{r}
+itstable.path <- file.path(root.dir, "data", "compile_2015-2019", "ITS_tables_20201030")
+
+db.mssih <- read_csv(file.path(itstable.path, "20201029_S_MACRO_SPECIES_SAMP_INF_HIST.csv"))  %>% 
+  rename_all(tolower) %>% 
+  setNames(., sub("mssih_", "", names(.))) %>% 
+  rename(site_id = event_smas_history_id,
+         coll_date = event_smas_sample_date) 
+
+# Just checking to see how much 15-17 LG data is missing from DB
+db.mssih.LG.15.16.17 <- db.mssih  %>% 
+  mutate(coll_date = as.Date(coll_date, format = "%m/%d/%Y"),
+         year = format(coll_date, format = "%Y")) %>% 
+  filter(year %in% c("2015", "2016", "2017"),
+         biosample_collect_method %in% "Low-Gradient",
+         # biosample_collect_method_num == 9 (filter result matches above)
+         replicate == 1
+         ) %>% 
+  select(site_id, coll_date)
+# ONLY 20 PRESENT! SHOULD BE ABOUT 130.
+# On queue for DB appedning.
+
+
+db.mssih.LG1819 <- db.mssih  %>% 
+  mutate(coll_date = as.Date(coll_date, format = "%m/%d/%Y"),
+         year = format(coll_date, format = "%Y")) %>% 
+  filter(year %in% c("2018", "2019"),
+         biosample_collect_method %in% "Low-Gradient"
+         # biosample_collect_method_num == 9 (filter result matches above)
+         # replicate == 1
+         )  %>% 
+  select(site_id, coll_date, linked_id_validator, replicate)
+
+db.msdh <- read_csv(file.path(itstable.path, "20201029_S_MACRO_SPECIES_DATA_HISTORY.csv"))  %>% 
+  rename_all(tolower) %>% 
+  setNames(., sub("msdh_", "", names(.))) 
+
+db.mssih.LG1819.msdh.join <- left_join(db.mssih.LG1819, db.msdh, by = "linked_id_validator") %>% 
+  select(-linked_id_validator)
+
+# #Transform from long to wide
+db.bugmatrix.18.19 <- db.mssih.LG1819.msdh.join %>%
+  group_by(site_id, coll_date, replicate, mstr_macro_species_id) %>%
+  summarise(individual_species_cnt = sum(individual_species_cnt)) %>%
+  spread(mstr_macro_species_id, individual_species_cnt, fill = 0) 
+
+bugmatrix.15.16.17.df.form <- bugmatrix.15.16.17.df %>% 
+  rename_all(tolower) %>%
+  # rename(sample_date = coll_date) %>% 
+  setNames(., sub(" ", "_", names(.))) 
+  
+bugmatrix.15to19 <- bind_rows(bugmatrix.15.16.17.df.form, db.bugmatrix.18.19) %>% 
+  filter(replicate == 1) %>% 
+  arrange(coll_date) %>% 
+  rename(sample_date = coll_date) %>% 
+  select(-replicate) %>% 
+  mutate(sample_date = data.table::fifelse(site_id %in% "04-WCONI-0.6", sample_date + 1, sample_date))
+
+bugmatrix.15to19[is.na(bugmatrix.15to19)] <- 0
+
+
+# #Transform from long to wide (old code used on raw data)
+# bugmatrix.18.19.df <- bugs.bind.18.19 %>% 
+#   mutate(REPLICATE = ifelse(is.na(REPLICATE), 1, REPLICATE)) %>%
+#   mutate(INDIV = as.numeric(INDIV)) %>% 
+#   mutate(COLL_DATE = as.Date(COLL_DATE, format = "%m/%d/%Y")) %>% 
+#   select(SITE_ID, COLL_DATE, REPLICATE, MACRO_GENSPECIES, INDIV) %>% 
+#   group_by(SITE_ID, COLL_DATE, REPLICATE, MACRO_GENSPECIES) %>% 
+#   summarise(INDIV = sum(INDIV)) %>% 
+#   spread(MACRO_GENSPECIES, INDIV, fill = 0)
+# 
+# bugmatrix.15to19 <- bind_rows(bugmatrix.15.16.17.df, bugmatrix.18.19.df)
+# bugmatrix.15to19[is.na(bugmatrix.15to19)] <- 0
+# bugmatrix.15to19 <- bugmatrix.15to19[order(bugmatrix.15to19$SITE_ID),] 
+# 
+
+
+
+
+```
+
+Check full bug list against master taxa table and reformat/update accordingly
+```{r}
+
+# Make sure using list that mmir package uses. Does this match the formatting of our master sp. table? Need to make sure these are synchronized.
+
+
+```
+
+
 Check sites table to see if all LG samples sites for 2015-2019 are present
 ```{r}
 
 
 matchlist <- bugmatrix.15to19 %>% 
-  select(SITE_ID, COLL_DATE) %>% 
-  mutate(SITE_MATCH = SITE_ID %in% sites.master$BAS_LOC_RM)
+  select(site_id, coll_date) %>% 
+  mutate(SITE_MATCH = site_id %in% sites.master$BAS_LOC_RM)
   
 # 5 sites not in sites table:
 
@@ -205,10 +298,13 @@ matchlist <- bugmatrix.15to19 %>%
 
 ```
 
-Export for TetraTech
+Clean up dataframes and export matrix
 ```{r}
 
-write.table(bugmatrix.15to19, file.path(root.dir, "data/compile_2015-2019/NYSDEC_LowGrad_macro_2015-2019_2020-04-09.csv"),sep=",", row.names = FALSE)
+rm(matchlist, bugmatrix.15.16.17.df, bugmatrix.18.19.df, bugs.2018.1, bugs.2018.2, bugs.2019, sites.master)
+
+# write.table(bugmatrix.15to19, file.path(root.dir, "data/compile_2015-2019/bugs/NYSDEC_LowGrad_macro_2015-2019_2020-04-09.csv"),sep=",", row.names = FALSE)
+write.table(bugmatrix.15to19, file.path(root.dir, "data/compile_2015-2019/bugs/2015-2019_lowgrad_bugs_matrix_20201030.csv"),sep=",", row.names = FALSE)
 
 
 ```
