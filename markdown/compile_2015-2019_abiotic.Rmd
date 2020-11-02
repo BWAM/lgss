@@ -25,7 +25,8 @@ field.LU.2015 <- read_excel(fielddata.2015.path, sheet = "FieldData") %>%
   select(-BAS_LOC_RM...39, -BAS_LOC_RM_gis) %>% 
   janitor::clean_names() %>% 
   rename_all(tolower) %>% 
-  select(-c(basin, name, direct, descript, lat_final, long_final)) %>% 
+  select(-c(name, direct, descript, lat_final, long_final)) %>% 
+  mutate(basin = as.numeric(basin)) %>% 
   rename(site_id = bas_loc_rm_1,
          sample_date = date_field_data,
          arrivetime = time,
@@ -37,7 +38,7 @@ field.LU.2015 <- read_excel(fielddata.2015.path, sheet = "FieldData") %>%
          general_comment = notes,
          macrophyte_pct = percent_macrophyte,
          cur_spd = current,
-         cond = conduct,
+         spcond = conduct,
          ph = p_h,
          do_conc = do,
          do_pct_sat = percent_sat
@@ -49,12 +50,13 @@ field.LU.2016.2017 <- read_excel(fielddata.2016.2017.path, sheet = "LG data + si
   janitor::clean_names() %>% 
   rename_all(tolower) %>% 
   setNames(., sub("_x", "", names(.))) %>% 
-  select(-c(basin, location, rivmile, station, org_for_toxics, project, samp, secchi)) %>% 
+  select(-c(location, rivmile, station, org_for_toxics, project, samp, secchi)) %>% 
   rename(site_id = bas_loc_rm,
          sample_date = coll_date,
          embeddedness = embedd,
          do_conc = do,
          do_pct_sat = percent_sat,
+         spcond = cond,
          algae_suspended = algae_s,
          algae_filamentous = algae_fil,
          algae_diaoms_presen = algae_d,
@@ -75,6 +77,9 @@ field.LU.2016.2017 <- read_excel(fielddata.2016.2017.path, sheet = "LG data + si
 # Bind 2015 and 2016+2017 data together
 field.LU.bind <- bind_rows(field.LU.2015, field.LU.2016.2017) 
   # select(sort(current_vars()))
+
+field.LU.bind <- field.LU.bind %>% 
+  select(-c(algae_suspended, algae_filamentous, "ephem", "plecop", "trich", "coleop", "megalop", "odonata", "chir", "simul", "decapod", "gammar", "mollusk", "oligo", "others"))
 
 
 # Field names for referece (binding)
@@ -125,6 +130,9 @@ field.LU.bind <- bind_rows(field.LU.2015, field.LU.2016.2017)
 # [25] "other"                    "field_water_qlty"         "habitat"                  "lgs_habitat_bank"         "lgs_habitat_macrophyte"   "lgs_habitat_snag"        
 # [31] "lgs_habitat_substrate"    "bottom_type"              "dominant_substrate"       "water_clarity_driver"     "macro_comment" 
 
+
+rm(field.LU.2015, field.LU.2016.2017)
+
 ```
 
 Habitat tables: Read in best versions and join
@@ -134,7 +142,7 @@ habitat.2015 <- read_excel(fielddata.2015.path, sheet = "Habitat") %>%
   rename_all(tolower) %>% 
   # select(-c()) %>% 
   rename(site_id = bas_loc_rm,
-         sample_date_habitat = date_habitat,
+         sample_date = date_habitat,
          epifaunal_cover = x1_epifaunal_substrate_available_cover,
          embeddedness_pooling = x2_pool_substrate_characterization,
          velocity_depth_regime = x3_pool_variability,
@@ -168,7 +176,7 @@ habitat.2016.2017 <- read_excel(fielddata.2016.2017.path, sheet = "Habitat") %>%
   select(-c(basin, location, rivmile, bas_loc_rm, gradient)) %>% 
   mutate(site_id_field_fixed = str_replace(site_id_field_fixed, "07-HARB-0.5_b", "07-HARB-0.5")) %>% 
   rename(site_id = site_id_field_fixed,
-         sample_date_habitat = coll_date_habitat,
+         sample_date = coll_date_habitat,
          epifaunal_cover = epi_cover,
          embeddedness_pooling = embedd_pool,
          velocity_depth_regime = vel_dep_regime,
@@ -220,7 +228,7 @@ streamstats.bind <- bind_rows(streamstats.2015, streamstats.2016.2017)
 rm(field.LU.2015, field.LU.2016.2017, fielddata.2015.path, fielddata.2016.2017.path, habitat.2015, habitat.2016.2017, streamstats.2015, streamstats.2016.2017)
 
 ```
-Read in bug data to get list of 2018-2019 events for filtering ITS tables
+Read in bug data (MACRO SP SAMPLE INFO HIST) to get list of 2018-2019 events for filtering field data tables.
 ```{r}
 db.mssih.events <- read_csv(file.path(itstable.path, "20201029_S_MACRO_SPECIES_SAMP_INF_HIST.csv"))  %>% 
   rename_all(tolower) %>% 
@@ -242,14 +250,157 @@ db.mssih.events <- read_csv(file.path(itstable.path, "20201029_S_MACRO_SPECIES_S
 
 ```
 
+
+New approach: Join ITS tables and add in 2015-2017 data
+
+Import and trim down SAMPLE EVENT INFO and MACRO FIELD tables to needed fields then join.
+```{r}
+db.SEI <- read.csv(file.path(itstable.path, "20201019_S_SAMPLE_EVENT_INFO_all_fields.csv"), stringsAsFactors = FALSE) %>% 
+  rename_all(tolower) %>% 
+  setNames(., sub("seih_", "", names(.))) %>% 
+  rename(site_id = event_smas_history_id,
+         sample_date = event_smas_sample_date,
+         event_id = event_smas_id,
+         arrivetime = smas_arrivetime,
+         cur_spd = speed_of_stream_current,
+         macrophyte_pct = mfdh_macrophytes) %>%
+  filter(event_id %in% db.mssih.events$event_id) %>% 
+  mutate(sample_date = as.POSIXct(sample_date, format = "%m/%d/%Y"))
+
+db.SEI.select <- db.SEI %>% 
+  select(event_id, site_id, basin, sample_date, arrivetime, crew, depth, width, cur_spd, algae_diaoms_presen, thickness_diatoms_present, macrophyte_pct, canopy, embeddedness, rock, rubble, gravel, sand, silt, clay, land_use, general_comment)
+
+db.macrofield <- read.csv(file.path(itstable.path, "20201023_S_MACRO_FIELD_DATA_HISTORY_all_fields.csv"), stringsAsFactors = FALSE) %>% 
+  rename_all(tolower) %>% 
+  setNames(., sub("mfdh_", "", names(.))) %>%
+  rename(event_id = event_smas_id) %>%
+  filter(event_id %in% db.mssih.events$event_id) %>% 
+  # filtering by the criteria below yields 5 more surveys than bugs present. Look into missing bugs later.
+  # mutate(sample_date = as.Date(sample_date, format = "%m/%d/%Y"),
+  #        year = format(sample_date, format = "%Y")) %>%
+  # filter(year %in% c("2018", "2019"),
+  #        biosample_collect_method %in% "Low-Gradient") %>%
+  rename(ephem = ephemeroptera,
+         plecop = plecoptera,
+         trich = trichoptera,
+         coleop = coleoptera,
+         megalop = megaloptera,
+         chir = chironomidae,
+         simul = simuliidae,
+         decapod = decapods,
+         gammar = gammaridae,
+         mollusk = mollusca,
+         oligo = oligochaeta) %>% 
+  # The following field traige columns would not bind; not needed anyway.
+  select(-c("ephem", "plecop", "trich", "coleop", "megalop", "odonata", "chir", "simul", "decapod", "gammar", "mollusk", "oligo", "tipulidae", "others", "other"))
+
+db.macrofield.select <- db.macrofield %>% 
+  select(-c(row_index, instance_id, event_smas_history_id, basin, location, rivermile, event_smas_sample_date, biosample_collect_method, biosamp_col_method_note))
+
+SEI.MACRO.join <- left_join(db.SEI.select, db.macrofield.select, by = "event_id")
+
+# setdiff(SEI.MACRO.join, field.LU.bind)
+# Output:
+# Error: not compatible: 
+# - Cols in y but not x: `pht_id_dwn`, `pht_id_up`, `hab_present`, `land_use_pct_natural_wetland`, `do_pct_sat`, `cond`, `site_condition_notes`, `cond_test_250`, `site_condition_v1`, `ph`, `temp`, `riffle_present`, `site_condition_v2`, `ref_field_yn`, `salinity`, `photo_2`, `microtox`, `chl_a`, `do_conc`, `photo`. 
+# - Cols in x but not y: `macro_comment`, `event_id`. 
+
+#Fields checked; okay.
+
+```
+
+Add in HABAITAT table to above join
+```{r}
+db.habitat <- read.csv(file.path(itstable.path, "20201020_S_HABITAT_FIELD_DATA_HISTORY_all_fields.csv"), stringsAsFactors = FALSE) %>% 
+  rename_all(tolower) %>% 
+  setNames(., sub("hfdh_", "", names(.))) %>% 
+  rename(site_id = event_smas_history_id,
+         sample_date = event_smas_sample_date,
+         event_id = event_smas_id) %>% 
+  filter(event_id %in% db.mssih.events$event_id) 
+
+db.habitat.select <- db.habitat %>% 
+  select(-c(row_index, site_id, basin, location, rivermile, sample_date, instance_id))
+
+SEI.MACRO.HABITAT.join <- left_join(SEI.MACRO.join, db.habitat.select, by = "event_id")
+```
+
+Transform IN-SITU data from long to wide and join to above
+```{r}
+db.insitu <- read.csv(file.path(itstable.path, "20201030_S_IN_SITU_WATER_CHEM_all_fields.csv"), stringsAsFactors = FALSE) %>% 
+  rename_all(tolower) %>% 
+  setNames(., sub("iswc_", "", names(.))) %>% 
+  rename(site_id = event_smas_history_id,
+         event_id = event_smas_id,
+         sample_date = event_smas_sample_date,
+         pcode = chem_parameter_pcode_valid) %>% 
+  filter(event_id %in% db.mssih.events$event_id) %>% 
+  select(event_id, pcode, result) %>% 
+  mutate(pcode = as.character(pcode),
+         pcode = case_when(
+    pcode == 32 ~ "chl_rfu",
+    pcode == 33  ~ "chl_ugL",
+    pcode == 61 ~ "do_conc",
+    pcode == 62 ~ "do_pct_sat",
+    pcode == 109 ~ "ph",
+    pcode == 125 ~ "pc_rfu",
+    pcode == 126 ~ "pc_ugl",
+    pcode == 138 ~ "spcond",
+    pcode == 142 ~ "temp",
+    pcode == 170 ~ "salinity",
+    TRUE ~ pcode
+    )
+  )
+
+db.insitu.wide <- db.insitu %>% 
+  group_by(event_id, pcode) %>% 
+  summarise(result = sum(result)) %>% 
+  spread(pcode, result, fill = NA) %>% 
+  select(event_id, temp, spcond, everything(), -c(chl_rfu, chl_ugL, pc_rfu, pc_ugl))
+
+SEI.MACRO.HABITAT.INSITU <- left_join(SEI.MACRO.HABITAT.join, db.insitu.wide, by = "event_id")
+
+```
+
+Join 2015-2017 field and habitat, bind with master 2018-2019 table, then add in additional site info.
+```{r}
+# First join together LG field and habitat data
+
+lg.old.join <- left_join(field.LU.bind, habitat.bind, by = c("site_id", "sample_date"))
+
+setdiff(SEI.MACRO.HABITAT.INSITU, lg.old.join)
+
+master.field <- bind_rows(SEI.MACRO.HABITAT.INSITU, lg.old.join)
+
+write.table(master.field, file.path(root.dir, "data", "compile_2015-2019", "field_data", "final_cleaned", "2015-2019_lowgrad_fielddata_20201101.csv"),sep=",", row.names = FALSE)
+
+sites <- read_excel(file.path(itstable.path, "20201030_S_SITE.xlsx")) %>% 
+  rename_all(tolower) %>% 
+  setNames(., sub("site_", "", names(.))) %>%
+  rename(site_id = history_id) %>%
+  filter(site_id %in% master.field$site_id)
+
+missing_sites <- anti_join(sites, master.field, by = "site_id")
+```
+
+
+
+
+
+
+# Old approach (unfinished):
+
+
 MACRO FIELD table: Filter to event list and add in 2015-2017 data
 ```{r}
-db.macrofield <- read_excel(file.path(itstable.path, "20201023_S_MACRO_FIELD_DATA_HISTORY_all_fields.xlsx"), col_types = "text") %>% 
+# db.macrofield <- read_excel(file.path(itstable.path, "20201023_S_MACRO_FIELD_DATA_HISTORY_all_fields.xlsx"), guess_max = min(10000, n_max = NULL)) %>% 
+db.macrofield <- read.csv(file.path(itstable.path, "20201023_S_MACRO_FIELD_DATA_HISTORY_all_fields.csv"), stringsAsFactors = FALSE) %>% 
   rename_all(tolower) %>% 
   setNames(., sub("mfdh_", "", names(.))) %>%
   rename(sample_date = event_smas_sample_date,
          event_id = event_smas_id) %>%
   filter(event_id %in% db.mssih.events$event_id) %>% 
+  mutate(sample_date = as.POSIXct(sample_date, format = "%m/%d/%Y")) %>%
   # filtering by the criteria below yields 5 more surveys than bugs present. Look into missing bugs later.
   # mutate(sample_date = as.Date(sample_date, format = "%m/%d/%Y"),
   #        year = format(sample_date, format = "%Y")) %>%
@@ -266,21 +417,52 @@ db.macrofield <- read_excel(file.path(itstable.path, "20201023_S_MACRO_FIELD_DAT
          decapod = decapods,
          gammar = gammaridae,
          mollusk = mollusca,
-         oligo = oligochaeta)
+         oligo = oligochaeta) %>% 
+  # The following field traige columns would not bind; not needed anyway.
+  select(-c("ephem", "plecop", "trich", "coleop", "megalop", "odonata", "chir", "simul", "decapod", "gammar", "mollusk", "oligo", "tipulidae", "others", "other"))
 
+# list unique values in all fields to check import
+db.macrofield.unique <- lapply(db.macrofield, unique)
+
+db.macrofield.select <- db.macrofield %>% 
+  select(-c(row_index, instance_id, location, rivermile, biosample_collect_method, biosamp_col_method_note))
+field.master <- bind_rows(db.macrofield.select, field.LU.bind)
+
+# setdiff(db.macrofield.select, field.LU.bind)
+
+
+# Clean up unique names
+macro.field.bind.unique <- lapply(field.master, unique)
+
+
+
+
+
+rm(db.macrofield, field.LU.bind, db.macrofield.select)
 ```
 
 SAMPLE EVENT INFO table: Filter to event list and add in 2015-2017 data
 ```{r}
-db.SEI <- read_excel(file.path(itstable.path, "20201019_S_SAMPLE_EVENT_INFO_all_fields.xlsx"), col_types = "text") %>% 
+# db.SEI <- read_excel(file.path(itstable.path, "20201019_S_SAMPLE_EVENT_INFO_all_fields.xlsx"), guess_max = min(10000, n_max = NULL)) %>% 
+db.SEI <- read.csv(file.path(itstable.path, "20201019_S_SAMPLE_EVENT_INFO_all_fields.csv"), stringsAsFactors = FALSE) %>% 
   rename_all(tolower) %>% 
   setNames(., sub("seih_", "", names(.))) %>% 
-  rename(sample_date = event_smas_sample_date,
-         event_id = event_smas_id,
+  rename(event_id = event_smas_id,
          arrivetime = smas_arrivetime,
          cur_spd = speed_of_stream_current,
          macrophyte_pct = mfdh_macrophytes) %>%
   filter(event_id %in% db.mssih.events$event_id) 
+  # mutate(depth = as.numeric(depth),
+  #        width = as.numeric(width),
+  #        cur_spd = as.numeric(cur_spd))
+
+db.SEI.select <- db.SEI %>% 
+  select(event_id, arrivetime, crew, depth, width, cur_spd, algae_diaoms_presen, thickness_diatoms_present, macrophyte_pct, canopy, embeddedness, rock, rubble, gravel, sand, silt, clay, land_use, general_comment)
+
+field.master2 <- left_join(field.master, db.SEI.select)
+
+# field.master2 <- bind_rows(field.master, db.SEI.select)
+
 
 # field.master <- db.SEI %>% 
 #   select(-instance_id, -row_index, -event_smas_id, -location, -rivermile, -site_type_dept_intrst, -site_type_extrnl_sugg, -site_type_lng_trm_trnd, -site_type_mltplt, -site_type_probabilistc, -site_type_ras, -site_type_reference, -site_type_rmn, -site_type_spcl_stdy, -site_type_unassd_pwl)
