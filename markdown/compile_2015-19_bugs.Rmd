@@ -247,22 +247,11 @@ bugmatrix.15to19 <- bind_rows(bugmatrix.15.16.17.df.form, db.bugmatrix.18.19) %>
 bugmatrix.15to19[is.na(bugmatrix.15to19)] <- 0
 
 
-# #Transform from long to wide (old code used on raw data)
-# bugmatrix.18.19.df <- bugs.bind.18.19 %>% 
-#   mutate(REPLICATE = ifelse(is.na(REPLICATE), 1, REPLICATE)) %>%
-#   mutate(INDIV = as.numeric(INDIV)) %>% 
-#   mutate(COLL_DATE = as.Date(COLL_DATE, format = "%m/%d/%Y")) %>% 
-#   select(SITE_ID, COLL_DATE, REPLICATE, MACRO_GENSPECIES, INDIV) %>% 
-#   group_by(SITE_ID, COLL_DATE, REPLICATE, MACRO_GENSPECIES) %>% 
-#   summarise(INDIV = sum(INDIV)) %>% 
-#   spread(MACRO_GENSPECIES, INDIV, fill = 0)
-# 
-# bugmatrix.15to19 <- bind_rows(bugmatrix.15.16.17.df, bugmatrix.18.19.df)
-# bugmatrix.15to19[is.na(bugmatrix.15to19)] <- 0
-# bugmatrix.15to19 <- bugmatrix.15to19[order(bugmatrix.15to19$SITE_ID),] 
-# 
-
-
+bugmatrix.15to19.unique <- bugmatrix.15to19 %>% 
+  arrange(sample_date) %>% 
+  distinct(site_id, .keep_all = TRUE) %>% 
+  select(-sample_date)
+  
 
 
 ```
@@ -304,6 +293,10 @@ rm(matchlist, bugmatrix.15.16.17.df, bugmatrix.18.19.df, bugs.2018.1, bugs.2018.
 # write.table(bugmatrix.15to19, file.path(root.dir, "data/compile_2015-2019/bugs/NYSDEC_LowGrad_macro_2015-2019_2020-04-09.csv"),sep=",", row.names = FALSE)
 write.table(bugmatrix.15to19, file.path(root.dir, "data/compile_2015-2019/bugs/2015-2019_lowgrad_bugs_matrix_20201030.csv"),sep=",", row.names = FALSE)
 
+
+teams.datadir <- "C:/Users/gmlemley/New York State Office of Information Technology Services/SMAS - Low Gradient IBI/data"
+
+write.table(bugmatrix.15to19.unique, file.path(teams.datadir, "bugs", "2015-2019_lowgrad_bugs_matrix_UNIQUE_20201104.csv"),sep=",", row.names = FALSE)
 
 ```
 
