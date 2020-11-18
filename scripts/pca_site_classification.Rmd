@@ -41,7 +41,7 @@ fielddata.num.sub <- fielddata.num %>%
 # Filter out spotty params
   select(-c(hab_present, embeddedness, chl_a, microtox, biosample, habitat_total_score, clay, rubble, silt, rock, sand, gravel, salinity, algae_diaoms_presen, thickness_diatoms_present, cond_test_250, land_use_pct_natural_wetland, lgs_habitat_snag, lgs_habitat_bank, lgs_habitat_macrophyte, lgs_habitat_substrate)) %>% 
 # Filter out params not reflective of human disturbance
-  select(-c(depth, width, cur_spd, canopy, temp)) %>% 
+  # select(-c(depth, width, cur_spd, canopy, temp)) %>% 
 # Filter out sites with lots of missing data
   filter(!(unique_id %in% c("03-LSAM_N-7.9_2015", "01-BLKE-0.1_2015"))) %>% 
   mutate_all(~replace(., . == -9999, NA))
@@ -66,9 +66,9 @@ fielddata.num.sub.hab <- fielddata.num.sub %>%
 
 datacounts2 <- data.frame(colname = names(fielddata.num.sub.hab),colSums_fielddata=colSums(!is.na(fielddata.num.sub.hab)))
 
-# Select only fully populated fields for testing PCA
+# Remove incomplete fields for testing PCA
 fielddata.pca.test <- fielddata.num.sub.hab %>% 
-  select(-c(macrophyte_pct, sediment_deposition, embeddedness_pooling, flow_status, channel_alteration))
+  select(-c(depth, width, cur_spd, canopy, macrophyte_pct, sediment_deposition, embeddedness_pooling, flow_status, channel_alteration))
 
 ```
 
@@ -98,10 +98,11 @@ fielddata.pca.test3<-scale(fielddata.pca.test2, center = TRUE, scale = TRUE)
 abiotic.pca <- prcomp(fielddata.pca.test3, cor = TRUE)
 
 # Plot PCA Biplot and quantiles of PC1 values
-pca_biplot<-autoplot(abiotic.pca, data = fielddata.pca.test3, label = FALSE, label.size = 2, loadings.label = TRUE, loadings.label.repel=T, loadings.label.size = 3, scale= 0)
-vline<- geom_vline(xintercept = c(-1.4769168,-0.4725721,0.9480725))
+pca_biplot<-autoplot(abiotic.pca, data = fielddata.pca.test3, label = F, label.size = 3, loadings.label = TRUE, loadings.label.repel=T, loadings.label.size = 4, scale= 0)
 
-pca_biplot+vline
+# vline<- geom_vline(xintercept = c(-1.4769168,-0.4725721,0.9480725))
+# pca_biplot+vline
+pca_biplot
 
 ```
 
