@@ -142,7 +142,7 @@ Habitat tables: Read in best versions and join
 habitat.2015 <- read_excel(fielddata.2015.path, sheet = "Habitat") %>% 
   janitor::clean_names() %>% 
   rename_all(tolower) %>% 
-  # select(-c()) %>% 
+  # mutate(date_habitat = ifelse(bas_loc_rm %in% "01-BLKE-0.1", date_habitat+1, date_habitat)) %>%
   rename(site_id = bas_loc_rm,
          sample_date = date_habitat,
          epifaunal_cover = x1_epifaunal_substrate_available_cover,
@@ -374,7 +374,7 @@ lg.old.join <- left_join(field.LU.bind, habitat.bind, by = c("site_id", "sample_
 
 master.field <- bind_rows(SEI.MACRO.HABITAT.INSITU, lg.old.join)
 
-# write.table(master.field, file.path(root.dir, "data", "compile_2015-2019", "field_data", "final_cleaned", "2015-2019_lowgrad_fielddata_20201101.csv"),sep=",", row.names = FALSE)
+write.table(master.field, file.path(root.dir, "data", "compile_2015-2019", "field_data", "final_cleaned", "2015-2019_lowgrad_fielddata_20201117.csv"),sep=",", row.names = FALSE)
 
 
 ```
@@ -435,7 +435,7 @@ Addition cleaning on unique values for consistency
 Compile site information (sites table + StreamStats + landuse)
 ```{r}
 
-# Still need to harvest StreamStats + landuse data for 2018-2019 (do for 2020 at the same time?)
+# Still need to harvest StreamStats + landuse data for 2018-2019
 
 
 ```

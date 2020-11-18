@@ -1,0 +1,273 @@
+---
+title: "pca_site_classification"
+author: "Gavin Lemley"
+date: "2020-11-17"
+output: html_document
+---
+
+Load libraries
+```{r load libraries}
+library(tidyverse)
+
+```
+
+Load data and transform as needed
+```{r load data}
+root.dir <- rprojroot::find_root("lgss.Rproj")
+
+fielddata.path <- file.path(root.dir, "data", "compile_2015-2019", "field_data", "final_cleaned", "2015-2019_lowgrad_fielddata_20201117.csv")
+
+# Load data, create unique IDs, and remove duplicate sites.
+fielddata <- read.csv(fielddata.path, stringsAsFactors = FALSE) %>% 
+  mutate(sample_date = as.Date(sample_date)) %>% 
+  mutate(unique_id = paste0(site_id, "_", format(sample_date, "%Y"))) %>% 
+  select(unique_id, everything(), -event_id) %>% 
+  arrange(site_id, sample_date) %>% 
+  distinct(site_id, .keep_all = TRUE)
+
+# Select only unique id and numeric fields 
+fielddata.num <- fielddata %>% 
+  select(unique_id, which(sapply(.,is.numeric)), -c(basin))
+
+# Count number of non-NA records
+datacounts <- data.frame(colname = names(fielddata.num),colSums_fielddata=colSums(!is.na(fielddata.num)))
+# List fields in order by lowest value count, then list in console formatted for copy/pasting
+datacounts.vec <- colSums(!is.na(fielddata.num))
+sort(datacounts.vec)
+cat(names(sort(datacounts.vec)), sep = ", ")
+
+## Field selection and cleanup
+fielddata.num.sub <- fielddata.num %>% 
+# Filter out spotty params
+  select(-c(hab_present, embeddedness, chl_a, microtox, biosample, habitat_total_score, clay, rubble, silt, rock, sand, gravel, salinity, algae_diaoms_presen, thickness_diatoms_present, cond_test_250, land_use_pct_natural_wetland, lgs_habitat_snag, lgs_habitat_bank, lgs_habitat_macrophyte, lgs_habitat_substrate)) %>% 
+# Filter out params not reflective of human disturbance
+  select(-c(depth, width, cur_spd, canopy, temp)) %>% 
+# Filter out sites with lots of missing data
+  filter(!(unique_id %in% c("03-LSAM_N-7.9_2015", "01-BLKE-0.1_2015"))) %>% 
+  mutate_all(~replace(., . == -9999, NA))
+ 
+# Find means for creating dummy vals
+fielddata.num.mean <- fielddata.num.sub %>%
+  # summarise(across(everything(), list(min = min, max = max, median = median)))
+  # summarise(across(everything(), list(median = median)))
+  summarise_each(funs(mean(., na.rm = TRUE)))
+
+# Fill in dummy values and calculate total habitat score
+fielddata.num.sub.hab <- fielddata.num.sub %>% 
+  
+  ###
+  ### fill in dummy vals here with means of given column? ###
+  ###
+  
+  mutate(habitat_total_score = select(., epifaunal_cover, embeddedness_pooling, velocity_depth_regime, sediment_deposition, flow_status, channel_alteration,
+                                      riffle_bend_frequency, left_bank_stability, right_bank_stability, left_bank_veg, right_bank_veg, left_bank_veg_zone, 
+                                      right_bank_veg_zone) 
+         %>% rowSums(na.rm = TRUE))
+
+datacounts2 <- data.frame(colname = names(fielddata.num.sub.hab),colSums_fielddata=colSums(!is.na(fielddata.num.sub.hab)))
+
+# Select only fully populated fields for testing PCA
+fielddata.pca.test <- fielddata.num.sub.hab %>% 
+  select(-c(macrophyte_pct, sediment_deposition, embeddedness_pooling, flow_status, channel_alteration))
+
+```
+
+Load additional libs
+```{r}
+library(vegan)
+library(recipes)
+library(rsample)
+library(modeldata)
+library(ggplot2)
+library(ggfortify)
+library(corrr)
+library(tidymodels)
+library(factoextra)
+library(here)
+```
+
+
+```{r plotting pca}
+# Column names to row names 
+fielddata.pca.test2<-fielddata.pca.test %>% 
+  column_to_rownames(var = "unique_id")
+
+# PCA setup and biplot
+    ## Scale and center data 
+fielddata.pca.test3<-scale(fielddata.pca.test2, center = TRUE, scale = TRUE)
+abiotic.pca <- prcomp(fielddata.pca.test3, cor = TRUE)
+
+# Plot PCA Biplot and quantiles of PC1 values
+pca_biplot<-autoplot(abiotic.pca, data = fielddata.pca.test3, label = FALSE, label.size = 2, loadings.label = TRUE, loadings.label.repel=T, loadings.label.size = 3, scale= 0)
+vline<- geom_vline(xintercept = c(-1.4769168,-0.4725721,0.9480725))
+
+pca_biplot+vline
+
+```
+
+
+
+
+
+
+
+# Adapt chunks below for Low Gradient (copied from Matt's script for lakes analysis):
+
+
+```{r, Perform PCA on WQ & Landscape Data}
+
+
+
+# Get eigenvalues
+
+eig.val <- get_eigenvalue(abiotic.pca)
+
+# Get PCA Scores
+
+scores<-abiotic.pca$x
+
+
+scores<-as.data.frame(scores)
+scores<-scores %>% 
+  rownames_to_column(var = "uniqueID")
+
+
+# Join PCA scores back to original dataset
+
+joined<-left_join(all.abiotic, scores, by=("uniqueID"))
+
+#joined<-joined %>% 
+ # select(uniqueID, `ALKALINITY, TOTAL (AS CaCO3)`, AMMONIA, `CHLOROPHYLL A`, `DEPTH, SECCHI DISK DEPTH`, `NITROGEN, KJELDAHL, TOTAL`, `NITROGEN, NITRATE-NITRITE`, PH, `SPECIFIC CONDUCTANCE`, `TOTAL NITROGEN, MIXED FORMS`, `TOTAL PHOSPHORUS`, DEV100, IMPERV100, FOREST100, NATURAL100, AG100, BUILDING_AREA_DENSITY_100, Comp.1, Comp.2)
+
+# Select variables of interest 
+
+joined<-joined %>% 
+ select(uniqueID, ALK, NH3, CHLA,SECCHI, TKN, NOx, PH, COND, TN, TP, DEV, IMPERV, FOREST, NATURAL, AGRI, PC1, PC2, PC3)
+
+
+
+# Examine Kaiser-Guttman criterion & Broken Stick model to determine the number of meaninful principal components to explore (https://en.proft.me/2016/11/15/principal-component-analysis-pca-r/)
+
+ev = abiotic.pca$sdev^2
+
+
+evplot = function(ev) {
+  # Broken stick model (MacArthur 1957)
+  n = length(ev)
+  bsm = data.frame(j=seq(1:n), p=0)
+  bsm$p[1] = 1/n
+  for (i in 2:n) bsm$p[i] = bsm$p[i-1] + (1/(n + 1 - i))
+  bsm$p = 100*bsm$p/n
+  # Plot eigenvalues and % of variation for each axis
+  op = par(mfrow=c(2,1),omi=c(0.1,0.3,0.1,0.1), mar=c(2, 2, 2, 2))
+  barplot(ev, main="Eigenvalues", col="white", las=1)
+  abline(h=mean(ev), col="red")
+  legend("right", "Average eigenvalue", lwd=1, col=2, bty="n")
+  barplot(t(cbind(100*ev/sum(ev), bsm$p[n:1])), beside=TRUE, 
+          main="% variation", col=c("lightgray","black"), las=1)
+  legend("right", c("% eigenvalue", "Broken stick model"), 
+         pch=15, col=c("lightgray","black"), bty="n")
+  par(op)
+}
+
+evplot(ev)
+
+
+#Examine correlation between principal components
+
+joined_num<-select_if(joined, is.numeric)
+
+PC1_corr <- joined_num %>%
+  select(-PC2, -PC3) %>%
+  correlate() %>% 
+  focus(PC1)
+
+
+PC1_corr %>% 
+  mutate(rowname = factor(rowname, levels = rowname[order(PC1)])) %>%  # Order by correlation strength
+   ggplot(aes(x = rowname, y = PC1)) +
+  geom_bar(stat = "identity") +
+  ylab("Correlation with PC1") +
+  xlab("Variable")+
+  ylim(-1,1)+
+  theme(axis.text.x=element_text(angle=90,hjust=1))
+
+
+PC2_corr<-joined_num %>%
+  select(-PC1, -PC3) %>%
+  correlate() %>% 
+  focus(PC2)
+  
+
+
+PC2_corr %>% 
+    mutate(rowname = factor(rowname, levels = rowname[order(PC2)])) %>%  # Order by correlation strength
+    ggplot(aes(x = rowname, y = PC2)) +
+    geom_bar(stat = "identity") +
+    ylab("Correlation with PC2") +
+    xlab("Variable")+
+    ylim(-1,1)+
+    theme(axis.text.x=element_text(angle=90,hjust=1))
+
+
+```
+
+
+```{r, Classify Sites Based on PCA analysis}
+
+#Select only the first 3 principal components
+
+scores_filter<-scores %>% 
+  select(uniqueID, PC1, PC2, PC3)
+
+all.abiotic.classify<-left_join(all.abiotic, scores_filter, by=c("uniqueID"))
+
+#Determine Thresholds based on PC1 qauntiles
+
+quantile(all.abiotic.classify$PC1, probs = seq(0, 1, 0.25), na.rm = FALSE, names = TRUE, type = 7)
+
+
+all.abiotic.classified<-all.abiotic.classify %>% 
+ mutate(CONDITION_CLASS = case_when(PC1 <= -1.4769168 ~ "LDC", # Least Disturbed Condition
+                                    PC1 <= -0.4725721 ~ "MDC", # Minimally Disturbed Condition 
+                                    PC1 <= 0.9480725 ~ "MSC", # Moderately Stressed Condition
+                                    PC1 > 0.9480725 ~ "HSC", # Highly Stressed Condition
+                                    TRUE                 ~"MISTAKE"
+                          ))
+
+# Plot PCA variables as a function of the condition classes defined above. 
+
+all.abiotic.classified$CONDITION_CLASS<-as.character(all.abiotic.classified$CONDITION_CLASS)
+
+#all.abiotic.classified %>% 
+ # mutate(CONDITION_CLASS = factor(CONDITION_CLASS, c("LDC", "MDC", "MSC", "HSC"))) %>% 
+  #ggplot(aes(x=CONDITION_CLASS, y= TP))+
+  #geom_boxplot()
+
+
+all.abiotic.classified.long<-all.abiotic.classified %>% 
+  select(CONDITION_CLASS, ALK, NH3, CHLA,SECCHI, TKN, NOx, PH, COND, TN, TP, DEV, IMPERV, FOREST, NATURAL, AGRI) %>% 
+  pivot_longer(!CONDITION_CLASS, values_to = "result.value", names_to = "characteristic.name")
+
+p <- all.abiotic.classified.long %>% 
+  mutate(CONDITION_CLASS = factor(CONDITION_CLASS, c("LDC", "MDC", "MSC", "HSC"))) %>%  
+  ggplot(aes(CONDITION_CLASS, result.value)) +
+  geom_boxplot(outlier.size = 0.5)+
+  theme(axis.title.y=element_blank())
+
+p + facet_wrap(vars(characteristic.name), ncol = 3, scales = "free", strip.position = "left", 
+                labeller = as_labeller(c(AGRI = "AGRI (%)", ALK = "ALK (mg/L CaCO3)", CHLA = "CHLA (ug/L)", COND="COND (uS/cm)", DEV="DEV (%)", FOREST = "FOREST (%)", IMPERV= "IMERV (%)", NATURAL = "NATURAL (%)", NH3 = "NH3 (ug/L)", NOx = "NOx (ug/L)", PH = "PH", SECCHI ="SECCHI (m)", TKN = "TKN (ug/L)", TN = "TN (ug/L)", TP = "TP (ug/L)")))
+
+
+# Plot PCA Scores and categories on biplot w/o loadings
+
+scores_plot<-scores %>% 
+  ggplot(aes(x=PC1, y=PC2))+
+  geom_vline(xintercept = c(-1.4769168,-0.4725721,0.9480725))+
+  geom_point()+
+  annotate("text", x = -2.5, y = -7.5, label = "LDC")+
+  annotate("text", x = -0.9, y = -7.5, label = "MDC")+
+  annotate("text", x =  0.4, y = -7.5, label = "MSC")+
+  annotate("text", x =  7.5, y = -7.5, label = "HSC")
+scores_plot
+```
