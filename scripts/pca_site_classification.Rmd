@@ -16,7 +16,8 @@ Load data and transform as needed
 root.dir <- rprojroot::find_root("lgss.Rproj")
 
 fielddata.path <- file.path(root.dir, "data", "compile_2015-2019", "field_data", "final_cleaned", "2015-2019_lowgrad_fielddata_20201117.csv")
-
+landcover.path <- file.path(root.dir, "data", "compile_2015-2019", "landcover", "landcover_final_2015-2019_20201118.csv")
+  
 # Load data, create unique IDs, and remove duplicate sites.
 fielddata <- read.csv(fielddata.path, stringsAsFactors = FALSE) %>% 
   mutate(sample_date = as.Date(sample_date)) %>% 
@@ -25,6 +26,20 @@ fielddata <- read.csv(fielddata.path, stringsAsFactors = FALSE) %>%
   arrange(site_id, sample_date) %>% 
   distinct(site_id, .keep_all = TRUE)
 
+# Import landcover data generated in landcover.Rmd and clean up site IDs to match
+landcover <- read.csv(landcover.path, stringsAsFactors = FALSE) %>% 
+  mutate(site_id = str_replace(site_id, "_updated", "")) %>% 
+  mutate(site_id = str_replace(site_id, "_stretched", "")) %>% 
+  mutate(site_id = str_replace(site_id, "_new", "")) %>% 
+  mutate(site_id = str_replace(site_id, "d", "_"))
+
+
+
+
+```
+
+Prepping data for input to PCA
+```{r}
 # Select only unique id and numeric fields 
 fielddata.num <- fielddata %>% 
   select(unique_id, which(sapply(.,is.numeric)), -c(basin))
@@ -69,8 +84,8 @@ datacounts2 <- data.frame(colname = names(fielddata.num.sub.hab),colSums_fieldda
 # Remove incomplete fields for testing PCA
 fielddata.pca.test <- fielddata.num.sub.hab %>% 
   select(-c(depth, width, cur_spd, canopy, macrophyte_pct, sediment_deposition, embeddedness_pooling, flow_status, channel_alteration))
-
 ```
+
 
 Load additional libs
 ```{r}

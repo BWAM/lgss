@@ -13,37 +13,71 @@ This document was created to import the land cover data calculated by C. Stoll a
 
 # Preparation
 
-Import the necessary packages.
+Import libs and find root
 ```{r}
 library(tidyverse)
 library(readxl)
-```
 
-Find the R-project root directory to simplify file path designations.
-```{r}
 root.dir <- rprojroot::find_root("lgss.Rproj")
+
 ```
 
 Specify the file path to the XLS file.
 ```{r}
-landcover.path <- file.path(root.dir,
+landcover.15.path <- file.path(root.dir,
                             "data",
-                            "Batch_Land_Cover_Output_01312019.xls")
+                            "compile_2015-2019",
+                            "landcover",
+                            "Batch_Land_Cover_Output_12212018_2015basins.xls")
+
+landcover.16.17.path <- file.path(root.dir,
+                            "data",
+                            "compile_2015-2019",
+                            "landcover",
+                            "Batch_Land_Cover_Output_01312019_2016-17basins.xls")
+
+landcover.18.19.path <- file.path(root.dir,
+                            "data",
+                            "compile_2015-2019",
+                            "landcover",
+                            "Batch_Land_Cover_Output_11182020_2018-19basins.xls")
 ```
 
 Identify all of the sheets in the XLS file.
 ```{r}
-sheet.vec <- readxl::excel_sheets(landcover.path)
+sheet.vec.15 <- readxl::excel_sheets(landcover.15.path)
+sheet.vec.16.17 <- readxl::excel_sheets(landcover.16.17.path)
+sheet.vec.18.19 <- readxl::excel_sheets(landcover.18.19.path)
+
 ```
 
 Import all of the sheets in the XLS file and bind them into a single data frame. The sheet name is used to generate the `site_id` column. The prefix "Basin_" is dropped from the `site_id` column.
 ```{r}
-landcover.df <- purrr::map_df(sheet.vec, function(sheet.i) {
-  readxl::read_xls(landcover.path,
+landcover.15.df <- purrr::map_df(sheet.vec.15, function(sheet.i) {
+  readxl::read_xls(landcover.15.path,
                    sheet = sheet.i) %>% 
     mutate(site_id = sheet.i,
            site_id = str_replace(site_id, "Basin_", ""))
 })
+
+landcover.16.17.df <- purrr::map_df(sheet.vec.16.17, function(sheet.i) {
+  readxl::read_xls(landcover.16.17.path,
+                   sheet = sheet.i) %>% 
+    mutate(site_id = sheet.i,
+           site_id = str_replace(site_id, "Basin_", ""))
+})
+
+landcover.18.19.df <- purrr::map_df(sheet.vec.18.19, function(sheet.i) {
+  readxl::read_xls(landcover.18.19.path,
+                   sheet = sheet.i) %>% 
+    mutate(site_id = sheet.i,
+           site_id = sub('.', '', site_id))
+})
+
+landcover.df <- bind_rows(landcover.15.df, landcover.16.17.df, landcover.18.19.df)
+
+# total = 167. 3 sites missing (should be 169 but includes 1 dup site to check reproducability)
+
 ```
 
 ```{r}
@@ -52,22 +86,64 @@ landcover.df <- landcover.df %>%
   mutate(total_acres = sum(Area_acre)) %>% 
   ungroup() %>% 
   mutate(percent_cover = Area_acre / total_acres * 100)
+
 ```
 
 ```{r}
-NLCD_key <- read.csv(file.path(root.dir, "data", "NLCD_attribute_key_condensed_LGSS.csv"))
+NLCD_key <- read.csv(file.path(root.dir, "data", "compile_2015-2019", "landcover", "NLCD_attribute_key_condensed_LGSS_v2.csv"))
+
 landcover.df <- merge(landcover.df,NLCD_key, by = "Value", all.x = TRUE)
+
 ```
 
-```{r}
+Old method
+```{r eval = FALSE}
 sitetype.df <- landcover.df %>% 
   filter(Condensed_class %in% c("Natural", "Wetland")) %>% 
   group_by(site_id) %>% 
   summarize(pct = sum(percent_cover)) %>% 
   mutate(site_type = ifelse(pct>=75,"ref","test"))
 
-write.table(sitetype.df, file.path(root.dir, "data/compile_2016-17/LGSS_16-17_landuse.csv"),sep=",", row.names = FALSE)
+# write.table(sitetype.df, file.path(root.dir, "data/compile_2016-17/LGSS_16-17_landuse.csv"),sep=",", row.names = FALSE)
 
+
+```
+New method including all "condensed categories" with new NLCD_key v2
+```{r}
+landcover.nat <- landcover.df %>% 
+  filter(Condensed_class %in% "Natural") %>% 
+  group_by(site_id) %>% 
+  summarize(landcover_nat_pct = sum(percent_cover))
+
+landcover.dev <- landcover.df %>% 
+  filter(Condensed_class %in% "Developed") %>% 
+  group_by(site_id) %>% 
+  summarize(landcover_dev_pct = sum(percent_cover))
+
+landcover.water <- landcover.df %>% 
+  filter(Condensed_class %in% "Water") %>% 
+  group_by(site_id) %>% 
+  summarize(landcover_water_pct = sum(percent_cover))
+
+landcover.ag <- landcover.df %>% 
+  filter(Condensed_class %in% "Agricultural") %>% 
+  group_by(site_id) %>% 
+  summarize(landcover_ag_pct = sum(percent_cover))
+
+landcover.all <- left_join(landcover.nat, landcover.dev, by = "site_id") %>% 
+  left_join(., landcover.ag, by = "site_id") %>% 
+  left_join(., landcover.water, by = "site_id") %>% 
+  # Add all to verify 100%
+  mutate(total_pct = select(., landcover_nat_pct, landcover_dev_pct, landcover_water_pct, landcover_ag_pct) 
+         %>% rowSums(na.rm = TRUE)) %>% 
+  select(-total_pct) %>% 
+  # Remove reproducability site
+  filter(!(site_id %in% "08_BENE_0_2_repro"))
+
+```
+
+```{r}
+write.table(landcover.all, file.path(root.dir, "data/compile_2015-2019/landcover/landcover_final_2015-2019_20201118.csv"),sep=",", row.names = FALSE)
 
 ```
 
