@@ -27,7 +27,7 @@ field.LU.2015 <- read_excel(fielddata.2015.path, sheet = "FieldData") %>%
   select(-BAS_LOC_RM...39, -BAS_LOC_RM_gis) %>% 
   janitor::clean_names() %>% 
   rename_all(tolower) %>% 
-  select(-c(name, direct, descript, lat_final, long_final)) %>% 
+  select(-c(name, direct, descript, lat_final, long_final, cond_test_250, land_use_pct_natural_wetland)) %>% 
   mutate(basin = as.numeric(basin)) %>% 
   rename(site_id = bas_loc_rm_1,
          sample_date = date_field_data,
@@ -52,7 +52,7 @@ field.LU.2016.2017 <- read_excel(fielddata.2016.2017.path, sheet = "LG data + si
   janitor::clean_names() %>% 
   rename_all(tolower) %>% 
   setNames(., sub("_x", "", names(.))) %>% 
-  select(-c(location, rivmile, station, org_for_toxics, project, samp, secchi)) %>% 
+  select(-c(location, rivmile, station, org_for_toxics, project, samp, secchi, lu_pct_nat_wetlnd)) %>% 
   rename(site_id = bas_loc_rm,
          sample_date = coll_date,
          embeddedness = embedd,
@@ -71,8 +71,7 @@ field.LU.2016.2017 <- read_excel(fielddata.2016.2017.path, sheet = "LG data + si
          dominant_substrate = dom_substrate,
          water_clarity_driver = wtrclr_driver,
          land_use = landuse,
-         general_comment = notes,
-         land_use_pct_natural_wetland = lu_pct_nat_wetlnd
+         general_comment = notes
   ) %>% 
   mutate(arrivetime = format(arrivetime, format="%H:%M"))
 
@@ -374,7 +373,7 @@ lg.old.join <- left_join(field.LU.bind, habitat.bind, by = c("site_id", "sample_
 
 master.field <- bind_rows(SEI.MACRO.HABITAT.INSITU, lg.old.join)
 
-write.table(master.field, file.path(root.dir, "data", "compile_2015-2019", "field_data", "final_cleaned", "2015-2019_lowgrad_fielddata_20201117.csv"),sep=",", row.names = FALSE)
+write.table(master.field, file.path(root.dir, "data", "compile_2015-2019", "field_data", "final_cleaned", "2015-2019_lowgrad_fielddata_20201120.csv"),sep=",", row.names = FALSE)
 
 
 ```
@@ -414,31 +413,3 @@ sites.lg.HG <- sites.lg %>%
 
 
 ```
-
-```{r}
-
-```
-
-
-
-
-
-Addition cleaning on unique values for consistency
-```{r}
-
-```
-
-
-
-
-
-Compile site information (sites table + StreamStats + landuse)
-```{r}
-
-# Still need to harvest StreamStats + landuse data for 2018-2019
-
-
-```
-
-
-

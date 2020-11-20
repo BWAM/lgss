@@ -137,13 +137,26 @@ landcover.all <- left_join(landcover.nat, landcover.dev, by = "site_id") %>%
   mutate(total_pct = select(., landcover_nat_pct, landcover_dev_pct, landcover_water_pct, landcover_ag_pct) 
          %>% rowSums(na.rm = TRUE)) %>% 
   select(-total_pct) %>% 
-  # Remove reproducability site
-  filter(!(site_id %in% "08_BENE_0_2_repro"))
+  replace(is.na(.), 0)
 
 ```
 
+Correct sites and drop previously dropped sites sites, and remove one duplicate site. Remove reproducability site (verified OK)
 ```{r}
-write.table(landcover.all, file.path(root.dir, "data/compile_2015-2019/landcover/landcover_final_2015-2019_20201118.csv"),sep=",", row.names = FALSE)
+landcover.all.corr <- landcover.all %>% 
+  mutate(site_id = sub("12_TEET_0d8", "11_TEET_0d8", site_id),
+         site_id = sub("01_LSIS_2d0", "01_LSIS_2d4", site_id),
+         site_id = sub("03_GUFF_1d8", "03_GUFF_0d9", site_id)) %>% 
+  filter(!(site_id %in% c("02_WANG_W_0_1",
+                          "01_BUFC_37_8",
+                          "07_HARB_0_5",
+                          "08_BENE_0_2_repro")))
+
+```
+
+
+```{r}
+write.table(landcover.all.corr, file.path(root.dir, "data/compile_2015-2019/landcover/landcover_final_2015-2019_20201120.csv"),sep=",", row.names = FALSE)
 
 ```
 
