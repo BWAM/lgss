@@ -100,16 +100,11 @@ fielddata.pca.data <- fielddata.dummy
   # select(-c(depth, width, cur_spd, canopy, macrophyte_pct, sediment_deposition, embeddedness_pooling, flow_status, channel_alteration))
 
 # Subset to only habitat params for plotting on PCA
-# fielddata.pca.habitatonly <- fielddata.pca.data %>%
-#   select(site_id, epifaunal_cover, velocity_depth_regime, riffle_bend_frequency, left_bank_stability, right_bank_stability, left_bank_veg, right_bank_veg, left_bank_veg_zone, right_bank_veg_zone)
-# Same as above including fields with missing vals
 fielddata.pca.habitatonly <- fielddata.pca.data %>%
   select(site_id, epifaunal_cover, embeddedness_pooling, velocity_depth_regime, sediment_deposition, flow_status, channel_alteration, riffle_bend_frequency, left_bank_stability, right_bank_stability, left_bank_veg, right_bank_veg, left_bank_veg_zone, right_bank_veg_zone)
 
+
 # Remove habitat variables and retain just total habitat score
-# fielddata.pca.data.clean <- fielddata.pca.data %>%
-#   select(-c(epifaunal_cover, velocity_depth_regime, riffle_bend_frequency, left_bank_stability, right_bank_stability, left_bank_veg, right_bank_veg, left_bank_veg_zone, right_bank_veg_zone))
-# Same as above, including fields with missing vals
 fielddata.pca.data.clean <- fielddata.pca.data %>%
   select(-c(epifaunal_cover, embeddedness_pooling, velocity_depth_regime, sediment_deposition, flow_status, channel_alteration, riffle_bend_frequency, left_bank_stability, right_bank_stability, left_bank_veg, right_bank_veg, left_bank_veg_zone, right_bank_veg_zone))
 
@@ -121,17 +116,15 @@ fielddata.pca.disturb <- fielddata.pca.data.clean %>%
 # Subset further to remove all landcover but NAT
 fielddata.pca.disturb.nat <- fielddata.pca.disturb %>% 
   select(-c(landcover_dev_pct, landcover_water_pct, landcover_ag_pct))
-
-# Subset to only variables that represent disturbance, minus duplicate landcover and pH
-fielddata.pca.disturb.simp.nat <- fielddata.pca.data.clean %>% 
-  select(site_id, landcover_nat_pct, spcond, habitat_total_score)
-
 # Same as above using DEV instead of NAT landcover
-fielddata.pca.disturb.simp.dev <- fielddata.pca.data.clean %>% 
-  select(site_id, landcover_dev_pct, spcond, habitat_total_score)
+fielddata.pca.disturb.dev <- fielddata.pca.disturb %>% 
+  select(-c(landcover_nat_pct, landcover_water_pct, landcover_ag_pct))
+
+# Subset further to just use NAT, habitat score, and SpCond
+fielddata.pca.disturb.simp <- fielddata.pca.disturb.nat %>% 
+  select(-c(ph, macrophyte_pct))
 
 ```
-
 
 Load additional libs
 ```{r}
@@ -149,12 +142,20 @@ library(here)
 
 
 ```{r plotting pca, fig.width=10, fig.height=6}
+
+# fielddata.pca.data
+# fielddata.pca.habitatonly
+# fielddata.pca.data.clean
+# fielddata.pca.disturb
+# fielddata.pca.disturb.nat
+# fielddata.pca.disturb.dev
+# fielddata.pca.disturb.simp
+
 # Column names to row names 
-fielddata.pca.input <- fielddata.pca.disturb.nat %>% 
+fielddata.pca.input <- fielddata.pca.disturb %>% 
   column_to_rownames(var = "site_id")
 
 # PCA setup and biplot
-    ## Scale and center data 
 fielddata.pca.scale <- scale(fielddata.pca.input, center = TRUE, scale = TRUE)
 abiotic.pca <- prcomp(fielddata.pca.scale, cor = TRUE)
 
