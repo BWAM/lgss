@@ -21,8 +21,8 @@ landcover.path <- file.path(root.dir, "data", "compile_2015-2019", "landcover", 
 # Load data, create unique IDs, and remove duplicate sites.
 fielddata <- read.csv(fielddata.path, stringsAsFactors = FALSE) %>% 
   mutate(sample_date = as.Date(sample_date)) %>% 
-  mutate(unique_id = paste0(site_id, "_", format(sample_date, "%Y"))) %>% 
-  select(unique_id, everything(), -event_id) %>% 
+  # mutate(unique_id = paste0(site_id, "_", format(sample_date, "%Y"))) %>% 
+  select(site_id, everything(), -event_id) %>% 
   arrange(site_id, sample_date) %>% 
   distinct(site_id, .keep_all = TRUE)
 
@@ -39,8 +39,8 @@ fielddata.lc <- fielddata %>%
   mutate(site_id_landcover = gsub("-", "_", site_id),
          site_id_landcover = gsub("\\.", "_", site_id_landcover)) %>% 
   left_join(landcover, by = "site_id_landcover") %>% 
-  select(-site_id_landcover) %>% 
-  select(landcover_nat_pct, landcover_dev_pct, landcover_ag_pct, landcover_water_pct, everything())
+  select(-site_id_landcover) 
+  # select(landcover_nat_pct, landcover_dev_pct, landcover_ag_pct, landcover_water_pct, everything())
   
 ```
 
@@ -48,15 +48,15 @@ Prepping data for input to PCA
 ```{r}
 # Select only unique id and numeric fields 
 fielddata.num <- fielddata.lc %>% 
-  select(unique_id, which(sapply(.,is.numeric)), -c(basin))
+  select(site_id, which(sapply(.,is.numeric)), -c(basin))
 
 # Count number of non-NA records
 datacounts <- data.frame(colname = names(fielddata.num),colSums_fielddata=colSums(!is.na(fielddata.num)))
 
 # List fields in order by lowest value count, then list in console formatted for copy/pasting
-datacounts.vec <- colSums(!is.na(fielddata.num))
-sort(datacounts.vec)
-cat(names(sort(datacounts.vec)), sep = ", ")
+# datacounts.vec <- colSums(!is.na(fielddata.num))
+# sort(datacounts.vec)
+# cat(names(sort(datacounts.vec)), sep = ", ")
 
 ## Field selection and cleanup
 fielddata.num.sub <- fielddata.num %>% 
@@ -66,7 +66,7 @@ fielddata.num.sub <- fielddata.num %>%
 # Filter out params not reflective of human disturbance
   # select(-c(depth, width, cur_spd, canopy, temp)) %>% 
 # Filter out sites with lots of missing data
-  filter(!(unique_id %in% c("03-LSAM_N-7.9_2015", "01-BLKE-0.1_2015"))) %>% 
+  filter(!(site_id %in% c("03-LSAM_N-7.9", "01-BLKE-0.1"))) %>% 
   mutate_all(~replace(., . == -9999, NA))
  
 # Find means for creating dummy vals
@@ -75,43 +75,60 @@ fielddata.num.mean <- fielddata.num.sub %>%
   # summarise(across(everything(), list(median = median)))
   summarise_each(funs(mean(., na.rm = TRUE)))
 
-# Fill in dummy values and calculate total habitat score
-fielddata.num.sub.hab <- fielddata.num.sub %>% 
-  
-  ###
-  ### fill in dummy vals here with means of given column? ###
-  ###
-  
+datacounts2 <- data.frame(colname = names(fielddata.num.sub),colSums_fielddata=colSums(!is.na(fielddata.num.sub)))
+
+# Fill in dummy values with means and calculate total habitat score
+fielddata.dummy <- fielddata.num.sub %>% 
+  ### (see Dray and Josse, 2015 for deeper dive into filling in missing vals)
+  mutate_at(vars(depth), ~replace_na(., mean(depth, na.rm = TRUE))) %>%
+  mutate_at(vars(width), ~replace_na(., mean(width, na.rm = TRUE))) %>%
+  mutate_at(vars(cur_spd), ~replace_na(., mean(cur_spd, na.rm = TRUE))) %>%
+  mutate_at(vars(canopy), ~replace_na(., mean(canopy, na.rm = TRUE))) %>%
+  mutate_at(vars(macrophyte_pct), ~replace_na(., mean(macrophyte_pct, na.rm = TRUE))) %>%
+  mutate_at(vars(sediment_deposition), ~replace_na(., mean(sediment_deposition, na.rm = TRUE))) %>%
+  mutate_at(vars(embeddedness_pooling), ~replace_na(., mean(embeddedness_pooling, na.rm = TRUE))) %>%
+  mutate_at(vars(flow_status), ~replace_na(., mean(flow_status, na.rm = TRUE))) %>%
+  mutate_at(vars(channel_alteration), ~replace_na(., mean(channel_alteration, na.rm = TRUE))) %>%
   mutate(habitat_total_score = select(., epifaunal_cover, embeddedness_pooling, velocity_depth_regime, sediment_deposition, flow_status, channel_alteration,
                                       riffle_bend_frequency, left_bank_stability, right_bank_stability, left_bank_veg, right_bank_veg, left_bank_veg_zone, 
                                       right_bank_veg_zone) 
          %>% rowSums(na.rm = TRUE))
 
-datacounts2 <- data.frame(colname = names(fielddata.num.sub.hab),colSums_fielddata=colSums(!is.na(fielddata.num.sub.hab)))
 
 # Remove incomplete fields for testing PCA
-fielddata.pca.data <- fielddata.num.sub.hab %>% 
-  select(-c(depth, width, cur_spd, canopy, macrophyte_pct, sediment_deposition, embeddedness_pooling, flow_status, channel_alteration))
+fielddata.pca.data <- fielddata.dummy  
+  # select(-c(depth, width, cur_spd, canopy, macrophyte_pct, sediment_deposition, embeddedness_pooling, flow_status, channel_alteration))
 
 # Subset to only habitat params for plotting on PCA
+# fielddata.pca.habitatonly <- fielddata.pca.data %>%
+#   select(site_id, epifaunal_cover, velocity_depth_regime, riffle_bend_frequency, left_bank_stability, right_bank_stability, left_bank_veg, right_bank_veg, left_bank_veg_zone, right_bank_veg_zone)
+# Same as above including fields with missing vals
 fielddata.pca.habitatonly <- fielddata.pca.data %>%
-  select(unique_id, epifaunal_cover, velocity_depth_regime, riffle_bend_frequency, left_bank_stability, right_bank_stability, left_bank_veg, right_bank_veg, left_bank_veg_zone, right_bank_veg_zone)
+  select(site_id, epifaunal_cover, embeddedness_pooling, velocity_depth_regime, sediment_deposition, flow_status, channel_alteration, riffle_bend_frequency, left_bank_stability, right_bank_stability, left_bank_veg, right_bank_veg, left_bank_veg_zone, right_bank_veg_zone)
 
 # Remove habitat variables and retain just total habitat score
-fielddata.pca.data.clean <- fielddata.pca.data %>% 
-  select(-c(epifaunal_cover, velocity_depth_regime, riffle_bend_frequency, left_bank_stability, right_bank_stability, left_bank_veg, right_bank_veg, left_bank_veg_zone, right_bank_veg_zone))
+# fielddata.pca.data.clean <- fielddata.pca.data %>%
+#   select(-c(epifaunal_cover, velocity_depth_regime, riffle_bend_frequency, left_bank_stability, right_bank_stability, left_bank_veg, right_bank_veg, left_bank_veg_zone, right_bank_veg_zone))
+# Same as above, including fields with missing vals
+fielddata.pca.data.clean <- fielddata.pca.data %>%
+  select(-c(epifaunal_cover, embeddedness_pooling, velocity_depth_regime, sediment_deposition, flow_status, channel_alteration, riffle_bend_frequency, left_bank_stability, right_bank_stability, left_bank_veg, right_bank_veg, left_bank_veg_zone, right_bank_veg_zone))
 
-# Subset to only variables that represent disturbance
+# Remove variables that probably don't represent disturbance
 fielddata.pca.disturb <- fielddata.pca.data.clean %>% 
-  select(unique_id, landcover_nat_pct, landcover_dev_pct, landcover_ag_pct, landcover_water_pct, spcond, ph, habitat_total_score)
+  # select(site_id, landcover_nat_pct, landcover_dev_pct, landcover_ag_pct, landcover_water_pct, spcond, ph, habitat_total_score)
+  select(-c(depth, width, cur_spd, canopy, temp, do_conc, do_pct_sat))
+
+# Subset further to remove all landcover but NAT
+fielddata.pca.disturb.nat <- fielddata.pca.disturb %>% 
+  select(-c(landcover_dev_pct, landcover_water_pct, landcover_ag_pct))
 
 # Subset to only variables that represent disturbance, minus duplicate landcover and pH
 fielddata.pca.disturb.simp.nat <- fielddata.pca.data.clean %>% 
-  select(unique_id, landcover_nat_pct, spcond, habitat_total_score)
+  select(site_id, landcover_nat_pct, spcond, habitat_total_score)
 
 # Same as above using DEV instead of NAT landcover
 fielddata.pca.disturb.simp.dev <- fielddata.pca.data.clean %>% 
-  select(unique_id, landcover_dev_pct, spcond, habitat_total_score)
+  select(site_id, landcover_dev_pct, spcond, habitat_total_score)
 
 ```
 
@@ -131,10 +148,10 @@ library(here)
 ```
 
 
-```{r plotting pca}
+```{r plotting pca, fig.width=10, fig.height=6}
 # Column names to row names 
-fielddata.pca.input <- fielddata.pca.disturb %>% 
-  column_to_rownames(var = "unique_id")
+fielddata.pca.input <- fielddata.pca.disturb.nat %>% 
+  column_to_rownames(var = "site_id")
 
 # PCA setup and biplot
     ## Scale and center data 

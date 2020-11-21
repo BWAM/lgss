@@ -154,9 +154,17 @@ landcover.all.corr <- landcover.all %>%
 
 ```
 
-
+Export landcover data
 ```{r}
 write.table(landcover.all.corr, file.path(root.dir, "data/compile_2015-2019/landcover/landcover_final_2015-2019_20201120.csv"),sep=",", row.names = FALSE)
 
 ```
+
+
+Compile StreamStats basin stats
+```{r}
+# data in C:\Data\LGSS_scripting\lgss\data\compile_2015-2019\steamstats_basinstats
+# select/transform 2018-2019 from long to wide
+```
+
 
