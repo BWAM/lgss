@@ -197,9 +197,6 @@ pca_biplot
 Look at correlations between PCs and variables.
 ```{r}
 
-# Scree plot
-fviz_eig(abiotic.pca)
-
 # Get eigenvalues and join to data
 eig.val <- get_eigenvalue(abiotic.pca)
 
@@ -216,9 +213,15 @@ fielddata.pca.input.forjoin <- fielddata.pca.input %>%
 joined <- left_join(fielddata.pca.input.forjoin, scores, by=("site_id"))
 
 
+# Scree plot - how to quanify results?
+fviz_eig(abiotic.pca)
+
 # Examine Kaiser-Guttman criterion & Broken Stick model to determine the number of meaninful principal components to explore (https://en.proft.me/2016/11/15/principal-component-analysis-pca-r/)
 
 ev = abiotic.pca$sdev^2
+
+# BROKEN STICK DOES NOT SUPPORT PC1
+# Look at Jackson 1993 paper for additional tests to try.
 
 evplot = function(ev) {
   # Broken stick model (MacArthur 1957)
@@ -243,8 +246,8 @@ evplot(ev)
 
 #Examine correlation between principal components
 joined_num<-select_if(joined, is.numeric) %>% 
-  # select(-c(PC4, PC5, PC6, PC7))
-  select(-c(PC4, PC5))
+  select(-c(PC4, PC5, PC6, PC7))
+  # select(-c(PC4, PC5))
 
 PC1_corr <- joined_num %>%
   select(-PC2, -PC3) %>%
@@ -279,18 +282,20 @@ PC2_corr %>%
 Classify sites based on PC1 and plot
 ```{r, fig.width=14, fig.height=8}
 class.plot.df <- scores %>% 
-  select(site_id, PC1, PC2) %>% 
+  select(site_id, PC1, PC2) %>%  
   mutate(basin = substr(site_id, 0, 2))
 
 # Determine Thresholds based on PC1 qauntiles
-quantile(scores_filter$PC1, probs = seq(0, 1, 0.25), na.rm = FALSE, names = TRUE, type = 7)
+quantile(class.plot.df$PC1, probs = seq(0, 1, 0.25), na.rm = FALSE, names = TRUE, type = 7)
 
 # for fielddata.pca.disturb2:
 #         0%        25%        50%        75%       100% 
 # -5.4314219 -0.8870725  0.0270505  1.1074533  3.2054342 
         
-all.abiotic.classified<-left_join(fielddata.lc, scores_filter, by=c("site_id")) %>% 
+all.abiotic.classified<-left_join(fielddata.lc, class.plot.df, by=c("site_id")) %>% 
   filter(!(site_id %in% c("03-LSAM_N-7.9", "01-BLKE-0.1"))) %>% 
+  rename(basin = basin.x) %>% 
+  select(-basin.y) %>% 
   mutate(condition_class = case_when(PC1 <= -0.8870725 ~ "HD", # Highly Disturbed
                                      PC1 <= 0.0270505 ~ "MD", # Moderately Disturbed
                                      PC1 <= 1.1074533 ~ "SD", # Slightly Disturbed
