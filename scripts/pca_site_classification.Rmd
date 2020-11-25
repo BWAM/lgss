@@ -60,13 +60,12 @@ datacounts <- data.frame(colname = names(fielddata.num),colSums_fielddata=colSum
 
 ## Field selection and cleanup
 fielddata.num.sub <- fielddata.num %>% 
-# Filter out spotty params
+  # Remove spotty params and those not present in 2015 data
   select(-c(hab_present, embeddedness, chl_a, microtox, biosample, habitat_total_score, clay, rubble, silt, rock, sand, gravel, salinity, algae_diaoms_presen, 
             thickness_diatoms_present, lgs_habitat_snag, lgs_habitat_bank, lgs_habitat_macrophyte, lgs_habitat_substrate)) %>% 
-# Filter out params not reflective of human disturbance
-  # select(-c(depth, width, cur_spd, canopy, temp)) %>% 
-# Filter out sites with lots of missing data
+  # Filter out sites with lots of missing data
   filter(!(site_id %in% c("03-LSAM_N-7.9", "01-BLKE-0.1"))) %>% 
+  # Replace -9999s with NA
   mutate_all(~replace(., . == -9999, NA))
  
 # Find means for creating dummy vals
@@ -104,6 +103,8 @@ fielddata.pca.habitatonly <- fielddata.pca.data %>%
   select(site_id, epifaunal_cover, embeddedness_pooling, velocity_depth_regime, sediment_deposition, flow_status, channel_alteration, riffle_bend_frequency, left_bank_stability, right_bank_stability, left_bank_veg, right_bank_veg, left_bank_veg_zone, right_bank_veg_zone)
 
 
+### Data frames for testing in PCA:
+
 # Remove habitat variables and retain just total habitat score
 fielddata.pca.data.clean <- fielddata.pca.data %>%
   select(-c(epifaunal_cover, embeddedness_pooling, velocity_depth_regime, sediment_deposition, flow_status, channel_alteration, riffle_bend_frequency, left_bank_stability, right_bank_stability, left_bank_veg, right_bank_veg, left_bank_veg_zone, right_bank_veg_zone))
@@ -111,14 +112,18 @@ fielddata.pca.data.clean <- fielddata.pca.data %>%
 # Remove variables that probably don't represent disturbance
 fielddata.pca.disturb <- fielddata.pca.data.clean %>% 
   # select(site_id, landcover_nat_pct, landcover_dev_pct, landcover_ag_pct, landcover_water_pct, spcond, ph, habitat_total_score)
-  select(-c(depth, width, cur_spd, canopy, temp, do_conc, do_pct_sat))
+  select(-c(depth, width, cur_spd, canopy, do_conc, landcover_water_pct))
+fielddata.pca.disturb2 <- fielddata.pca.disturb %>% 
+  # select(site_id, landcover_nat_pct, landcover_dev_pct, landcover_ag_pct, landcover_water_pct, spcond, ph, habitat_total_score)
+  select(-c(do_pct_sat, temp))
 
 # Subset further to remove all landcover but NAT
 fielddata.pca.disturb.nat <- fielddata.pca.disturb %>% 
-  select(-c(landcover_dev_pct, landcover_water_pct, landcover_ag_pct))
+  select(-c(landcover_dev_pct, landcover_ag_pct))
+
 # Same as above using DEV instead of NAT landcover
 fielddata.pca.disturb.dev <- fielddata.pca.disturb %>% 
-  select(-c(landcover_nat_pct, landcover_water_pct, landcover_ag_pct))
+  select(-c(landcover_nat_pct, landcover_ag_pct))
 
 # Subset further to just use NAT, habitat score, and SpCond
 fielddata.pca.disturb.simp <- fielddata.pca.disturb.nat %>% 
@@ -147,12 +152,15 @@ library(here)
 # fielddata.pca.habitatonly
 # fielddata.pca.data.clean
 # fielddata.pca.disturb
+# fielddata.pca.disturb2
 # fielddata.pca.disturb.nat
 # fielddata.pca.disturb.dev
 # fielddata.pca.disturb.simp
 
+### 1st plot:
+
 # Column names to row names 
-fielddata.pca.input <- fielddata.pca.disturb %>% 
+fielddata.pca.input <- fielddata.pca.disturb2 %>% 
   column_to_rownames(var = "site_id")
 
 # PCA setup and biplot
@@ -160,59 +168,57 @@ fielddata.pca.scale <- scale(fielddata.pca.input, center = TRUE, scale = TRUE)
 abiotic.pca <- prcomp(fielddata.pca.scale, cor = TRUE)
 
 # Plot PCA Biplot and quantiles of PC1 values
-pca_biplot<-autoplot(abiotic.pca, data = fielddata.pca.scale, label = F, label.size = 3, loadings.label = TRUE, loadings.label.repel=T, loadings.label.size = 4, scale= 0)
+pca_biplot <- autoplot(abiotic.pca, data = fielddata.pca.scale, label = FALSE, label.size = 2, loadings.label = TRUE, loadings.label.repel=T, loadings.label.size = 4, scale= 0)
 
 # vline<- geom_vline(xintercept = c(-1.4769168,-0.4725721,0.9480725))
 # pca_biplot+vline
 pca_biplot
 
+
+### 2nd plot:
+
+# # Column names to row names 
+# fielddata.pca.input <- fielddata.pca.disturb2 %>% 
+#   column_to_rownames(var = "site_id")
+# 
+# # PCA setup and biplot
+# fielddata.pca.scale <- scale(fielddata.pca.input, center = TRUE, scale = TRUE)
+# abiotic.pca <- prcomp(fielddata.pca.scale, cor = TRUE)
+# 
+# # Plot PCA Biplot and quantiles of PC1 values
+# pca_biplot <- autoplot(abiotic.pca, data = fielddata.pca.scale, label = FALSE, label.size = 2, loadings.label = TRUE, loadings.label.repel=T, loadings.label.size = 4, scale= 0)
+# 
+# # vline<- geom_vline(xintercept = c(-1.4769168,-0.4725721,0.9480725))
+# # pca_biplot+vline
+# pca_biplot
+
 ```
 
+Look at correlations between PCs and variables.
+```{r}
 
+# Scree plot
+fviz_eig(abiotic.pca)
 
-
-
-
-
-# Adapt chunks below for Low Gradient (copied from Matt's script for lakes analysis):
-
-
-```{r, Perform PCA on WQ & Landscape Data}
-
-
-
-# Get eigenvalues
-
+# Get eigenvalues and join to data
 eig.val <- get_eigenvalue(abiotic.pca)
 
 # Get PCA Scores
-
-scores<-abiotic.pca$x
-
-
-scores<-as.data.frame(scores)
-scores<-scores %>% 
-  rownames_to_column(var = "uniqueID")
-
+scores <- abiotic.pca$x
+scores <- as.data.frame(scores)
+scores <- scores %>% 
+  rownames_to_column(var = "site_id")
 
 # Join PCA scores back to original dataset
+fielddata.pca.input.forjoin <- fielddata.pca.input %>% 
+  rownames_to_column(var = "site_id")
 
-joined<-left_join(all.abiotic, scores, by=("uniqueID"))
-
-#joined<-joined %>% 
- # select(uniqueID, `ALKALINITY, TOTAL (AS CaCO3)`, AMMONIA, `CHLOROPHYLL A`, `DEPTH, SECCHI DISK DEPTH`, `NITROGEN, KJELDAHL, TOTAL`, `NITROGEN, NITRATE-NITRITE`, PH, `SPECIFIC CONDUCTANCE`, `TOTAL NITROGEN, MIXED FORMS`, `TOTAL PHOSPHORUS`, DEV100, IMPERV100, FOREST100, NATURAL100, AG100, BUILDING_AREA_DENSITY_100, Comp.1, Comp.2)
-
-# Select variables of interest 
-
-joined<-joined %>% 
- select(uniqueID, ALK, NH3, CHLA,SECCHI, TKN, NOx, PH, COND, TN, TP, DEV, IMPERV, FOREST, NATURAL, AGRI, PC1, PC2, PC3)
-
+joined <- left_join(fielddata.pca.input.forjoin, scores, by=("site_id"))
 
 
 # Examine Kaiser-Guttman criterion & Broken Stick model to determine the number of meaninful principal components to explore (https://en.proft.me/2016/11/15/principal-component-analysis-pca-r/)
 
 ev = abiotic.pca$sdev^2
-
 
 evplot = function(ev) {
   # Broken stick model (MacArthur 1957)
@@ -235,16 +241,15 @@ evplot = function(ev) {
 
 evplot(ev)
 
-
 #Examine correlation between principal components
-
-joined_num<-select_if(joined, is.numeric)
+joined_num<-select_if(joined, is.numeric) %>% 
+  # select(-c(PC4, PC5, PC6, PC7))
+  select(-c(PC4, PC5))
 
 PC1_corr <- joined_num %>%
   select(-PC2, -PC3) %>%
   correlate() %>% 
   focus(PC1)
-
 
 PC1_corr %>% 
   mutate(rowname = factor(rowname, levels = rowname[order(PC1)])) %>%  # Order by correlation strength
@@ -255,13 +260,10 @@ PC1_corr %>%
   ylim(-1,1)+
   theme(axis.text.x=element_text(angle=90,hjust=1))
 
-
 PC2_corr<-joined_num %>%
   select(-PC1, -PC3) %>%
   correlate() %>% 
   focus(PC2)
-  
-
 
 PC2_corr %>% 
     mutate(rowname = factor(rowname, levels = rowname[order(PC2)])) %>%  # Order by correlation strength
@@ -272,65 +274,77 @@ PC2_corr %>%
     ylim(-1,1)+
     theme(axis.text.x=element_text(angle=90,hjust=1))
 
-
 ```
 
+Classify sites based on PC1 and plot
+```{r, fig.width=14, fig.height=8}
+class.plot.df <- scores %>% 
+  select(site_id, PC1, PC2) %>% 
+  mutate(basin = substr(site_id, 0, 2))
 
-```{r, Classify Sites Based on PCA analysis}
+# Determine Thresholds based on PC1 qauntiles
+quantile(scores_filter$PC1, probs = seq(0, 1, 0.25), na.rm = FALSE, names = TRUE, type = 7)
 
-#Select only the first 3 principal components
-
-scores_filter<-scores %>% 
-  select(uniqueID, PC1, PC2, PC3)
-
-all.abiotic.classify<-left_join(all.abiotic, scores_filter, by=c("uniqueID"))
-
-#Determine Thresholds based on PC1 qauntiles
-
-quantile(all.abiotic.classify$PC1, probs = seq(0, 1, 0.25), na.rm = FALSE, names = TRUE, type = 7)
-
-
-all.abiotic.classified<-all.abiotic.classify %>% 
- mutate(CONDITION_CLASS = case_when(PC1 <= -1.4769168 ~ "LDC", # Least Disturbed Condition
-                                    PC1 <= -0.4725721 ~ "MDC", # Minimally Disturbed Condition 
-                                    PC1 <= 0.9480725 ~ "MSC", # Moderately Stressed Condition
-                                    PC1 > 0.9480725 ~ "HSC", # Highly Stressed Condition
-                                    TRUE                 ~"MISTAKE"
-                          ))
-
-# Plot PCA variables as a function of the condition classes defined above. 
-
-all.abiotic.classified$CONDITION_CLASS<-as.character(all.abiotic.classified$CONDITION_CLASS)
-
-#all.abiotic.classified %>% 
- # mutate(CONDITION_CLASS = factor(CONDITION_CLASS, c("LDC", "MDC", "MSC", "HSC"))) %>% 
-  #ggplot(aes(x=CONDITION_CLASS, y= TP))+
-  #geom_boxplot()
-
+# for fielddata.pca.disturb2:
+#         0%        25%        50%        75%       100% 
+# -5.4314219 -0.8870725  0.0270505  1.1074533  3.2054342 
+        
+all.abiotic.classified<-left_join(fielddata.lc, scores_filter, by=c("site_id")) %>% 
+  filter(!(site_id %in% c("03-LSAM_N-7.9", "01-BLKE-0.1"))) %>% 
+  mutate(condition_class = case_when(PC1 <= -0.8870725 ~ "HD", # Highly Disturbed
+                                     PC1 <= 0.0270505 ~ "MD", # Moderately Disturbed
+                                     PC1 <= 1.1074533 ~ "SD", # Slightly Disturbed
+                                     PC1 > 1.1074533 ~ "LD", # Least Disturbed
+                                     TRUE                 ~"NOT CLASSIFIED"
+  )) %>% 
+  select(site_id, condition_class, everything(), -PC1)
 
 all.abiotic.classified.long<-all.abiotic.classified %>% 
-  select(CONDITION_CLASS, ALK, NH3, CHLA,SECCHI, TKN, NOx, PH, COND, TN, TP, DEV, IMPERV, FOREST, NATURAL, AGRI) %>% 
-  pivot_longer(!CONDITION_CLASS, values_to = "result.value", names_to = "characteristic.name")
+  select(condition_class, macrophyte_pct, spcond, ph, landcover_nat_pct, landcover_dev_pct, landcover_ag_pct, habitat_total_score) %>% 
+  pivot_longer(!condition_class, values_to = "result_value", names_to = "parameter")
 
 p <- all.abiotic.classified.long %>% 
-  mutate(CONDITION_CLASS = factor(CONDITION_CLASS, c("LDC", "MDC", "MSC", "HSC"))) %>%  
-  ggplot(aes(CONDITION_CLASS, result.value)) +
+  mutate(condition_class = factor(condition_class, c("LD", "SD", "MD", "HD"))) %>%  
+  ggplot(aes(condition_class, result_value)) +
   geom_boxplot(outlier.size = 0.5)+
   theme(axis.title.y=element_blank())
 
-p + facet_wrap(vars(characteristic.name), ncol = 3, scales = "free", strip.position = "left", 
-                labeller = as_labeller(c(AGRI = "AGRI (%)", ALK = "ALK (mg/L CaCO3)", CHLA = "CHLA (ug/L)", COND="COND (uS/cm)", DEV="DEV (%)", FOREST = "FOREST (%)", IMPERV= "IMERV (%)", NATURAL = "NATURAL (%)", NH3 = "NH3 (ug/L)", NOx = "NOx (ug/L)", PH = "PH", SECCHI ="SECCHI (m)", TKN = "TKN (ug/L)", TN = "TN (ug/L)", TP = "TP (ug/L)")))
+p + facet_wrap(vars(parameter), ncol = 3, scales = "free", strip.position = "left", 
+                # labeller = as_labeller(c(AGRI = "AGRI (%)", ALK = "ALK (mg/L CaCO3)", CHLA = "CHLA (ug/L)", COND="COND (uS/cm)", DEV="DEV (%)", FOREST = "FOREST (%)", IMPERV= "IMERV (%)", NATURAL = "NATURAL (%)", NH3 = "NH3 (ug/L)", NOx = "NOx (ug/L)", PH = "PH", SECCHI ="SECCHI (m)", TKN = "TKN (ug/L)", TN = "TN (ug/L)", TP = "TP (ug/L)"))
+               )
 
 
 # Plot PCA Scores and categories on biplot w/o loadings
 
-scores_plot<-scores %>% 
+class.plot <- class.plot.df %>% 
   ggplot(aes(x=PC1, y=PC2))+
   geom_vline(xintercept = c(-1.4769168,-0.4725721,0.9480725))+
-  geom_point()+
-  annotate("text", x = -2.5, y = -7.5, label = "LDC")+
-  annotate("text", x = -0.9, y = -7.5, label = "MDC")+
-  annotate("text", x =  0.4, y = -7.5, label = "MSC")+
-  annotate("text", x =  7.5, y = -7.5, label = "HSC")
-scores_plot
+  geom_point(size=3, aes(shape = basin)) +
+  scale_shape_manual(values=c(0:40))+
+  annotate("text", x = -4, y = -4, label = "Highly\nDisturbed")+
+  annotate("text", x = -0.9, y = -4, label = "Moderately\nDisturbed")+
+  annotate("text", x =  0.3, y = -4, label = "Slightly\nDisturbed")+
+  annotate("text", x =  2.5, y = -4, label = "Least\nDisturbed")
+class.plot
+
+# List unique basins in each category
+class.HD.basins <- all.abiotic.classified %>% 
+  select(site_id, basin, condition_class) %>% 
+  filter(condition_class == "HD")
+class.MD.basins <- all.abiotic.classified %>% 
+  select(site_id, basin, condition_class) %>% 
+  filter(condition_class == "MD")
+class.SD.basins <- all.abiotic.classified %>% 
+  select(site_id, basin, condition_class) %>% 
+  filter(condition_class == "SD")
+class.LD.basins <- all.abiotic.classified %>% 
+  select(site_id, basin, condition_class) %>% 
+  filter(condition_class == "LD")
+unique(class.HD.basins$basin)
+unique(class.MD.basins$basin)
+unique(class.SD.basins$basin)
+unique(class.LD.basins$basin)
+
+
 ```
+
