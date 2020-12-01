@@ -296,20 +296,23 @@ all.abiotic.classified<-left_join(fielddata.lc, class.plot.df, by=c("site_id")) 
   filter(!(site_id %in% c("03-LSAM_N-7.9", "01-BLKE-0.1"))) %>% 
   rename(basin = basin.x) %>% 
   select(-basin.y) %>% 
-  mutate(condition_class = case_when(PC1 <= -0.8870725 ~ "HD", # Highly Disturbed
-                                     PC1 <= 0.0270505 ~ "MD", # Moderately Disturbed
-                                     PC1 <= 1.1074533 ~ "SD", # Slightly Disturbed
-                                     PC1 > 1.1074533 ~ "LD", # Least Disturbed
+  mutate(condition_class = case_when(PC1 <= -0.8870725 ~ "4", # Highly Disturbed
+                                     PC1 <= 0.0270505 ~ "3", # Moderately Disturbed
+                                     PC1 <= 1.1074533 ~ "2", # Slightly Disturbed
+                                     PC1 > 1.1074533 ~ "1", # Least Disturbed
                                      TRUE                 ~"NOT CLASSIFIED"
   )) %>% 
-  select(site_id, condition_class, everything(), -PC1)
+  select(site_id, condition_class, everything(), -PC1, -PC2)
+
+# Export above for ArcGIS
+# write.table(all.abiotic.classified, file.path(root.dir, "data/compile_2015-2019/field_data/2015-2019_LG_field_landcover_condclasses_20201130.csv"),sep=",", row.names = FALSE)
 
 all.abiotic.classified.long<-all.abiotic.classified %>% 
   select(condition_class, macrophyte_pct, spcond, ph, landcover_nat_pct, landcover_dev_pct, landcover_ag_pct, habitat_total_score) %>% 
   pivot_longer(!condition_class, values_to = "result_value", names_to = "parameter")
 
 p <- all.abiotic.classified.long %>% 
-  mutate(condition_class = factor(condition_class, c("LD", "SD", "MD", "HD"))) %>%  
+  mutate(condition_class = factor(condition_class, c("1", "2", "3", "4"))) %>%  
   ggplot(aes(condition_class, result_value)) +
   geom_boxplot(outlier.size = 0.5)+
   theme(axis.title.y=element_blank())
@@ -326,25 +329,25 @@ class.plot <- class.plot.df %>%
   geom_vline(xintercept = c(-1.4769168,-0.4725721,0.9480725))+
   geom_point(size=3, aes(shape = basin)) +
   scale_shape_manual(values=c(0:40))+
-  annotate("text", x = -4, y = -4, label = "Highly\nDisturbed")+
-  annotate("text", x = -0.9, y = -4, label = "Moderately\nDisturbed")+
-  annotate("text", x =  0.3, y = -4, label = "Slightly\nDisturbed")+
-  annotate("text", x =  2.5, y = -4, label = "Least\nDisturbed")
+  annotate("text", x = -4, y = -4, label = "Class 4 - Highly\nDisturbed")+
+  annotate("text", x = -0.9, y = -4, label = "Class 3- Mod.\nDisturbed")+
+  annotate("text", x =  0.3, y = -4, label = "Class 2- Slightly\nDisturbed")+
+  annotate("text", x =  2.5, y = -4, label = "Class 1- Least\nDisturbed")
 class.plot
 
 # List unique basins in each category
 class.HD.basins <- all.abiotic.classified %>% 
   select(site_id, basin, condition_class) %>% 
-  filter(condition_class == "HD")
+  filter(condition_class == "4")
 class.MD.basins <- all.abiotic.classified %>% 
   select(site_id, basin, condition_class) %>% 
-  filter(condition_class == "MD")
+  filter(condition_class == "3")
 class.SD.basins <- all.abiotic.classified %>% 
   select(site_id, basin, condition_class) %>% 
-  filter(condition_class == "SD")
+  filter(condition_class == "2")
 class.LD.basins <- all.abiotic.classified %>% 
   select(site_id, basin, condition_class) %>% 
-  filter(condition_class == "LD")
+  filter(condition_class == "1")
 unique(class.HD.basins$basin)
 unique(class.MD.basins$basin)
 unique(class.SD.basins$basin)
