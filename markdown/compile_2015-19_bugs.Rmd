@@ -11,6 +11,7 @@ library(tidyverse)
 library(readxl)
 
 root.dir <- rprojroot::find_root("lgss.Rproj")
+datamod.dir <- file.path("C:/Users/gmlemley/New York State Office of Information Technology Services/SMAS - Streams Data Modernization/Cleaned Files/FINAL_RELOADS_SEPT2020")
 
 ```
 
@@ -53,7 +54,7 @@ field.habitat.ITS <- read_csv(file.path(root.dir, "data/compile_2015-2019/ITS_ta
 
 ```
 
-Assessing ITS tables for missing LG data
+Assessing ITS tables for missing LG data (to be done at a later date)
 ```{r eval = FALSE}
 macroinfo.ITS <- macroinfo.ITS %>% 
   mutate(YEAR = format(as.Date(SAMPLE_DATE, format="%m/%d/%Y"),"%Y"))
@@ -116,7 +117,8 @@ fielddata.2015 <- readxl::read_excel(file.path(root.dir,  "data", "compile_2015-
 
 bugmatrix2015.df <- read.csv(file.path(root.dir, "data", "2015_bugs_Apr2020_SITEID_corrections.csv"), stringsAsFactors = FALSE, 
                              check.names = FALSE) %>% 
-  rename(SITE_ID = BAS_LOC_RM) %>% 
+  rename(SITE_ID = BAS_LOC_RM,
+         "Cricotopus/Orthocladius Complex" = "Cricotopus/Orthocladius complex") %>% 
   left_join(fielddata.2015, by = "SITE_ID") %>% 
   mutate(REPLICATE = 1) %>% 
   select(SITE_ID, COLL_DATE, REPLICATE, everything())
@@ -130,7 +132,7 @@ bugmatrix.15.16.17.df <- bind_rows(bugmatrix2015.df, bugmatrix1617.df)
 bugmatrix.15.16.17.df[is.na(bugmatrix.15.16.17.df)] <- 0
 bugmatrix.15.16.17.df <- bugmatrix.15.16.17.df[order(bugmatrix.15.16.17.df$SITE_ID),] 
 
-rm(bugmatrix1617.df, bugmatrix2015.df, fielddata.2015)
+# rm(bugmatrix1617.df, bugmatrix2015.df, fielddata.2015)
 ```
 
 
@@ -232,35 +234,63 @@ db.bugmatrix.18.19 <- db.mssih.LG1819.msdh.join %>%
   summarise(individual_species_cnt = sum(individual_species_cnt)) %>%
   spread(mstr_macro_species_id, individual_species_cnt, fill = 0) 
 
+# Invesigate issue taxa
+# bugmatrix.15.16.17.df.sub <- bugmatrix.15.16.17.df %>% 
+#   select(SITE_ID, COLL_DATE, REPLICATE, "Cricotopus/Orthocladius complex", "Cricotopus/Orthocladius Complex")
+
 bugmatrix.15.16.17.df.form <- bugmatrix.15.16.17.df %>% 
   rename_all(tolower) %>%
   # rename(sample_date = coll_date) %>% 
-  setNames(., sub(" ", "_", names(.))) 
-  
+  setNames(., gsub(" ", "_", names(.))) 
+  # select_all(~gsub(" ", "_", .))
+
+# Create complete bound version of all bugs  
 bugmatrix.15to19 <- bind_rows(bugmatrix.15.16.17.df.form, db.bugmatrix.18.19) %>% 
   filter(replicate == 1) %>% 
   arrange(coll_date) %>% 
   rename(sample_date = coll_date) %>% 
   select(-replicate) %>% 
-  mutate(sample_date = data.table::fifelse(site_id %in% "04-WCONI-0.6", sample_date + 1, sample_date))
+  mutate(sample_date = data.table::fifelse(site_id %in% "04-WCONI-0.6", sample_date + 1, sample_date)) 
+
+# Fix species names that don't match master taxa list
+bugmatrix.15to19 <- bugmatrix.15to19 %>% 
+  rename(pelocoris = pelocoris_sp.,
+         anafroptilum = anafroptilum_sp.,
+         frenesia = frenesia_sp.,
+         kiefferulus = kiefferulus_sp.,
+         nigronia = nigronia_sp.)
 
 bugmatrix.15to19[is.na(bugmatrix.15to19)] <- 0
-
 
 bugmatrix.15to19.unique <- bugmatrix.15to19 %>% 
   arrange(sample_date) %>% 
   distinct(site_id, .keep_all = TRUE) %>% 
   select(-sample_date)
-  
-
 
 ```
 
-Check full bug list against master taxa table and reformat/update accordingly
+Check full bug list against master taxa table and reformat/update accordingly (added 12/02/20)
 ```{r}
 
 # Make sure using list that mmir package uses. Does this match the formatting of our master sp. table? Need to make sure these are synchronized.
 
+# Load in current version of master macro species taxa table
+
+master.taxa <- read.csv(file.path(datamod.dir, "Final_Macro_ITS", "20201019_S_MSTR_MACRO_SPECIES.csv"), stringsAsFactors = FALSE)
+
+bugnames.15to19 <- as.data.frame(names(bugmatrix.15to19)) %>% 
+  rename(genspecies = "names(bugmatrix.15to19)") %>% 
+  filter(!grepl("site_id", genspecies),
+         !grepl("sample_date", genspecies))
+
+bugnames.15to19.mismatch <- bugnames.15to19 %>% 
+  filter(!(genspecies %in% master.taxa$MMS_MACRO_GENSPECIES))
+
+### nigronia_sp. is only one that doesn't exist in master taxa table ###
+# See how many exist...
+bugmatrix.15to19.nigronia <- bugmatrix.15to19 %>% 
+  select(site_id, sample_date, nigronia)
+# Only 2 total individuals present across 2 sites.
 
 ```
 
@@ -285,18 +315,19 @@ matchlist <- bugmatrix.15to19 %>%
 
 ```
 
-Clean up dataframes and export matrix
+
+Export matrices
 ```{r}
-
-rm(matchlist, bugmatrix.15.16.17.df, bugmatrix.18.19.df, bugs.2018.1, bugs.2018.2, bugs.2019, sites.master)
-
-# write.table(bugmatrix.15to19, file.path(root.dir, "data/compile_2015-2019/bugs/NYSDEC_LowGrad_macro_2015-2019_2020-04-09.csv"),sep=",", row.names = FALSE)
-write.table(bugmatrix.15to19, file.path(root.dir, "data/compile_2015-2019/bugs/2015-2019_lowgrad_bugs_matrix_20201030.csv"),sep=",", row.names = FALSE)
-
 
 teams.datadir <- "C:/Users/gmlemley/New York State Office of Information Technology Services/SMAS - Low Gradient IBI/data"
 
-write.table(bugmatrix.15to19.unique, file.path(teams.datadir, "bugs", "2015-2019_lowgrad_bugs_matrix_UNIQUE_20201104.csv"),sep=",", row.names = FALSE)
+# All bugs
+write.table(bugmatrix.15to19, file.path(root.dir, "data/compile_2015-2019/bugs/2015-2019_lowgrad_bugs_matrix_20201202.csv"),sep=",", row.names = FALSE)
+write.table(bugmatrix.15to19, file.path(teams.datadir, "bugs/2015-2019_lowgrad_bugs_matrix_20201202.csv"),sep=",", row.names = FALSE)
+
+# Only unique bugs
+write.table(bugmatrix.15to19.unique, file.path(root.dir, "data/compile_2015-2019/bugs/2015-2019_lowgrad_bugs_matrix_UNIQUE_20201202.csv"),sep=",", row.names = FALSE)
+write.table(bugmatrix.15to19.unique, file.path(teams.datadir, "bugs", "2015-2019_lowgrad_bugs_matrix_UNIQUE_20201202.csv"),sep=",", row.names = FALSE)
 
 ```
 

@@ -1,0 +1,22 @@
+---
+title: "nmds_ordination"
+output: html_document
+---
+
+Load libs
+```{r}
+
+```
+
+Load bug matrix (unique) produced in compile_2015-19_bugs.Rmd
+```{r}
+root.dir <- rprojroot::find_root("lgss.Rproj")
+bugs <- read.csv(file.path(root.dir, 
+                           "data", 
+                           "compile_2015-2019", 
+                           "bugs", 
+                           "2015-2019_lowgrad_bugs_matrix_UNIQUE_20201202.csv"))
+
+
+```
+
