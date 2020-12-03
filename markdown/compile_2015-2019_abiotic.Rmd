@@ -363,7 +363,7 @@ SEI.MACRO.HABITAT.INSITU <- left_join(SEI.MACRO.HABITAT.join, db.insitu.wide, by
 
 ```
 
-Join 2015-2017 field and habitat, bind with master 2018-2019 table, export.
+Join 2015-2017 field and habitat, bind with master field 2018-2019 table
 ```{r}
 # First join together LG field and habitat data
 
@@ -373,15 +373,29 @@ lg.old.join <- left_join(field.LU.bind, habitat.bind, by = c("site_id", "sample_
 
 master.field <- bind_rows(SEI.MACRO.HABITAT.INSITU, lg.old.join)
 
-write.table(master.field, file.path(root.dir, "data", "compile_2015-2019", "field_data", "final_cleaned", "2015-2019_lowgrad_fielddata_20201120.csv"),sep=",", row.names = FALSE)
+```
 
+Further field data cleaning and export
+```{r}
+
+master.field.clean <- master.field %>% 
+  select(-c(site_condition_v1, site_condition_v2, site_condition_notes, habitat_total_score)) %>% 
+  mutate(bottom_type = tolower(bottom_type),
+         bottom_type = str_replace_all(bottom_type, " ", "_"),
+         water_clarity_driver = tolower(water_clarity_driver),
+         water_clarity_driver = str_replace_all(water_clarity_driver, " ", "_"),
+         water_clarity_driver = str_replace_all(water_clarity_driver, "turbidity", "turb"))
+
+# Export to two directories
+write.table(master.field.clean, file.path(root.dir, "data", "compile_2015-2019", "field_data", "final_cleaned", "2015-2019_lowgrad_fielddata_MASTER_20201203.csv"),sep=",", row.names = FALSE)
+write.table(master.field.clean, file.path(teams.datadir, "field-sites", "2015-2019_lowgrad_fielddata_MASTER_20201203.csv"),sep=",", row.names = FALSE)
 
 ```
 
-Get site info for list of sites, add in year to subset.
+Sites table
 ```{r}
 # Only 163 unique sites present.
-# Identify which sites were sampled twice and which are new
+# Identify which sites were sampled twice and which are new in 2018-2019
 master.field.sitecount <- master.field %>% 
   select(site_id, sample_date, basin) %>% 
   group_by(site_id) %>% 
@@ -399,17 +413,26 @@ sites.lg <- read_excel(file.path(itstable.path, "20201030_S_SITE.xlsx")) %>%
   filter(site_id %in% master.field$site_id) %>% 
   left_join(master.field.sitecount, by = "site_id")
 
+# Subset to sites new in 2018-2019 for performing land use analysis
 sites.lg.new.in.2018.2019 <- sites.lg %>% 
   filter(newsite.2018.2019 == 1)
 
-# write.table(sites.lg, file.path(teams.datadir, "sites.lowgradient_20201104.csv"),sep=",", row.names = FALSE)
-write.table(sites.lg.new.in.2018.2019, file.path(teams.datadir, "field-sites", "sites.lowgradient.newin20182019_20201104.csv"),sep=",", row.names = FALSE)
-
-
-
-# List sites that are IDs as high gradient in the sites table
+# List sites that are IDd as high gradient in the sites table
 sites.lg.HG <- sites.lg %>% 
   filter(grepl("*High", habitat_type))
+
+
+
+
+### Add in elev, slope, other info from StreamStats ####
+# Old files in C:\Data\LGSS_scripting\lgss\data\compile_2015-2019\steamstats_basinstats 
+#          and ...\field_data
+# Export 2018-2019 stats from shapefile in ArcGIS Pro (already did?)
+
+
+
+# write.table(sites.lg, file.path(teams.datadir, "sites.lowgradient_20201104.csv"),sep=",", row.names = FALSE)
+# write.table(sites.lg.new.in.2018.2019, file.path(teams.datadir, "field-sites", "sites.lowgradient.newin20182019_20201104.csv"),sep=",", row.names = FALSE)
 
 
 ```

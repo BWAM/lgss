@@ -5,6 +5,8 @@ output: html_document
 
 Load libs
 ```{r}
+library(tidyverse)
+library(vegan)
 
 ```
 
@@ -15,8 +17,63 @@ bugs <- read.csv(file.path(root.dir,
                            "data", 
                            "compile_2015-2019", 
                            "bugs", 
-                           "2015-2019_lowgrad_bugs_matrix_UNIQUE_20201202.csv"))
+                           "2015-2019_lowgrad_bugs_matrix_UNIQUE_20201202.csv")) %>% 
+  filter(!(site_id %in% c("03-LSAM_N-7.9", "01-BLKE-0.1"))) %>% 
+  column_to_rownames(var = "site_id") 
 
+
+```
+
+Prep data for NMDS and plot
+```{r}
+
+# bugs.mds <- metaMDS(bugs, distance = "bray", autotransform = FALSE)
+# 
+# bugs.mds.autotrans <- metaMDS(bugs, distance = "bray", autotransform = TRUE)
+
+
+bugs.log <- log(bugs + 1)
+bugs.sqrt <- sqrt(bugs)
+# bugs.4throot <- pracma::nthroot(bugs, 4)
+
+# bugs.log <- decostand(bugs, method = "log")
+
+# Calculate dissimilarity
+bugs.log.diss <- vegdist(bugs.log, method = "bray")
+bugs.sqrt.diss <- vegdist(bugs.sqrt, method = "bray")
+
+bugs.log.mds <- metaMDS(bugs.log.diss, distance = "bray", autotransform = FALSE)
+bugs.sqrt.mds <- metaMDS(bugs.sqrt.diss, distance = "bray", autotransform = FALSE)
+
+```
+
+Plot NMDS
+```{r}
+# plot(bugs.mds)
+# plot(bugs.mds.autotrans)
+
+plot(bugs.log.mds)
+plot(bugs.sqrt.mds)
+
+```
+
+
+Add in env variables and plot
+```{r}
+#http://environmentalcomputing.net/multidimensional-scaling/
+
+abiotic.df <- read.csv(file.path(root.dir, "data/compile_2015-2019/field_data/2015-2019_LG_field_landcover_condclasses_20201130.csv"))
+condclasses.df <- read.csv(file.path(root.dir, "data/compile_2015-2019/condition_classes/2015-2019_LG_condclasses_20201203.csv"))
+
+abiotic.condclass <- abiotic.df %>% 
+  select(site_id, condition_class) %>% 
+  mutate(condition_class = as.factor(condition_class))
+
+mds.xy <- data.frame(bugs.log.mds$points) %>% 
+  rownames_to_column(var = "site_id") %>% 
+  left_join(abiotic.condclass)
+
+ggplot(mds.xy, aes(MDS1, MDS2, color = condition_class)) + geom_point() + theme_bw()
 
 ```
 

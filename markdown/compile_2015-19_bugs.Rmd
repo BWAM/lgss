@@ -290,6 +290,9 @@ bugnames.15to19.mismatch <- bugnames.15to19 %>%
 # See how many exist...
 bugmatrix.15to19.nigronia <- bugmatrix.15to19 %>% 
   select(site_id, sample_date, nigronia)
+
+bugmatrix.15to19.anafroptilum <- bugmatrix.15to19 %>% 
+  select(site_id, sample_date, anafroptilum)
 # Only 2 total individuals present across 2 sites.
 
 ```

@@ -304,9 +304,6 @@ all.abiotic.classified<-left_join(fielddata.lc, class.plot.df, by=c("site_id")) 
   )) %>% 
   select(site_id, condition_class, everything(), -PC1, -PC2)
 
-# Export above for ArcGIS
-# write.table(all.abiotic.classified, file.path(root.dir, "data/compile_2015-2019/field_data/2015-2019_LG_field_landcover_condclasses_20201130.csv"),sep=",", row.names = FALSE)
-
 all.abiotic.classified.long<-all.abiotic.classified %>% 
   select(condition_class, macrophyte_pct, spcond, ph, landcover_nat_pct, landcover_dev_pct, landcover_ag_pct, habitat_total_score) %>% 
   pivot_longer(!condition_class, values_to = "result_value", names_to = "parameter")
@@ -353,6 +350,18 @@ unique(class.MD.basins$basin)
 unique(class.SD.basins$basin)
 unique(class.LD.basins$basin)
 
+
+```
+
+Exporting data
+```{r}
+# Export joined data with classes
+# write.table(all.abiotic.classified, file.path(root.dir, "data/compile_2015-2019/field_data/2015-2019_LG_field_landcover_condclasses_20201130.csv"),sep=",", row.names = FALSE)
+
+# Export just the classes for joining elsewhere
+# classes.export <- all.abiotic.classified %>% 
+#   select(site_id, condition_class)
+# write.table(classes.export, file.path(root.dir, "data/compile_2015-2019/condition_classes/2015-2019_LG_condclasses_20201203.csv"),sep=",", row.names = FALSE)
 
 ```
 
