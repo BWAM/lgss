@@ -232,11 +232,12 @@ db.mssih.LG1819.msdh.join <- left_join(db.mssih.LG1819, db.msdh, by = "linked_id
 db.bugmatrix.18.19 <- db.mssih.LG1819.msdh.join %>%
   group_by(site_id, coll_date, replicate, mstr_macro_species_id) %>%
   summarise(individual_species_cnt = sum(individual_species_cnt)) %>%
-  spread(mstr_macro_species_id, individual_species_cnt, fill = 0) 
-
-# Invesigate issue taxa
-# bugmatrix.15.16.17.df.sub <- bugmatrix.15.16.17.df %>% 
-#   select(SITE_ID, COLL_DATE, REPLICATE, "Cricotopus/Orthocladius complex", "Cricotopus/Orthocladius Complex")
+  spread(mstr_macro_species_id, individual_species_cnt, fill = 0) %>% 
+  # Condense nigronia_serricornis and nigronia_sp. columns as per Brian Duffy, 12/4/2020
+  rename(nigronia_serricornis_old = nigronia_serricornis) %>% 
+  mutate(nigronia_serricornis = nigronia_serricornis_old + nigronia_sp.) %>% 
+  select(-c(nigronia_serricornis_old, nigronia_sp.))
+  
 
 bugmatrix.15.16.17.df.form <- bugmatrix.15.16.17.df %>% 
   rename_all(tolower) %>%
@@ -257,8 +258,8 @@ bugmatrix.15to19 <- bugmatrix.15to19 %>%
   rename(pelocoris = pelocoris_sp.,
          anafroptilum = anafroptilum_sp.,
          frenesia = frenesia_sp.,
-         kiefferulus = kiefferulus_sp.,
-         nigronia = nigronia_sp.)
+         kiefferulus = kiefferulus_sp.)
+         # nigronia_serricornis = nigronia_sp.)
 
 bugmatrix.15to19[is.na(bugmatrix.15to19)] <- 0
 
@@ -286,15 +287,6 @@ bugnames.15to19 <- as.data.frame(names(bugmatrix.15to19)) %>%
 bugnames.15to19.mismatch <- bugnames.15to19 %>% 
   filter(!(genspecies %in% master.taxa$MMS_MACRO_GENSPECIES))
 
-### nigronia_sp. is only one that doesn't exist in master taxa table ###
-# See how many exist...
-bugmatrix.15to19.nigronia <- bugmatrix.15to19 %>% 
-  select(site_id, sample_date, nigronia)
-
-bugmatrix.15to19.anafroptilum <- bugmatrix.15to19 %>% 
-  select(site_id, sample_date, anafroptilum)
-# Only 2 total individuals present across 2 sites.
-
 ```
 
 
@@ -305,7 +297,7 @@ sites.master <- read_excel(file.path(itstable.path, "20201030_S_SITE.xlsx"))
 
 matchlist <- bugmatrix.15to19 %>% 
   select(site_id, sample_date) %>% 
-  mutate(SITE_MATCH = site_id %in% sites.master$BAS_LOC_RM)
+  mutate(SITE_MATCH = site_id %in% sites.master$SITE_HISTORY_ID)
   
 # 5 sites not in sites table:
 
@@ -314,7 +306,6 @@ matchlist <- bugmatrix.15to19 %>%
 #	09-CHPW-11	2019-09-17	FALSE   MISSING RM ".0" (FIXED IN CODE ABOVE)
 #	12-TEET-0.8	2015-06-19	FALSE   	11-TEET-0.8 exists in sites table. Confirmed same site. (FIXED IN SOURCE DATA)
 #	17-NISS-4.7	2015-06-26	FALSE     17-NISS-6.0 exists in sites table. Coord are not close. Add to sites table? (NOT FIXED)
-
 
 ```
 
@@ -325,12 +316,12 @@ Export matrices
 teams.datadir <- "C:/Users/gmlemley/New York State Office of Information Technology Services/SMAS - Low Gradient IBI/data"
 
 # All bugs
-write.table(bugmatrix.15to19, file.path(root.dir, "data/compile_2015-2019/bugs/2015-2019_lowgrad_bugs_matrix_20201202.csv"),sep=",", row.names = FALSE)
-write.table(bugmatrix.15to19, file.path(teams.datadir, "bugs/2015-2019_lowgrad_bugs_matrix_20201202.csv"),sep=",", row.names = FALSE)
+write.table(bugmatrix.15to19, file.path(root.dir, "data/compile_2015-2019/bugs/2015-2019_lowgrad_bugs_matrix_20201207.csv"),sep=",", row.names = FALSE)
+write.table(bugmatrix.15to19, file.path(teams.datadir, "bugs/2015-2019_lowgrad_bugs_matrix_20201207.csv"),sep=",", row.names = FALSE)
 
 # Only unique bugs
-write.table(bugmatrix.15to19.unique, file.path(root.dir, "data/compile_2015-2019/bugs/2015-2019_lowgrad_bugs_matrix_UNIQUE_20201202.csv"),sep=",", row.names = FALSE)
-write.table(bugmatrix.15to19.unique, file.path(teams.datadir, "bugs", "2015-2019_lowgrad_bugs_matrix_UNIQUE_20201202.csv"),sep=",", row.names = FALSE)
+write.table(bugmatrix.15to19.unique, file.path(root.dir, "data/compile_2015-2019/bugs/2015-2019_lowgrad_bugs_matrix_UNIQUE_20201207.csv"),sep=",", row.names = FALSE)
+write.table(bugmatrix.15to19.unique, file.path(teams.datadir, "bugs", "2015-2019_lowgrad_bugs_matrix_UNIQUE_20201207.csv"),sep=",", row.names = FALSE)
 
 ```
 

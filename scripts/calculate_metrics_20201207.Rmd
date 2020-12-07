@@ -1,0 +1,64 @@
+---
+title: "calculate_metrics_20201207"
+output: html_document
+---
+
+Load libs
+```{r}
+library(tidyverse)
+library(mmir)
+
+root.dir <- rprojroot::find_root("lgss.Rproj")
+datamod.dir <- file.path("C:/Users/gmlemley/New York State Office of Information Technology Services/SMAS - Streams Data Modernization/Cleaned Files/FINAL_RELOADS_SEPT2020")
+
+```
+
+Taxa table prep
+```{r Taxa table prep}
+# Load master taxa table
+master.taxa <- read.csv(file.path(datamod.dir, "Final_Macro_ITS", "20201019_S_MSTR_MACRO_SPECIES.csv"), stringsAsFactors = FALSE) %>% 
+  rename_all(tolower) %>% 
+  setNames(., sub("mms_", "", names(.)))
+
+# May need to rename columns to match original attributes table used:
+# names(attributes.df)
+#  [1] "final_id"         "macro_genspecies" "tol_int"          "tol_char"         "tol_p_int"        "tol_n_int"        "ffg"              "reference"       
+#  [9] "prevnames"        "final_tsn"        "final_id.y"       "kingdom"          "subkingdom"       "infrakingdom"     "superphylum"      "phylum"          
+# [17] "subphylum"        "class"            "subclass"         "infraclass"       "superorder"       "order"            "suborder"         "infraorder"      
+# [25] "superfamily"      "family"           "subfamily"        "tribe"            "subtribe"         "genus"            "subgenus"         "species"         
+# [33] "subspecies"       "org_id"  
+
+# Load bug matrix
+taxa.df.wide <- read.csv(file.path(root.dir, "data/compile_2015-2019/bugs/2015-2019_lowgrad_bugs_matrix_UNIQUE_20201207.csv"), check.names = FALSE)
+
+# List taxa names for troublshooting
+# bugnames <- as.data.frame(names(taxa.df)) %>% 
+#   rename(genspecies = "names(taxa.df)") %>% 
+#   filter(!grepl("site_id", genspecies))
+
+# Convert from wide to long
+taxa.df <- taxa.df.wide %>% 
+  gather(final_id, count, -site_id) %>% 
+  filter(!is.na(count),
+         count > 0)  
+
+# Identify missing taxa
+missing.df <- taxa.df %>% 
+  select(final_id) %>% 
+  distinct() %>% 
+  anti_join(master.taxa, by = c("final_id" = "macro_genspecies"))
+
+# Join attributes to data
+taxa.df <- taxa.df %>% 
+  rename(macro_genspecies = final_id) %>%
+  left_join(master.taxa, by = "macro_genspecies") #%>% 
+  # fill_taxa(taxa.df, final_id, kingdom:subspecies)
+
+rm(master.taxa, missing.df, taxa.df.wide)
+```
+
+Calculate metrics
+```{r Calculate metrics}
+
+```
+
