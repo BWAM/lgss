@@ -3,8 +3,7 @@ title: "calculate_metrics_20201207"
 output: html_document
 ---
 
-Load libs
-```{r}
+```{r Load libs}
 library(tidyverse)
 library(mmir)
 
@@ -13,7 +12,6 @@ datamod.dir <- file.path("C:/Users/gmlemley/New York State Office of Information
 
 ```
 
-Taxa table prep
 ```{r Taxa table prep}
 # Load master taxa table
 master.taxa <- read.csv(file.path(datamod.dir, "Final_Macro_ITS", "20201019_S_MSTR_MACRO_SPECIES.csv"), stringsAsFactors = FALSE) %>% 
@@ -54,11 +52,71 @@ taxa.df <- taxa.df %>%
   left_join(master.taxa, by = "macro_genspecies") #%>% 
   # fill_taxa(taxa.df, final_id, kingdom:subspecies)
 
-rm(master.taxa, missing.df, taxa.df.wide)
+# Attach disturbance categories and remove data without a class
+condition <- read.csv(file.path("C:/Data/LGSS_scripting/lgss/data/compile_2015-2019/condition_classes", "2015-2019_LG_condclasses_20201203.csv"))
+taxa.df <- taxa.df %>% left_join(., condition) %>% 
+  select(site_id, condition_class, everything()) %>% 
+  filter(!is.na(condition_class))
+
+rm(missing.df, taxa.df.wide, condition)
 ```
 
-Calculate metrics
-```{r Calculate metrics}
 
+# Calculate metrics
+
+
+## Richness Metrics
+
+### Community Richness
+```{r}
+nest.df <- taxa.df %>%
+  dplyr::group_nest(site_id,  condition_class, .key = "data")
+
+rich.df <- nest.df %>%
+  dplyr::mutate(
+    rich_family = taxa_rich(.dataframe = .,
+                            .key_col = site_id,
+                            .group_col = family,
+                            .unnest_col = data),
+    rich_genus = taxa_rich(.dataframe = .,
+                            .key_col = site_id,
+                            .group_col = genus,
+                            .unnest_col = data)
+  )
+
+
+rich.df %>%
+  dplyr::mutate(data = "nested dataframe") %>%
+  head() %>%
+  knitr::kable()
+
+```
+
+
+## Running mmir example data
+```{r Load in data}
+data("nrsa_nap_0809", package = "mmir")
+
+nest.df <- nrsa_nap_0809 %>%
+  dplyr::group_nest(uid,  rt_nrsa_cat, .key = "data")
+
+
+rich.df <- nest.df %>%
+  dplyr::mutate(
+    rich_family = taxa_rich(.dataframe = .,
+                            .key_col = uid,
+                            .group_col = family,
+                            .unnest_col = data),
+    rich_genus = taxa_rich(.dataframe = .,
+                            .key_col = uid,
+                            .group_col = genus,
+                            .unnest_col = data)
+  )
+
+
+rich.df %>%
+  dplyr::mutate(data = "nested dataframe") %>%
+  head() %>%
+  knitr::kable()
 ```
 

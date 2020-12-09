@@ -38,7 +38,7 @@ taxa.df <- read_csv(file.path(root.dir,
 ```
 
 
-```{r}
+```{r eval = FALSE}
 missing.df <- taxa.df %>% 
   select(final_id) %>% 
   distinct() %>% 
