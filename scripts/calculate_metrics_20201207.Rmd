@@ -12,19 +12,55 @@ datamod.dir <- file.path("C:/Users/gmlemley/New York State Office of Information
 
 ```
 
-```{r Taxa table prep}
+```{r Master taxa table prep}
 # Load master taxa table
 master.taxa <- read.csv(file.path(datamod.dir, "Final_Macro_ITS", "20201019_S_MSTR_MACRO_SPECIES.csv"), stringsAsFactors = FALSE, na.strings = c("", "NA")) %>% 
   rename_all(tolower) %>% 
   setNames(., sub("mms_", "", names(.)))
 
-# May need to rename columns to match original attributes table used:
-# names(attributes.df)
-#  [1] "final_id"         "macro_genspecies" "tol_int"          "tol_char"         "tol_p_int"        "tol_n_int"        "ffg"              "reference"       
-#  [9] "prevnames"        "final_tsn"        "final_id.y"       "kingdom"          "subkingdom"       "infrakingdom"     "superphylum"      "phylum"          
-# [17] "subphylum"        "class"            "subclass"         "infraclass"       "superorder"       "order"            "suborder"         "infraorder"      
-# [25] "superfamily"      "family"           "subfamily"        "tribe"            "subtribe"         "genus"            "subgenus"         "species"         
-# [33] "subspecies"       "org_id"  
+
+# Zach's function for filling blank taxa rankings with previous
+
+#'Fill NAs with Previous Taxonomic Rank
+#'@description Fill in NA values present in the taxonomic hierarchy with the
+#'previous taxonomic rank.
+#'@param long.df Taxonomic counts arranged in a long data format.
+#'@param final.id.col The name of the column that contains the final taxonomic
+#'ID.
+#'@param ... A set of columns related to taxonomic ranks where NA
+#'values will be replaced with the previous taxonomic rank. It is important to
+#'list these columns in the appropriate order (e.g. phylum to species). The
+#'order the columns are presented is used to create the hierarchy that
+#'identifies the previous taxonomic rank.
+#'@return A data frame.
+#'@export
+fill_taxa <- function(long.df, final.id.col, ...) {
+  rank.quos <- rlang::quos(...)
+  final.id.col <- rlang::enquo(final.id.col)
+  rank.vec <- long.df %>%
+    select(!!!rank.quos) %>%
+    names()
+  final.df <- long.df %>%
+    gather(rank, taxon, !!!rank.quos) %>%
+    mutate(rank = factor(rank, levels = rank.vec),
+                  taxon = if_else(taxon == "", as.character(NA), taxon)) %>%
+    group_by(!!final.id.col) %>%
+    fill(taxon)  %>%
+    ungroup() %>%
+    spread(rank, taxon)
+  return(final.df)
+}
+
+master.taxa.fill <- fill_taxa(master.taxa, macro_genspecies, kingdom:species) %>% 
+  mutate(target_taxon = species) %>% 
+  relocate(target_taxon) %>% 
+  rename(ffg = feeding_habits,
+         tol_char = tolerance_name,
+         tol_int = tolerance)
+
+```
+
+```{r Sample taxa table prep}
 
 # Load bug matrix
 taxa.df.wide <- read.csv(file.path(root.dir, "data/compile_2015-2019/bugs/2015-2019_lowgrad_bugs_matrix_UNIQUE_20201207.csv"), check.names = FALSE)
@@ -49,7 +85,7 @@ missing.df <- taxa.df %>%
 # Join attributes to data
 taxa.df <- taxa.df %>% 
   rename(macro_genspecies = final_id) %>%
-  left_join(master.taxa, by = "macro_genspecies") #%>% 
+  left_join(master.taxa.fill, by = "macro_genspecies") #%>% 
   # fill_taxa(taxa.df, final_id, kingdom:subspecies)
 
 # Attach disturbance categories and remove data without a class
@@ -64,116 +100,158 @@ taxa.df <- taxa.df %>% left_join(., condition) %>%
 #                                ifelse( # ENTER NEXT TAXA RANK HERE...  ))) %>%
 #   select(site_id, target_taxon, everything())
 
-rm(missing.df, taxa.df.wide, condition)
-```
-
-
-fill_taxa() function
-```{r eval = FALSE}
-#'Fill NAs with Previous Taxonomic Rank
-#'@description Fill in NA values present in the taxonomic hierarchy with the
-#'previous taxonomic rank.
-#'@param long.df Taxonomic counts arranged in a long data format.
-#'@param final.id.col The name of the column that contains the final taxonomic
-#'ID.
-#'@param ... A set of columns related to taxonomic ranks where NA
-#'values will be replaced with the previous taxonomic rank. It is important to
-#'list these columns in the appropriate order (e.g. phylum to species). The
-#'order the columns are presented is used to create the hierarchy that
-#'identifies the previous taxonomic rank.
-#'@return A data frame.
-#'@export
-fill_taxa <- function(long.df, final.id.col, ...) {
-  rank.quos <- rlang::quos(...)
-  final.id.col <- rlang::enquo(final.id.col)
-  rank.vec <- long.df %>%
-    dplyr::select(!!!rank.quos) %>%
-    names()
-  final.df <- long.df %>%
-    tidyr::gather(rank, taxon, !!!rank.quos) %>%
-    dplyr::mutate(rank = factor(rank, levels = rank.vec),
-                  taxon = if_else(taxon == "", as.character(NA), taxon)) %>%
-    dplyr::group_by(!!final.id.col) %>%
-    tidyr::fill(taxon)  %>%
-    dplyr::ungroup() %>%
-    tidyr::spread(rank, taxon)
-  return(final.df)
-}
-
-master.taxa.fill <- Benthos::fill_taxa(master.taxa)
-
-
+rm(master.taxa, missing.df, taxa.df.wide, condition)
 ```
 
 
 # Calculate metrics
 
-
-## Richness Metrics
-
-### Community Richness
-```{r}
-
-# Spot-checked okay
-
+```{r Create nested dataframe}
 nest.df <- taxa.df %>%
-  dplyr::group_nest(site_id,  condition_class, .key = "data")
-
-rich.df <- nest.df %>%
-  dplyr::mutate(
-    rich_family = taxa_rich(.dataframe = .,
-                            .key_col = site_id,
-                            .group_col = family,
-                            .unnest_col = data,
-                            .filter = !is.na(family)),
-    rich_genus = taxa_rich(.dataframe = .,
-                            .key_col = site_id,
-                            .group_col = genus,
-                            .unnest_col = data,
-                            .filter = !is.na(genus))
-  )
-
-
-rich.df %>%
-  dplyr::mutate(data = "nested dataframe") %>%
-  head() %>%
-  knitr::kable()
+  group_nest(site_id,  condition_class, .key = "data")
 
 ```
+
+## Tolerance Metric
+
+```{r}
+
+# Does this need to point to a certain taxa name field? Or does it just look at the tolerance values of all present?
+# Spot-check: not completed
+
+taxa_tol.df <- nest.df %>%
+  mutate(
+    taxa_tol_index = taxa_tol_index(.dataframe = .,
+                                    .key_col = site_id,
+                                    .counts_col = count,
+                                    .tol_col = tol_int,
+                                    .unnest_col = data)
+  )
+
+```
+
+
+## Richness Metrics
 
 ### Subgroup Richness
 ```{r}
 
-#### If not using taxa_fill(), need to add .filter = !is.na(family)), etc.
-# How to add more than one statement to filter argument? Tried c() and && (neither work).
-# Example - 04-MCMI_S-5.0 should be 4/5/12 but it's 4/6/13.
+# Spot-check: OK
 
-sub_rich.df <- nest.df %>%
-  dplyr::mutate(
-    rich_ephemeroptera_fam = taxa_rich(.dataframe = .,
+rich_subgr.df <- nest.df %>%
+  mutate(
+    # rich_ept_gen = taxa_rich(.dataframe = .,
+    #                         .key_col = site_id,
+    #                         .group_col = genus,
+    #                         .filter = order %in% c("ephemeroptera",
+    #                                                    "plecoptera",
+    #                                                    "trichoptera"),
+    #                         .unnest_col = data),
+    rich_ept_ttaxon = taxa_rich(.dataframe = .,
                             .key_col = site_id,
-                            .group_col = family,
-                            .filter = order %in% "ephemeroptera",
-                            .unnest_col = data),
-    rich_ephemeroptera_gen = taxa_rich(.dataframe = .,
-                            .key_col = site_id,
-                            .group_col = genus,
-                            .filter = order %in% "ephemeroptera",
-                            .unnest_col = data),
-    rich_ept_gen = taxa_rich(.dataframe = .,
-                            .key_col = site_id,
-                            .group_col = genus,
+                            .group_col = target_taxon,
                             .filter = order %in% c("ephemeroptera",
                                                        "plecoptera",
                                                        "trichoptera"),
                             .unnest_col = data)
   )
 
-sub_rich.df %>%
-  dplyr::mutate(data = "nested dataframe") %>%
+
+
+# Could add things like % oligoceats, chirnonomids, etc. Look at literature to see what to add.
+
+
+rich_subgr.df %>%
+  mutate(data = "nested dataframe") %>%
   head() %>%
   knitr::kable()
 ```
+
+
+## Standard Richness and Relative Richness Metrics - 
+
+```{r}
+
+# Spot check: not completed
+
+rich_std_rel.df <- nest.df %>% 
+  mutate(
+    # Order level richness
+    rich_order = taxa_rich(.data = .,
+                            .key_col = site_id,
+                            .group_col = order,
+                            .unnest_col = data),
+    # Family level richness
+    rich_family = taxa_rich(.data = .,
+                            .key_col = site_id,
+                            .group_col = family,
+                            .unnest_col = data),
+    # Genus level richness
+    rich_genus = taxa_rich(.data = .,
+                            .key_col = site_id,
+                            .group_col = genus,
+                            .unnest_col = data),
+    # Functional Feeding group richness
+    rich_ffg = taxa_rich(.data = .,
+                            .key_col = site_id,
+                            .group_col = ffg,
+                            .unnest_col = data),
+    # Tolerance value richness
+    rich_tol = taxa_rich(.data = .,
+                            .key_col = site_id,
+                            .group_col = tol_char,
+                            .unnest_col = data),
+    # Genus-species richness of Coleoptera, Odonata, Trichoptera, and Ephemeroptera
+    # rich_cote_genspp = taxa_rich(.data = .,
+    #                          .key_col = site_id,
+    #                          .group_col = macro_genspecies,
+    #                          .filter = order %in% c("coleoptera",
+    #                                                 "odonata",
+    #                                                 "trichoptera",
+    #                                                 "ephemeroptera"
+    #                                                 ),
+    #                          .unnest_col = data),
+    rich_cote_ttaxon = taxa_rich(.data = .,
+                             .key_col = site_id,
+                             .group_col = target_taxon,
+                             .filter = order %in% c("coleoptera",
+                                                    "odonata",
+                                                    "trichoptera",
+                                                    "ephemeroptera"
+                                                    ),
+                             .unnest_col = data),
+    # Genus-species relative richness of Coleoptera, Odonata, Trichoptera, and Ephemeroptera
+    # pct_rich_cote_genspp = taxa_pct_rich(.data = .,
+    #                          .key_col = site_id,
+    #                          .group_col = macro_genspecies,
+    #                          .filter = order %in% c("coleoptera",
+    #                                                 "odonata",
+    #                                                 "trichoptera",
+    #                                                 "ephemeroptera"
+    #                                                 ),
+    #                          .unnest_col = data),
+    pct_rich_cote_ttaxon = taxa_pct_rich(.data = .,
+                             .key_col = site_id,
+                             .group_col = target_taxon,
+                             .filter = order %in% c("coleoptera",
+                                                    "odonata",
+                                                    "trichoptera",
+                                                    "ephemeroptera"
+                                                    ),
+                             .unnest_col = data),
+    # Relative abundance of Coleoptera, Odonata, Trichoptera, and Ephemeroptera
+    pct_cote = taxa_pct(.data = .,
+                         .key_col = site_id,
+                         .counts_col = count,
+                         .filter = order %in% c("coleoptera",
+                                                "odonata",
+                                                "trichoptera",
+                                                "ephemeroptera"
+                         ),
+                         .unnest_col = data)
+  )
+```
+
 
 
 ## Diversity Metrics
@@ -185,42 +263,73 @@ sub_rich.df %>%
 ### Not spot-checked
 
 div.df <- nest.df %>%
-  dplyr::mutate(
-    shannon_genus = taxa_div(.dataframe = .,
-                            .key_col = site_id,
-                            .counts_col = count,
-                            .group_col = genus,
-                            .job = "shannon",
+  mutate(
+    shannon_ttaxon = taxa_div(.dataframe = .,
+                             .key_col = site_id,
+                             .counts_col = count,
+                             .group_col = target_taxon,
+                             .job = "shannon",
                              .base_log = 2,
-                            .unnest_col = data),
-    simpson_genus = taxa_div(.dataframe = .,
-                            .key_col = site_id,
+                             .unnest_col = data),
+    # shannon_genus = taxa_div(.dataframe = .,
+    #                         .key_col = site_id,
+    #                         .counts_col = count,
+    #                         .group_col = genus,
+    #                         .job = "shannon",
+    #                          .base_log = 2,
+    #                         .unnest_col = data),
+    simpson_ttaxon = taxa_div(.dataframe = .,
+                             .key_col = site_id,
                             .counts_col = count,
-                            .group_col = genus,
+                            .group_col = target_taxon,
                             .job = "simpson",
                             .unnest_col = data),
-    margalef_genus = taxa_div(.dataframe = .,
+    # simpson_genus = taxa_div(.dataframe = .,
+    #                         .key_col = site_id,
+    #                         .counts_col = count,
+    #                         .group_col = genus,
+    #                         .job = "simpson",
+    #                         .unnest_col = data),
+    margalef_ttaxon = taxa_div(.dataframe = .,
                             .key_col = site_id,
                             .counts_col = count,
-                            .group_col = genus,
+                            .group_col = target_taxon,
                             .job = "margalef",
                             .unnest_col = data),
-    menhinick_genus = taxa_div(.dataframe = .,
+    # margalef_genus = taxa_div(.dataframe = .,
+    #                         .key_col = site_id,
+    #                         .counts_col = count,
+    #                         .group_col = genus,
+    #                         .job = "margalef",
+    #                         .unnest_col = data),
+    menhinick_ttaxon = taxa_div(.dataframe = .,
                             .key_col = site_id,
                             .counts_col = count,
-                            .group_col = genus,
+                            .group_col = target_taxon,
                             .job = "menhinick",
                             .unnest_col = data),
-    pielou_genus = taxa_div(.dataframe = .,
+    # menhinick_genus = taxa_div(.dataframe = .,
+    #                         .key_col = site_id,
+    #                         .counts_col = count,
+    #                         .group_col = genus,
+    #                         .job = "menhinick",
+    #                         .unnest_col = data),
+    pielou_ttaxon = taxa_div(.dataframe = .,
                             .key_col = site_id,
                             .counts_col = count,
-                            .group_col = genus,
+                            .group_col = target_taxon,
                             .job = "pielou",
-                            .unnest_col = data)
+                            .unnest_col = data),
+    # pielou_genus = taxa_div(.dataframe = .,
+    #                         .key_col = site_id,
+    #                         .counts_col = count,
+    #                         .group_col = genus,
+    #                         .job = "pielou",
+    #                         .unnest_col = data),
   )
 
 div.df %>%
-  dplyr::mutate(data = "nested dataframe") %>%
+  mutate(data = "nested dataframe") %>%
   head() %>%
   knitr::kable()
 ```
@@ -229,32 +338,61 @@ div.df %>%
 
 ```{r}
 
-### Not spot-checked
+# Not spot-checked
+# Changed group_col from order to target_taxon. Output differences were large.
 
-sub_div.df <- nest.df %>%
-  dplyr::mutate(
+div_subgr.df <- nest.df %>%
+  mutate(
+    # gini_simpson_ept = taxa_div(.dataframe = .,
+    #                         .key_col = site_id,
+    #                         .counts_col = count,
+    #                         .group_col = order,
+    #                         .filter = order %in% c("ephemeroptera",
+    #                                                    "plecoptera",
+    #                                                    "trichoptera"),
+    #                         .job = "gini_simpson",
+    #                         .unnest_col = data),
     gini_simpson_ept = taxa_div(.dataframe = .,
                             .key_col = site_id,
                             .counts_col = count,
-                            .group_col = order,
+                            .group_col = target_taxon,
                             .filter = order %in% c("ephemeroptera",
                                                        "plecoptera",
                                                        "trichoptera"),
                             .job = "gini_simpson",
                             .unnest_col = data),
+    # simpson_ept = taxa_div(.dataframe = .,
+    #                         .key_col = site_id,
+    #                         .counts_col = count,
+    #                         .group_col = order,
+    #                         .filter = order %in% c("ephemeroptera",
+    #                                                    "plecoptera",
+    #                                                    "trichoptera"),
+    #                         .job = "simpson",
+    #                         .unnest_col = data),
     simpson_ept = taxa_div(.dataframe = .,
                             .key_col = site_id,
                             .counts_col = count,
-                            .group_col = order,
+                            .group_col = target_taxon,
                             .filter = order %in% c("ephemeroptera",
                                                        "plecoptera",
                                                        "trichoptera"),
                             .job = "simpson",
                             .unnest_col = data),
+    # shannon_ept = taxa_div(.dataframe = .,
+    #                         .key_col = site_id,
+    #                         .counts_col = count,
+    #                         .group_col = order,
+    #                         .filter = order %in% c("ephemeroptera",
+    #                                                    "plecoptera",
+    #                                                    "trichoptera"),
+    #                         .job = "shannon",
+    #                         .base_log = 2,
+    #                         .unnest_col = data),
     shannon_ept = taxa_div(.dataframe = .,
                             .key_col = site_id,
                             .counts_col = count,
-                            .group_col = order,
+                            .group_col = target_taxon,
                             .filter = order %in% c("ephemeroptera",
                                                        "plecoptera",
                                                        "trichoptera"),
@@ -263,8 +401,8 @@ sub_div.df <- nest.df %>%
                             .unnest_col = data)
   )
 
-sub_div.df %>%
-  dplyr::mutate(data = "nested dataframe") %>%
+div_subgr.df %>%
+  mutate(data = "nested dataframe") %>%
   head() %>%
   knitr::kable()
 ```
@@ -273,29 +411,28 @@ sub_div.df %>%
 
 ```{r}
 
-#### Need to generate target_taxon field before running this 
-#### OR use taxa_fill() instead?
+### Not spot-checked
 
-# dom.df <- nest.df %>%
-#   dplyr::mutate(
-#     dom_1_target_taxon = taxa_dom(.dataframe = .,
-#                                   .key_col = site_id,
-#                                   .counts_col = count,
-#                                   .group_col = target_taxon,
-#                                   .dom_level = 1,
-#                                   .unnest_col = data),
-#     dom_5_target_taxon = taxa_dom(.dataframe = .,
-#                                   .key_col = site_id,
-#                                   .counts_col = count,
-#                                   .group_col = target_taxon,
-#                                   .dom_level = 5,
-#                                   .unnest_col = data)
-#   )
-# 
-# dom.df %>%
-#   dplyr::mutate(data = "nested dataframe") %>%
-#   head() %>%
-#   knitr::kable()
+dom.df <- nest.df %>%
+  mutate(
+    dom_1_ttaxon = taxa_dom(.dataframe = .,
+                                  .key_col = site_id,
+                                  .counts_col = count,
+                                  .group_col = target_taxon,
+                                  .dom_level = 1,
+                                  .unnest_col = data),
+    dom_5_ttaxon = taxa_dom(.dataframe = .,
+                                  .key_col = site_id,
+                                  .counts_col = count,
+                                  .group_col = target_taxon,
+                                  .dom_level = 5,
+                                  .unnest_col = data)
+  )
+
+dom.df %>%
+  mutate(data = "nested dataframe") %>%
+  head() %>%
+  knitr::kable()
 ```
 
 
@@ -308,12 +445,7 @@ sub_div.df %>%
 # Spot-checked okay
 
 pct.df <- nest.df %>%
-  dplyr::mutate(
-    pct_ephemeroptera = taxa_pct(.dataframe = .,
-                                  .key_col = site_id,
-                                  .counts_col = count,
-                                  .filter = order %in% "ephemeroptera",
-                                 .unnest_col = data),
+  mutate(
     pct_ept = taxa_pct(.dataframe = .,
                         .key_col = site_id,
                         .counts_col = count,
@@ -324,72 +456,108 @@ pct.df <- nest.df %>%
   )
 
 pct.df %>%
-  dplyr::mutate(data = "nested dataframe") %>%
+  mutate(data = "nested dataframe") %>%
   head() %>%
   knitr::kable()
 
 ```
 
 
-## Abundances
+# Sequence Metrics
+## ADAPT FROM MATT'S CODE
 
 ```{r}
 
-# Spot-check okay
+# Why is .counts_col for these commented out in Matt's code?
+# Spot-check: not completed
 
-abund.df <- nest.df %>%
-  dplyr::mutate(
-    abund_ephemeroptera = taxa_abund(.,
-                                  .key_col = site_id,
-                                  .counts_col = count,
-                                  .filter = order %in% "ephemeroptera",
-                                  .unnest_col = data),
-    abund_ept = taxa_abund(.,
-                        .key_col = site_id,
-                        .counts_col = count,
-                        .filter = order %in% c("ephemeroptera",
-                                                   "plecoptera",
-                                                   "trichoptera"),
-                        .unnest_col = data)
-  )
-
-abund.df %>%
-  dplyr::mutate(data = "nested dataframe") %>%
-  head() %>%
-  knitr::kable()
-
-```
-
-
-## Testing example code for Sequencing Metric Calculations
-
-```{r}
 seq.df <- nest.df %>%
-  dplyr::bind_cols(
-    taxa_seq(.dataframe = .,
-             .key_col = site_id,
-             .counts_col = count,
-             .filter_cols_vec = c("class", "order"),
-             .group_col = genus,
-             .job = "rich",
-             .unnest_col = data)
+  # Append all of the results as columns to a single DF.
+  bind_cols(
+    # Sequence through macrog_genspecies for each unique column specified
+    # in the .filter_cols_vec.
+    taxa_seq(
+      .data = .,
+      .key_col = site_id,
+      # .counts_col = count,
+      .filter_cols_vec = c("class",
+                           "order",
+                           "family",
+                           "tol_char",
+                           "ffg"),
+      .group_col = target_taxon,
+      .job = "rich",
+      .unnest_col = data
+    ),
+    # Sequence through each unique column specified in the .filter_cols_vec 
+    # to calculate target_taxon percent richness.
+    taxa_seq(
+      .data = .,
+      .key_col = site_id,
+      # .counts_col = count,
+      .filter_cols_vec = c("class",
+                           "order",
+                           "family",
+                           "tol_char",
+                           "ffg"),
+      .group_col = target_taxon,
+      .job = "pct_rich",
+      .unnest_col = data
+    ),
+    taxa_seq(
+      .data = .,
+      .key_col = site_id,
+      .counts_col = count,
+      .filter_cols_vec = c("class",
+                           "order",
+                           "suborder",
+                           "family",
+                           "genus",
+                           "tol_char",
+                           "ffg"),
+      .job = "pct",
+      .unnest_col = data
+    ),
+    taxa_seq(
+      .data = .,
+      .key_col = site_id,
+      .counts_col = count,
+      .filter_cols_vec = c("class",
+                           "order", 
+                           "family",
+                           "tol_char",
+                           "ffg"),
+      .group_col = target_taxon,
+      .base_log = 2,
+      .job = "shannon",
+      .unnest_col = data
+    ),
+    taxa_seq(
+      .data = .,
+      .key_col = site_id,
+      .counts_col = count,
+      .filter_cols_vec = c("class",
+                           "order", 
+                           "family",
+                           "tol_char",
+                           "ffg"),
+      .group_col = target_taxon,
+      .job = "simpson",
+      .unnest_col = data
     )
-
-dplyr::tibble(
-  "List of Column Names" = names(seq.df)
-) %>%
-knitr::kable()
+  )
 ```
-
 
 ## Testing "Putting it All Together" example
 
 ```{r}
 
+### May be a repeat of some chunks above. Just another way to do it. May be cleaner/easier to break these out as above then combine.
+
 ### Need field target_taxon use use fill_taxa() in order to run code below ###
 
-metrics.df <- nest.df %>%
-  dplyr::mutate(
+multi.df <- nest.df %>%
+  mutate(
     rich_family = taxa_rich(.dataframe = .,
                             .key_col = site_id,
                             .group_col = family,
@@ -463,7 +631,7 @@ metrics.df <- nest.df %>%
                                .tol_col = ptv,
                                .unnest_col = data)
   ) %>%
-  dplyr::bind_cols(
+  bind_cols(
     taxa_seq(.dataframe = .,
              .key_col = site_id,
              .counts_col = count,
@@ -497,7 +665,7 @@ metrics.df <- nest.df %>%
 
 ```{r}
 lowgrad_metrics.df <- metrics.df %>%
-  dplyr::select(-data)
+  select(-data)
 
 usethis::use_data(lowgrad_metrics.df,
                   overwrite = TRUE)
@@ -508,16 +676,18 @@ usethis::use_data(lowgrad_metrics.df,
 
 
 
+
+
 ## Running mmir example data
-```{r Load in data}
+```{r eval = FALSE}
 data("nrsa_nap_0809", package = "mmir")
 
 test.nest.df <- nrsa_nap_0809 %>%
-  dplyr::group_nest(uid,  rt_nrsa_cat, .key = "data")
+  group_nest(uid,  rt_nrsa_cat, .key = "data")
 
 
 test.rich.df <- test.nest.df %>%
-  dplyr::mutate(
+  mutate(
     rich_family = taxa_rich(.dataframe = .,
                             .key_col = uid,
                             .group_col = family,
@@ -530,7 +700,7 @@ test.rich.df <- test.nest.df %>%
 
 
 test.rich.df %>%
-  dplyr::mutate(data = "nested dataframe") %>%
+  mutate(data = "nested dataframe") %>%
   head() %>%
   knitr::kable()
 ```
