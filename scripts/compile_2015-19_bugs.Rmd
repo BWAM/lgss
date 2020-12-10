@@ -263,10 +263,12 @@ bugmatrix.15to19 <- bugmatrix.15to19 %>%
 
 bugmatrix.15to19[is.na(bugmatrix.15to19)] <- 0
 
+# Create table for IBI development: Remove duplicate (second) samples and sites missing significant info
 bugmatrix.15to19.unique <- bugmatrix.15to19 %>% 
   arrange(sample_date) %>% 
   distinct(site_id, .keep_all = TRUE) %>% 
-  select(-sample_date)
+  select(-sample_date) %>% 
+  filter(!(site_id %in% c("03-LSAM_N-7.9", "01-BLKE-0.1")))
 
 ```
 
@@ -320,8 +322,8 @@ write.table(bugmatrix.15to19, file.path(root.dir, "data/compile_2015-2019/bugs/2
 write.table(bugmatrix.15to19, file.path(teams.datadir, "bugs/2015-2019_lowgrad_bugs_matrix_20201207.csv"),sep=",", row.names = FALSE)
 
 # Only unique bugs
-write.table(bugmatrix.15to19.unique, file.path(root.dir, "data/compile_2015-2019/bugs/2015-2019_lowgrad_bugs_matrix_UNIQUE_20201207.csv"),sep=",", row.names = FALSE)
-write.table(bugmatrix.15to19.unique, file.path(teams.datadir, "bugs", "2015-2019_lowgrad_bugs_matrix_UNIQUE_20201207.csv"),sep=",", row.names = FALSE)
+write.table(bugmatrix.15to19.unique, file.path(root.dir, "data/compile_2015-2019/bugs/2015-2019_lowgrad_bugs_matrix_UNIQUE_20201210.csv"),sep=",", row.names = FALSE)
+write.table(bugmatrix.15to19.unique, file.path(teams.datadir, "bugs", "2015-2019_lowgrad_bugs_matrix_UNIQUE_20201210.csv"),sep=",", row.names = FALSE)
 
 ```
 
