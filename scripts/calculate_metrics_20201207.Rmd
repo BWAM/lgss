@@ -18,45 +18,53 @@ master.taxa <- read.csv(file.path(datamod.dir, "Final_Macro_ITS", "20201019_S_MS
   rename_all(tolower) %>% 
   setNames(., sub("mms_", "", names(.)))
 
-
-# Zach's function for filling blank taxa rankings with previous
-
-#'Fill NAs with Previous Taxonomic Rank
-#'@description Fill in NA values present in the taxonomic hierarchy with the
-#'previous taxonomic rank.
-#'@param long.df Taxonomic counts arranged in a long data format.
-#'@param final.id.col The name of the column that contains the final taxonomic
-#'ID.
-#'@param ... A set of columns related to taxonomic ranks where NA
-#'values will be replaced with the previous taxonomic rank. It is important to
-#'list these columns in the appropriate order (e.g. phylum to species). The
-#'order the columns are presented is used to create the hierarchy that
-#'identifies the previous taxonomic rank.
-#'@return A data frame.
-#'@export
-fill_taxa <- function(long.df, final.id.col, ...) {
-  rank.quos <- rlang::quos(...)
-  final.id.col <- rlang::enquo(final.id.col)
-  rank.vec <- long.df %>%
-    select(!!!rank.quos) %>%
-    names()
-  final.df <- long.df %>%
-    gather(rank, taxon, !!!rank.quos) %>%
-    mutate(rank = factor(rank, levels = rank.vec),
-                  taxon = if_else(taxon == "", as.character(NA), taxon)) %>%
-    group_by(!!final.id.col) %>%
-    fill(taxon)  %>%
-    ungroup() %>%
-    spread(rank, taxon)
-  return(final.df)
-}
-
-master.taxa.fill <- fill_taxa(master.taxa, macro_genspecies, kingdom:species) %>% 
-  mutate(target_taxon = species) %>% 
-  relocate(target_taxon) %>% 
+master.taxa.fill <- taxa_fill(master.taxa, .final_id = macro_genspecies, .prefix = "unidentified", kingdom:species) %>%
+  mutate(target_taxon = species) %>%
+  relocate(target_taxon) %>%
   rename(ffg = feeding_habits,
          tol_char = tolerance_name,
          tol_int = tolerance)
+
+# # Zach's raw function for filling blank taxa rankings with previous
+# 
+# #'Fill NAs with Previous Taxonomic Rank
+# #'@description Fill in NA values present in the taxonomic hierarchy with the
+# #'previous taxonomic rank.
+# #'@param long.df Taxonomic counts arranged in a long data format.
+# #'@param final.id.col The name of the column that contains the final taxonomic
+# #'ID.
+# #'@param ... A set of columns related to taxonomic ranks where NA
+# #'values will be replaced with the previous taxonomic rank. It is important to
+# #'list these columns in the appropriate order (e.g. phylum to species). The
+# #'order the columns are presented is used to create the hierarchy that
+# #'identifies the previous taxonomic rank.
+# #'@return A data frame.
+# #'@export
+# fill_taxa_old <- function(long.df, final.id.col, ...) {
+#   rank.quos <- rlang::quos(...)
+#   final.id.col <- rlang::enquo(final.id.col)
+#   rank.vec <- long.df %>%
+#     select(!!!rank.quos) %>%
+#     names()
+#   final.df <- long.df %>%
+#     gather(rank, taxon, !!!rank.quos) %>%
+#     mutate(rank = factor(rank, levels = rank.vec),
+#                   taxon = if_else(taxon == "", as.character(NA), taxon)) %>%
+#     group_by(!!final.id.col) %>%
+#     fill(taxon)  %>%
+#     ungroup() %>%
+#     spread(rank, taxon)
+#   return(final.df)
+# }
+# 
+# master.taxa.fill <- fill_taxa_old(master.taxa, macro_genspecies, kingdom:species) %>%
+#   mutate(target_taxon = species) %>%
+#   relocate(target_taxon) %>%
+#   rename(ffg = feeding_habits,
+#          tol_char = tolerance_name,
+#          tol_int = tolerance)
+
+
 
 ```
 
@@ -94,6 +102,8 @@ rm(master.taxa, missing.df, taxa.df.wide)
 
 # Calculate metrics
 
+## Create nested dataframe
+
 ```{r Create nested dataframe}
 nest.df <- taxa.df %>%
   group_nest(site_id, .key = "data")
@@ -122,62 +132,31 @@ taxa_tol.df <- nest.df %>%
 
 ## Richness Metrics
 
-### Subgroup Richness
-```{r}
-
-# Spot-check: OK
-
-rich_subgr.df <- nest.df %>%
-  mutate(
-    # rich_ept_gen = taxa_rich(.dataframe = .,
-    #                         .key_col = site_id,
-    #                         .group_col = genus,
-    #                         .filter = order %in% c("ephemeroptera",
-    #                                                    "plecoptera",
-    #                                                    "trichoptera"),
-    #                         .unnest_col = data),
-    rich_ept_ttaxon = taxa_rich(.dataframe = .,
-                            .key_col = site_id,
-                            .group_col = target_taxon,
-                            .filter = order %in% c("ephemeroptera",
-                                                       "plecoptera",
-                                                       "trichoptera"),
-                            .unnest_col = data)
-  ) %>% 
-  select(-data)
-
-
-
-# Could add things like % oligoceats, chirnonomids, etc. Look at literature to see what to add.
-
-
-rich_subgr.df %>%
-  mutate(data = "nested dataframe") %>%
-  head() %>%
-  knitr::kable()
-```
-
-
-## Standard Richness and Relative Richness Metrics - 
+## Standard Richness
 
 ```{r}
 
 # Spot check: not completed
 
-rich_std_rel.df <- nest.df %>% 
+rich_std.df <- nest.df %>% 
   mutate(
+    # Class level richness
+    rich_class = taxa_rich(.dataframe = .,
+                            .key_col = site_id,
+                            .group_col = class,
+                            .unnest_col = data),
     # Order level richness
-    rich_order = taxa_rich(.data = .,
+    rich_order = taxa_rich(.dataframe = .,
                             .key_col = site_id,
                             .group_col = order,
                             .unnest_col = data),
     # Family level richness
-    rich_family = taxa_rich(.data = .,
+    rich_family = taxa_rich(.dataframe = .,
                             .key_col = site_id,
                             .group_col = family,
                             .unnest_col = data),
     # Genus level richness
-    rich_genus = taxa_rich(.data = .,
+    rich_genus = taxa_rich(.dataframe = .,
                             .key_col = site_id,
                             .group_col = genus,
                             .unnest_col = data),
@@ -187,45 +166,135 @@ rich_std_rel.df <- nest.df %>%
                             .group_col = target_taxon,
                             .unnest_col = data),
     # Functional Feeding group richness
-    rich_ffg = taxa_rich(.data = .,
+    rich_ffg = taxa_rich(.dataframe = .,
                             .key_col = site_id,
                             .group_col = ffg,
                             .unnest_col = data),
     # Tolerance value richness
-    rich_tol = taxa_rich(.data = .,
+    rich_tol = taxa_rich(.dataframe = .,
                             .key_col = site_id,
                             .group_col = tol_char,
+                            .unnest_col = data)
+  ) %>% 
+  select(-data)
+
+```
+
+### Subgroup Richness
+
+```{r}
+
+# Spot-check: OK
+
+rich_subgr.df <- nest.df %>%
+  mutate(
+    rich_ept = taxa_rich(.dataframe = .,
+                            .key_col = site_id,
+                            .group_col = target_taxon,
+                            .filter = order %in% c("ephemeroptera",
+                                                       "plecoptera",
+                                                       "trichoptera"),
                             .unnest_col = data),
-    # Genus-species richness of Coleoptera, Odonata, Trichoptera, and Ephemeroptera
-    # rich_cote_genspp = taxa_rich(.data = .,
-    #                          .key_col = site_id,
-    #                          .group_col = macro_genspecies,
-    #                          .filter = order %in% c("coleoptera",
-    #                                                 "odonata",
-    #                                                 "trichoptera",
-    #                                                 "ephemeroptera"
-    #                                                 ),
-    #                          .unnest_col = data),
-    rich_cote_ttaxon = taxa_rich(.data = .,
-                             .key_col = site_id,
-                             .group_col = target_taxon,
-                             .filter = order %in% c("coleoptera",
-                                                    "odonata",
-                                                    "trichoptera",
-                                                    "ephemeroptera"
-                                                    ),
-                             .unnest_col = data),
-    # Genus-species relative richness of Coleoptera, Odonata, Trichoptera, and Ephemeroptera
-    # pct_rich_cote_genspp = taxa_pct_rich(.data = .,
-    #                          .key_col = site_id,
-    #                          .group_col = macro_genspecies,
-    #                          .filter = order %in% c("coleoptera",
-    #                                                 "odonata",
-    #                                                 "trichoptera",
-    #                                                 "ephemeroptera"
-    #                                                 ),
-    #                          .unnest_col = data),
-    pct_rich_cote_ttaxon = taxa_pct_rich(.data = .,
+    rich_ep = taxa_rich(.dataframe = .,
+                            .key_col = site_id,
+                            .group_col = target_taxon,
+                            .filter = order %in% c("ephemeroptera",
+                                                       "plecoptera"),
+                            .unnest_col = data),
+    rich_et = taxa_rich(.dataframe = .,
+                            .key_col = site_id,
+                            .group_col = target_taxon,
+                            .filter = order %in% c("ephemeroptera",
+                                                       "trichoptera"),
+                            .unnest_col = data),
+    rich_pt = taxa_rich(.dataframe = .,
+                            .key_col = site_id,
+                            .group_col = target_taxon,
+                            .filter = order %in% c("plecoptera",
+                                                       "trichoptera"),
+                            .unnest_col = data),
+    rich_e = taxa_rich(.dataframe = .,
+                            .key_col = site_id,
+                            .group_col = target_taxon,
+                            .filter = order %in% "ephemeroptera",
+                            .unnest_col = data),
+    rich_p = taxa_rich(.dataframe = .,
+                            .key_col = site_id,
+                            .group_col = target_taxon,
+                            .filter = order %in% "plecoptera",
+                            .unnest_col = data),
+    rich_t = taxa_rich(.dataframe = .,
+                            .key_col = site_id,
+                            .group_col = target_taxon,
+                            .filter = order %in% "trichoptera",
+                            .unnest_col = data),
+    rich_cote = taxa_rich(.dataframe = .,
+                            .key_col = site_id,
+                            .group_col = target_taxon,
+                            .filter = order %in% c("coleoptera",
+                                                  "odonata",
+                                                  "trichoptera",
+                                                  "ephemeroptera"
+                                                  ),
+                            .unnest_col = data)
+
+  ) %>% 
+  select(-data)
+
+
+
+# Could add things like % oligoceats, chirnonomids, etc. Look at literature to see what to add.
+
+
+
+# Copied below from old LG metrics script. Implement above?
+
+  #   rich_toe = taxa_rich(taxa.df, bas_loc_rm, order, !!quo.taxa.i,
+  #                            taxon = c("trichoptera",
+  #                                      "odonata",
+  #                                      "ephemeroptera")),
+  #   rich_cote = taxa_rich(taxa.df, bas_loc_rm, order, !!quo.taxa.i,
+  #                            taxon = c("coleoptera",
+  #                                      "odonata",
+  #                                      "trichoptera",
+  #                                      "ephemeroptera")),
+  #   rich_potec = taxa_rich(taxa.df, bas_loc_rm, order, !!quo.taxa.i,
+  #                            taxon = c("plecoptera",
+  #                                      "odonata",
+  #                                      "trichoptera", 
+  #                                       "ephemeroptera",
+  #                                      "coleoptera")),
+  #   rich_mol = taxa_rich(taxa.df, bas_loc_rm, phylum, !!quo.taxa.i,
+  #                            taxon = c("mollusca")),
+  #   rich_amphi = taxa_rich(taxa.df, bas_loc_rm, order, !!quo.taxa.i,
+  #                            taxon = c("amphipoda")),
+  #   rich_crust = taxa_rich(taxa.df, bas_loc_rm, subphylum, !!quo.taxa.i,
+  #                            taxon = c("crustacea")),
+  #   rich_mollusca_amphipoda = rich_mol + rich_amphi,
+  #   rich_crustacea_mollusca = rich_crust + rich_mol,
+  #   rich_chironominae = taxa_rich(taxa.df, bas_loc_rm, subfamily, !!quo.taxa.i,
+  #                            taxon = c("chironominae"))
+  # ) %>% 
+  #   select(-rich_mol, -rich_amphi, -rich_crust)
+
+
+# rich_subgr.df %>%
+#   mutate(data = "nested dataframe") %>%
+#   head() %>%
+#   knitr::kable()
+```
+
+
+## Relative Richness and Relative Abundance (Percent) 
+
+```{r}
+
+# Spot check: not completed
+
+rich_rel_abund.df <- nest.df %>% 
+  mutate(
+    # target_taxon relative richness of Coleoptera, Odonata, Trichoptera, and Ephemeroptera
+    pct_rich_cote_ttaxon = taxa_pct_rich(.dataframe = .,
                              .key_col = site_id,
                              .group_col = target_taxon,
                              .filter = order %in% c("coleoptera",
@@ -235,7 +304,7 @@ rich_std_rel.df <- nest.df %>%
                                                     ),
                              .unnest_col = data),
     # Relative abundance of Coleoptera, Odonata, Trichoptera, and Ephemeroptera
-    pct_cote = taxa_pct(.data = .,
+    pct_cote = taxa_pct(.dataframe = .,
                          .key_col = site_id,
                          .counts_col = count,
                          .filter = order %in% c("coleoptera",
@@ -246,8 +315,8 @@ rich_std_rel.df <- nest.df %>%
                          .unnest_col = data)
   ) %>% 
   select(-data)
-```
 
+```
 
 
 ## Diversity Metrics
@@ -325,10 +394,10 @@ div.df <- nest.df %>%
   ) %>% 
   select(-data)
 
-div.df %>%
-  mutate(data = "nested dataframe") %>%
-  head() %>%
-  knitr::kable()
+# div.df %>%
+#   mutate(data = "nested dataframe") %>%
+#   head() %>%
+#   knitr::kable()
 ```
 
 ### Subgroup Diversity
@@ -399,10 +468,10 @@ div_subgr.df <- nest.df %>%
   ) %>% 
   select(-data)
 
-div_subgr.df %>%
-  mutate(data = "nested dataframe") %>%
-  head() %>%
-  knitr::kable()
+# div_subgr.df %>%
+#   mutate(data = "nested dataframe") %>%
+#   head() %>%
+#   knitr::kable()
 ```
 
 ### Dominance
@@ -428,10 +497,10 @@ dom.df <- nest.df %>%
   ) %>% 
   select(-data)
 
-dom.df %>%
-  mutate(data = "nested dataframe") %>%
-  head() %>%
-  knitr::kable()
+# dom.df %>%
+#   mutate(data = "nested dataframe") %>%
+#   head() %>%
+#   knitr::kable()
 ```
 
 
@@ -464,10 +533,10 @@ pct.df <- nest.df %>%
   ) %>% 
   select(-data)
 
-pct.df %>%
-  mutate(data = "nested dataframe") %>%
-  head() %>%
-  knitr::kable()
+# pct.df %>%
+#   mutate(data = "nested dataframe") %>%
+#   head() %>%
+#   knitr::kable()
 
 ```
 
@@ -482,8 +551,7 @@ pct.df %>%
 seq.df <- nest.df %>%
   # Append all of the results as columns to a single DF.
   bind_cols(
-    # Sequence through macrog_genspecies for each unique column specified
-    # in the .filter_cols_vec.
+    # Sequence through target_taxon for each unique column specified in the .filter_cols_vec.
     taxa_seq(.data = .,
              .key_col = site_id,
              # .counts_col = count,
@@ -545,6 +613,15 @@ seq.df <- nest.df %>%
              .unnest_col = data)
   ) %>% 
   select(-data)
+
+seq.df.filter <- seq.df %>% 
+  select(-contains("unidentified"))
+
+seq.names <- as.data.frame(names(seq.df))
+
+### CONTAINS MANY NAMES WITH "NULL"!! Zach looking into this weekend...
+
+
 ```
 
 
