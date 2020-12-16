@@ -3,6 +3,8 @@ title: "calculate_metrics_20201207"
 output: html_document
 ---
 
+# Data prep 
+
 ```{r Load libs}
 library(tidyverse)
 library(mmir)
@@ -19,52 +21,11 @@ master.taxa <- read.csv(file.path(datamod.dir, "Final_Macro_ITS", "20201019_S_MS
   setNames(., sub("mms_", "", names(.)))
 
 master.taxa.fill <- taxa_fill(master.taxa, .final_id = macro_genspecies, .prefix = "unidentified", kingdom:species) %>%
-  mutate(target_taxon = species) %>%
-  relocate(target_taxon) %>%
+  mutate(ttaxa = species) %>%
+  relocate(ttaxa) %>%
   rename(ffg = feeding_habits,
          tol_char = tolerance_name,
          tol_int = tolerance)
-
-# # Zach's raw function for filling blank taxa rankings with previous
-# 
-# #'Fill NAs with Previous Taxonomic Rank
-# #'@description Fill in NA values present in the taxonomic hierarchy with the
-# #'previous taxonomic rank.
-# #'@param long.df Taxonomic counts arranged in a long data format.
-# #'@param final.id.col The name of the column that contains the final taxonomic
-# #'ID.
-# #'@param ... A set of columns related to taxonomic ranks where NA
-# #'values will be replaced with the previous taxonomic rank. It is important to
-# #'list these columns in the appropriate order (e.g. phylum to species). The
-# #'order the columns are presented is used to create the hierarchy that
-# #'identifies the previous taxonomic rank.
-# #'@return A data frame.
-# #'@export
-# fill_taxa_old <- function(long.df, final.id.col, ...) {
-#   rank.quos <- rlang::quos(...)
-#   final.id.col <- rlang::enquo(final.id.col)
-#   rank.vec <- long.df %>%
-#     select(!!!rank.quos) %>%
-#     names()
-#   final.df <- long.df %>%
-#     gather(rank, taxon, !!!rank.quos) %>%
-#     mutate(rank = factor(rank, levels = rank.vec),
-#                   taxon = if_else(taxon == "", as.character(NA), taxon)) %>%
-#     group_by(!!final.id.col) %>%
-#     fill(taxon)  %>%
-#     ungroup() %>%
-#     spread(rank, taxon)
-#   return(final.df)
-# }
-# 
-# master.taxa.fill <- fill_taxa_old(master.taxa, macro_genspecies, kingdom:species) %>%
-#   mutate(target_taxon = species) %>%
-#   relocate(target_taxon) %>%
-#   rename(ffg = feeding_habits,
-#          tol_char = tolerance_name,
-#          tol_int = tolerance)
-
-
 
 ```
 
@@ -96,13 +57,10 @@ taxa.df <- taxa.df %>%
   left_join(master.taxa.fill, by = "macro_genspecies") #%>% 
   # fill_taxa(taxa.df, final_id, kingdom:subspecies)
 
+# write.csv(taxa.df, "lowgrad_taxa_zach.csv")
+
 rm(master.taxa, missing.df, taxa.df.wide)
 ```
-
-
-# Calculate metrics
-
-## Create nested dataframe
 
 ```{r Create nested dataframe}
 nest.df <- taxa.df %>%
@@ -110,16 +68,15 @@ nest.df <- taxa.df %>%
 
 ```
 
-## Tolerance Metric
+# Calculate metrics
 
-```{r}
+```{r Tolerance Metric (HBI)}
 
-# Does this need to point to a certain taxa name field? Or does it just look at the tolerance values of all present?
 # Spot-check: not completed
 
 taxa_tol.df <- nest.df %>%
   mutate(
-    taxa_tol_index = taxa_tol_index(.dataframe = .,
+    hbi_taxa_tol = taxa_tol_index(.dataframe = .,
                                     .key_col = site_id,
                                     .counts_col = count,
                                     .tol_col = tol_int,
@@ -130,13 +87,12 @@ taxa_tol.df <- nest.df %>%
 ```
 
 
+
 ## Richness Metrics
 
-## Standard Richness
+```{r Standard Richness}
 
-```{r}
-
-# Spot check: not completed
+# Spot check: OK
 
 rich_std.df <- nest.df %>% 
   mutate(
@@ -161,122 +117,128 @@ rich_std.df <- nest.df %>%
                             .group_col = genus,
                             .unnest_col = data),
     # Target taxon level richness
-    rich_ttaxon = taxa_rich(.dataframe = .,
+    rich_ttaxa = taxa_rich(.dataframe = .,
                             .key_col = site_id,
-                            .group_col = target_taxon,
+                            .group_col = ttaxa,
                             .unnest_col = data),
     # Functional Feeding group richness
     rich_ffg = taxa_rich(.dataframe = .,
                             .key_col = site_id,
                             .group_col = ffg,
-                            .unnest_col = data),
+                            .unnest_col = data,
+                            .filter = !is.na(ffg)),
     # Tolerance value richness
     rich_tol = taxa_rich(.dataframe = .,
                             .key_col = site_id,
                             .group_col = tol_char,
-                            .unnest_col = data)
+                            .unnest_col = data,
+                            .filter = !is.na(tol_char))
   ) %>% 
   select(-data)
 
 ```
 
-### Subgroup Richness
-
-```{r}
+```{r Subgroup Richness}
 
 # Spot-check: OK
 
 rich_subgr.df <- nest.df %>%
   mutate(
-    rich_ept = taxa_rich(.dataframe = .,
+    rich_ttaxa_ep = taxa_rich(.dataframe = .,
                             .key_col = site_id,
-                            .group_col = target_taxon,
+                            .group_col = ttaxa,
+                            .filter = order %in% c("ephemeroptera",
+                                                       "plecoptera"),
+                            .unnest_col = data),
+    rich_ttaxa_et = taxa_rich(.dataframe = .,
+                            .key_col = site_id,
+                            .group_col = ttaxa,
+                            .filter = order %in% c("ephemeroptera",
+                                                       "trichoptera"),
+                            .unnest_col = data),
+    rich_ttaxa_pt = taxa_rich(.dataframe = .,
+                            .key_col = site_id,
+                            .group_col = ttaxa,
+                            .filter = order %in% c("plecoptera",
+                                                       "trichoptera"),
+                            .unnest_col = data),
+    rich_ttaxa_ept = taxa_rich(.dataframe = .,
+                            .key_col = site_id,
+                            .group_col = ttaxa,
                             .filter = order %in% c("ephemeroptera",
                                                        "plecoptera",
                                                        "trichoptera"),
                             .unnest_col = data),
-    rich_ep = taxa_rich(.dataframe = .,
+    # Zach said this is usually specific to lakes, but keep it. May be good for LG.
+    rich_ttaxa_cote = taxa_rich(.dataframe = .,
                             .key_col = site_id,
-                            .group_col = target_taxon,
-                            .filter = order %in% c("ephemeroptera",
-                                                       "plecoptera"),
-                            .unnest_col = data),
-    rich_et = taxa_rich(.dataframe = .,
-                            .key_col = site_id,
-                            .group_col = target_taxon,
-                            .filter = order %in% c("ephemeroptera",
-                                                       "trichoptera"),
-                            .unnest_col = data),
-    rich_pt = taxa_rich(.dataframe = .,
-                            .key_col = site_id,
-                            .group_col = target_taxon,
-                            .filter = order %in% c("plecoptera",
-                                                       "trichoptera"),
-                            .unnest_col = data),
-    rich_e = taxa_rich(.dataframe = .,
-                            .key_col = site_id,
-                            .group_col = target_taxon,
-                            .filter = order %in% "ephemeroptera",
-                            .unnest_col = data),
-    rich_p = taxa_rich(.dataframe = .,
-                            .key_col = site_id,
-                            .group_col = target_taxon,
-                            .filter = order %in% "plecoptera",
-                            .unnest_col = data),
-    rich_t = taxa_rich(.dataframe = .,
-                            .key_col = site_id,
-                            .group_col = target_taxon,
-                            .filter = order %in% "trichoptera",
-                            .unnest_col = data),
-    rich_cote = taxa_rich(.dataframe = .,
-                            .key_col = site_id,
-                            .group_col = target_taxon,
+                            .group_col = ttaxa,
                             .filter = order %in% c("coleoptera",
                                                   "odonata",
                                                   "trichoptera",
-                                                  "ephemeroptera"
-                                                  ),
-                            .unnest_col = data)
-
+                                                  "ephemeroptera"),
+                            .unnest_col = data),
+    rich_ttaxa_cot = taxa_rich(.dataframe = .,
+                            .key_col = site_id,
+                            .group_col = ttaxa,
+                            .filter = order %in% c("coleoptera",
+                                                  "odonata",
+                                                  "trichoptera"),
+                            .unnest_col = data),
+    # Below Metrics were in old LG metrics script
+    rich_ttaxa_toe = taxa_rich(.dataframe = .,
+                            .key_col = site_id,
+                            .group_col = ttaxa,
+                            .filter = order %in% c("trichoptera",
+                                                   "odonata",
+                                                   "ephemeroptera"),
+                            .unnest_col = data),
+    rich_ttaxa_potec = taxa_rich(.dataframe = .,
+                            .key_col = site_id,
+                            .group_col = ttaxa,
+                            .filter = order %in% c("plecoptera",
+                                                   "odonata",
+                                                   "trichoptera",
+                                                   "ephemeroptera",
+                                                   "coleoptera"),
+                            .unnest_col = data),
+    rich_ttaxa_mol = taxa_rich(.dataframe = .,
+                            .key_col = site_id,
+                            .group_col = ttaxa,
+                            .filter = phylum %in% "mollusca",
+                            .unnest_col = data),
+     # Already done in taxa_seq() chunk, but used to calculate subgr
+    rich_ttaxa_amphi = taxa_rich(.dataframe = .,
+                            .key_col = site_id,
+                            .group_col = ttaxa,
+                            .filter = order %in% "amphipoda",
+                            .unnest_col = data),
+    rich_ttaxa_mol_amph = rich_ttaxa_mol + rich_ttaxa_amphi,
+    rich_ttaxa_crust = taxa_rich(.dataframe = .,
+                            .key_col = site_id,
+                            .group_col = ttaxa,
+                            .filter = subphylum %in% "crustacea",
+                            .unnest_col = data),
+    rich_ttaxa_mol_crust = rich_ttaxa_crust + rich_ttaxa_mol,
+    rich_ttaxa_chiro = taxa_rich(.dataframe = .,
+                            .key_col = site_id,
+                            .group_col = ttaxa,
+                            .filter = subfamily %in% "chironominae",
+                            .unnest_col = data),
+    # "oligochaeta" not present in master taxa table! How to subset worms? Needed?v1
+    # rich_olig = taxa_rich(.dataframe = .,
+    #                         .key_col = site_id,
+    #                         .group_col = ttaxa,
+    #                         .filter = subclass %in% "oligochaeta",
+    #                         .unnest_col = data),
+    # Richness of intolerant and facultative Taxa 
+    rich_ttaxa_intol_facul = taxa_rich(.dataframe = .,
+                             .key_col = site_id,
+                             .group_col = ttaxa,
+                             .filter = tol_int <=6,
+                             .unnest_col = data)
   ) %>% 
   select(-data)
-
-
-
-# Could add things like % oligoceats, chirnonomids, etc. Look at literature to see what to add.
-
-
-
-# Copied below from old LG metrics script. Implement above?
-
-  #   rich_toe = taxa_rich(taxa.df, bas_loc_rm, order, !!quo.taxa.i,
-  #                            taxon = c("trichoptera",
-  #                                      "odonata",
-  #                                      "ephemeroptera")),
-  #   rich_cote = taxa_rich(taxa.df, bas_loc_rm, order, !!quo.taxa.i,
-  #                            taxon = c("coleoptera",
-  #                                      "odonata",
-  #                                      "trichoptera",
-  #                                      "ephemeroptera")),
-  #   rich_potec = taxa_rich(taxa.df, bas_loc_rm, order, !!quo.taxa.i,
-  #                            taxon = c("plecoptera",
-  #                                      "odonata",
-  #                                      "trichoptera", 
-  #                                       "ephemeroptera",
-  #                                      "coleoptera")),
-  #   rich_mol = taxa_rich(taxa.df, bas_loc_rm, phylum, !!quo.taxa.i,
-  #                            taxon = c("mollusca")),
-  #   rich_amphi = taxa_rich(taxa.df, bas_loc_rm, order, !!quo.taxa.i,
-  #                            taxon = c("amphipoda")),
-  #   rich_crust = taxa_rich(taxa.df, bas_loc_rm, subphylum, !!quo.taxa.i,
-  #                            taxon = c("crustacea")),
-  #   rich_mollusca_amphipoda = rich_mol + rich_amphi,
-  #   rich_crustacea_mollusca = rich_crust + rich_mol,
-  #   rich_chironominae = taxa_rich(taxa.df, bas_loc_rm, subfamily, !!quo.taxa.i,
-  #                            taxon = c("chironominae"))
-  # ) %>% 
-  #   select(-rich_mol, -rich_amphi, -rich_crust)
-
 
 # rich_subgr.df %>%
 #   mutate(data = "nested dataframe") %>%
@@ -284,35 +246,89 @@ rich_subgr.df <- nest.df %>%
 #   knitr::kable()
 ```
 
-
-## Relative Richness and Relative Abundance (Percent) 
-
-```{r}
+```{r Percent Richness}
 
 # Spot check: not completed
 
-rich_rel_abund.df <- nest.df %>% 
+rich_pct.df <- nest.df %>% 
   mutate(
-    # target_taxon relative richness of Coleoptera, Odonata, Trichoptera, and Ephemeroptera
-    pct_rich_cote_ttaxon = taxa_pct_rich(.dataframe = .,
+     pct_rich_ttaxa_ep = taxa_pct_rich(.dataframe = .,
                              .key_col = site_id,
-                             .group_col = target_taxon,
+                             .group_col = ttaxa,
+                             .filter = order %in% c("ephemeroptera", 
+                                                    "plecoptera"),
+                             .unnest_col = data),
+     pct_rich_ttaxa_et = taxa_pct_rich(.dataframe = .,
+                             .key_col = site_id,
+                             .group_col = ttaxa,
+                             .filter = order %in% c("trichoptera",
+                                                    "ephemeroptera"),
+                             .unnest_col = data), 
+     pct_rich_ttaxa_pt = taxa_pct_rich(.dataframe = .,
+                             .key_col = site_id,
+                             .group_col = ttaxa,
+                             .filter = order %in% c("trichoptera",
+                                                    "plecoptera"),
+                             .unnest_col = data), 
+     pct_rich_ttaxa_ept = taxa_pct_rich(.dataframe = .,
+                             .key_col = site_id,
+                             .group_col = ttaxa,
+                             .filter = order %in% c("plecoptera",
+                                                    "trichoptera",
+                                                    "ephemeroptera"),
+                             .unnest_col = data), 
+     pct_rich_ttaxa_toe = taxa_pct_rich(.dataframe = .,
+                             .key_col = site_id,
+                             .group_col = ttaxa,
+                             .filter = order %in% c("odonata",
+                                                    "trichoptera",
+                                                    "ephemeroptera"),
+                             .unnest_col = data), 
+     pct_rich_ttaxa_cote = taxa_pct_rich(.dataframe = .,
+                             .key_col = site_id,
+                             .group_col = ttaxa,
                              .filter = order %in% c("coleoptera",
                                                     "odonata",
                                                     "trichoptera",
-                                                    "ephemeroptera"
-                                                    ),
+                                                    "ephemeroptera"),
                              .unnest_col = data),
-    # Relative abundance of Coleoptera, Odonata, Trichoptera, and Ephemeroptera
-    pct_cote = taxa_pct(.dataframe = .,
-                         .key_col = site_id,
-                         .counts_col = count,
-                         .filter = order %in% c("coleoptera",
-                                                "odonata",
-                                                "trichoptera",
-                                                "ephemeroptera"
-                         ),
-                         .unnest_col = data)
+     pct_rich_ttaxa_cot = taxa_pct_rich(.dataframe = .,
+                             .key_col = site_id,
+                             .group_col = ttaxa,
+                             .filter = order %in% c("coleoptera",
+                                                    "odonata",
+                                                    "trichoptera"),
+                             .unnest_col = data),
+     pct_rich_ttaxa_potec = taxa_pct_rich(.dataframe = .,
+                             .key_col = site_id,
+                             .group_col = ttaxa,
+                             .filter = order %in% c("plecoptera",
+                                                    "coleoptera",
+                                                    "odonata",
+                                                    "trichoptera",
+                                                    "ephemeroptera"),
+                             .unnest_col = data), 
+     pct_rich_ttaxa_mol = taxa_pct_rich(.dataframe = .,
+                             .key_col = site_id,
+                             .group_col = ttaxa,
+                             .filter = phylum %in% "mollusca",
+                             .unnest_col = data), 
+     pct_rich_ttaxa_crust = taxa_pct_rich(.dataframe = .,
+                             .key_col = site_id,
+                             .group_col = ttaxa,
+                             .filter = subphylum %in% "crustacea",
+                             .unnest_col = data), 
+     pct_rich_ttaxa_chiro = taxa_pct_rich(.dataframe = .,
+                             .key_col = site_id,
+                             .group_col = ttaxa,
+                             .filter = subfamily %in% "chironominae",
+                             .unnest_col = data),
+    # Percent Richness of Intolerant and Facultative Taxa
+     pct_rich_ttaxa_intol_facul = taxa_pct_rich(.dataframe = .,
+                             .key_col = site_id,
+                             .group_col = ttaxa,
+                             .filter = tol_int <=6,
+                             .unnest_col = data)
   ) %>% 
   select(-data)
 
@@ -321,76 +337,43 @@ rich_rel_abund.df <- nest.df %>%
 
 ## Diversity Metrics
 
-### Community Diversity
-
-```{r}
+```{r Community Diversity}
 
 ### Not spot-checked
 
 div.df <- nest.df %>%
   mutate(
-    shannon_ttaxon = taxa_div(.dataframe = .,
+    shannon_ttaxa = taxa_div(.dataframe = .,
                              .key_col = site_id,
                              .counts_col = count,
-                             .group_col = target_taxon,
+                             .group_col = ttaxa,
                              .job = "shannon",
                              .base_log = 2,
                              .unnest_col = data),
-    # shannon_genus = taxa_div(.dataframe = .,
-    #                         .key_col = site_id,
-    #                         .counts_col = count,
-    #                         .group_col = genus,
-    #                         .job = "shannon",
-    #                          .base_log = 2,
-    #                         .unnest_col = data),
-    simpson_ttaxon = taxa_div(.dataframe = .,
+    simpson_ttaxa = taxa_div(.dataframe = .,
                              .key_col = site_id,
                             .counts_col = count,
-                            .group_col = target_taxon,
+                            .group_col = ttaxa,
                             .job = "simpson",
                             .unnest_col = data),
-    # simpson_genus = taxa_div(.dataframe = .,
-    #                         .key_col = site_id,
-    #                         .counts_col = count,
-    #                         .group_col = genus,
-    #                         .job = "simpson",
-    #                         .unnest_col = data),
-    margalef_ttaxon = taxa_div(.dataframe = .,
+    margalef_ttaxa = taxa_div(.dataframe = .,
                             .key_col = site_id,
                             .counts_col = count,
-                            .group_col = target_taxon,
+                            .group_col = ttaxa,
                             .job = "margalef",
                             .unnest_col = data),
-    # margalef_genus = taxa_div(.dataframe = .,
-    #                         .key_col = site_id,
-    #                         .counts_col = count,
-    #                         .group_col = genus,
-    #                         .job = "margalef",
-    #                         .unnest_col = data),
-    menhinick_ttaxon = taxa_div(.dataframe = .,
+    menhinick_ttaxa = taxa_div(.dataframe = .,
                             .key_col = site_id,
                             .counts_col = count,
-                            .group_col = target_taxon,
+                            .group_col = ttaxa,
                             .job = "menhinick",
                             .unnest_col = data),
-    # menhinick_genus = taxa_div(.dataframe = .,
-    #                         .key_col = site_id,
-    #                         .counts_col = count,
-    #                         .group_col = genus,
-    #                         .job = "menhinick",
-    #                         .unnest_col = data),
-    pielou_ttaxon = taxa_div(.dataframe = .,
+    pielou_ttaxa = taxa_div(.dataframe = .,
                             .key_col = site_id,
                             .counts_col = count,
-                            .group_col = target_taxon,
+                            .group_col = ttaxa,
                             .job = "pielou",
                             .unnest_col = data),
-    # pielou_genus = taxa_div(.dataframe = .,
-    #                         .key_col = site_id,
-    #                         .counts_col = count,
-    #                         .group_col = genus,
-    #                         .job = "pielou",
-    #                         .unnest_col = data),
   ) %>% 
   select(-data)
 
@@ -400,68 +383,68 @@ div.df <- nest.df %>%
 #   knitr::kable()
 ```
 
-### Subgroup Diversity
-
-```{r}
+```{r Subgroup Diversity}
 
 # Not spot-checked
-# Changed group_col from order to target_taxon. Output differences were large.
+# Changed group_col from order to ttaxa. Output differences were large.
 
 div_subgr.df <- nest.df %>%
   mutate(
-    # gini_simpson_ept = taxa_div(.dataframe = .,
-    #                         .key_col = site_id,
-    #                         .counts_col = count,
-    #                         .group_col = order,
-    #                         .filter = order %in% c("ephemeroptera",
-    #                                                    "plecoptera",
-    #                                                    "trichoptera"),
-    #                         .job = "gini_simpson",
-    #                         .unnest_col = data),
-    gini_simpson_ept = taxa_div(.dataframe = .,
+    gini_simpson_ttaxa_ept = taxa_div(.dataframe = .,
                             .key_col = site_id,
                             .counts_col = count,
-                            .group_col = target_taxon,
+                            .group_col = ttaxa,
                             .filter = order %in% c("ephemeroptera",
-                                                       "plecoptera",
-                                                       "trichoptera"),
+                                                   "plecoptera",
+                                                   "trichoptera"),
                             .job = "gini_simpson",
                             .unnest_col = data),
-    # simpson_ept = taxa_div(.dataframe = .,
-    #                         .key_col = site_id,
-    #                         .counts_col = count,
-    #                         .group_col = order,
-    #                         .filter = order %in% c("ephemeroptera",
-    #                                                    "plecoptera",
-    #                                                    "trichoptera"),
-    #                         .job = "simpson",
-    #                         .unnest_col = data),
-    simpson_ept = taxa_div(.dataframe = .,
+    simpson_ttaxa_ept = taxa_div(.dataframe = .,
                             .key_col = site_id,
                             .counts_col = count,
-                            .group_col = target_taxon,
+                            .group_col = ttaxa,
                             .filter = order %in% c("ephemeroptera",
-                                                       "plecoptera",
-                                                       "trichoptera"),
+                                                   "plecoptera",
+                                                   "trichoptera"),
                             .job = "simpson",
                             .unnest_col = data),
-    # shannon_ept = taxa_div(.dataframe = .,
-    #                         .key_col = site_id,
-    #                         .counts_col = count,
-    #                         .group_col = order,
-    #                         .filter = order %in% c("ephemeroptera",
-    #                                                    "plecoptera",
-    #                                                    "trichoptera"),
-    #                         .job = "shannon",
-    #                         .base_log = 2,
-    #                         .unnest_col = data),
-    shannon_ept = taxa_div(.dataframe = .,
+    # Simpson Diversity of Coleoptera, Odonata, and Trichoptera Genus-Species
+    simpson_ttaxa_cot = taxa_div(.data = .,
+                            .key_col = site_id,
+                            .group_col = ttaxa,
+                            .counts_col = count,
+                            .filter = order %in% c("coleoptera",
+                                                   "odonata",
+                                                   "trichoptera"), 
+                            .job = "simpson",
+                            .unnest_col = data),
+    shannon_ttaxa_ept = taxa_div(.dataframe = .,
                             .key_col = site_id,
                             .counts_col = count,
-                            .group_col = target_taxon,
+                            .group_col = ttaxa,
                             .filter = order %in% c("ephemeroptera",
-                                                       "plecoptera",
-                                                       "trichoptera"),
+                                                   "plecoptera",
+                                                   "trichoptera"),
+                            .job = "shannon",
+                            .base_log = 2,
+                            .unnest_col = data),
+    # Shannon Diversity of Coleoptera, Odonata, and Trichoptera Genus-Species
+    shannon_ttaxa_cot = taxa_div(.dataframe = .,
+                            .key_col = site_id,
+                            .group_col = ttaxa,
+                            .counts_col = count,
+                            .filter = order %in% c("coleoptera",
+                                                   "odonata",
+                                                   "trichoptera"), 
+                            .job = "shannon",
+                            .base_log = 2,
+                            .unnest_col = data),    
+    # Shannon Diversity of Intolerant and Facultative Taxa
+    shannon_ttaxa_intol_facul = taxa_div(.dataframe = .,
+                            .key_col = site_id,
+                            .group_col = ttaxa,
+                            .counts_col = count,
+                            .filter = tol_int <=6,
                             .job = "shannon",
                             .base_log = 2,
                             .unnest_col = data)
@@ -474,24 +457,40 @@ div_subgr.df <- nest.df %>%
 #   knitr::kable()
 ```
 
-### Dominance
-
-```{r}
+```{r Dominance}
 
 ### Not spot-checked
 
 dom.df <- nest.df %>%
   mutate(
-    dom_1_ttaxon = taxa_dom(.dataframe = .,
+    dom_1_ttaxa = taxa_dom(.dataframe = .,
                             .key_col = site_id,
                             .counts_col = count,
-                            .group_col = target_taxon,
+                            .group_col = ttaxa,
                             .dom_level = 1,
                             .unnest_col = data),
-    dom_5_ttaxon = taxa_dom(.dataframe = .,
+    dom_2_ttaxa = taxa_dom(.dataframe = .,
                             .key_col = site_id,
                             .counts_col = count,
-                            .group_col = target_taxon,
+                            .group_col = ttaxa,
+                            .dom_level = 2,
+                            .unnest_col = data),
+    dom_3_ttaxa = taxa_dom(.dataframe = .,
+                            .key_col = site_id,
+                            .counts_col = count,
+                            .group_col = ttaxa,
+                            .dom_level = 3,
+                            .unnest_col = data),
+    dom_4_ttaxa = taxa_dom(.dataframe = .,
+                            .key_col = site_id,
+                            .counts_col = count,
+                            .group_col = ttaxa,
+                            .dom_level = 4,
+                            .unnest_col = data),
+    dom_5_ttaxa = taxa_dom(.dataframe = .,
+                            .key_col = site_id,
+                            .counts_col = count,
+                            .group_col = ttaxa,
                             .dom_level = 5,
                             .unnest_col = data)
   ) %>% 
@@ -504,35 +503,87 @@ dom.df <- nest.df %>%
 ```
 
 
-### Community Metrics
+## Community Metrics
 
-## Percentages
-
-```{r}
+```{r Percentages}
 
 # Spot-checked okay
 
-pct.df <- nest.df %>%
+pct.df <- nest.df %>% 
   mutate(
-    pct_ept = taxa_pct(.dataframe = .,
-                       .key_col = site_id,
-                       .counts_col = count,
-                       .filter = order %in% c("ephemeroptera",
-                                              "plecoptera",
-                                              "trichoptera"),
-                       .unnest_col = data),
-    pct_cote = taxa_pct(.dataframe = .,
-                        .key_col = site_id,
-                        .counts_col = count,
-                        .filter = order %in% c("coleoptera",
-                                               "odonata",
-                                               "trichoptera",
-                                               "ephemeroptera"),
-                        .unnest_col = data),
-    
+     pct_ep = taxa_pct(.dataframe = .,
+                             .key_col = site_id,
+                             .counts_col = count,
+                             .filter = order %in% c("ephemeroptera", 
+                                                    "plecoptera"),
+                             .unnest_col = data),
+     pct_et = taxa_pct(.dataframe = .,
+                             .key_col = site_id,
+                             .counts_col = count,
+                             .filter = order %in% c("trichoptera",
+                                                    "ephemeroptera"),
+                             .unnest_col = data), 
+     pct_pt = taxa_pct(.dataframe = .,
+                             .key_col = site_id,
+                             .counts_col = count,
+                             .filter = order %in% c("trichoptera",
+                                                    "plecoptera"),
+                             .unnest_col = data), 
+     pct_ept = taxa_pct(.dataframe = .,
+                             .key_col = site_id,
+                             .counts_col = count,
+                             .filter = order %in% c("plecoptera",
+                                                    "trichoptera",
+                                                    "ephemeroptera"),
+                             .unnest_col = data), 
+     pct_toe = taxa_pct(.dataframe = .,
+                             .key_col = site_id,
+                             .counts_col = count,
+                             .filter = order %in% c("odonata",
+                                                    "trichoptera",
+                                                    "ephemeroptera"),
+                             .unnest_col = data), 
+     pct_cote = taxa_pct(.dataframe = .,
+                             .key_col = site_id,
+                             .counts_col = count,
+                             .filter = order %in% c("coleoptera",
+                                                    "odonata",
+                                                    "trichoptera",
+                                                    "ephemeroptera"),
+                             .unnest_col = data),
+     pct_cot = taxa_pct(.dataframe = .,
+                             .key_col = site_id,
+                             .counts_col = count,
+                             .filter = order %in% c("coleoptera",
+                                                    "odonata",
+                                                    "trichoptera"),
+                             .unnest_col = data),
+     pct_potec = taxa_pct(.dataframe = .,
+                             .key_col = site_id,
+                             .counts_col = count,
+                             .filter = order %in% c("plecoptera",
+                                                    "coleoptera",
+                                                    "odonata",
+                                                    "trichoptera",
+                                                    "ephemeroptera"),
+                             .unnest_col = data), 
+     pct_mol = taxa_pct(.dataframe = .,
+                             .key_col = site_id,
+                             .counts_col = count,
+                             .filter = phylum %in% "mollusca",
+                             .unnest_col = data), 
+     pct_crust = taxa_pct(.dataframe = .,
+                             .key_col = site_id,
+                             .counts_col = count,
+                             .filter = subphylum %in% "crustacea",
+                             .unnest_col = data), 
+     pct_chiro = taxa_pct(.dataframe = .,
+                             .key_col = site_id,
+                             .counts_col = count,
+                             .filter = subfamily %in% "chironominae",
+                             .unnest_col = data)
   ) %>% 
   select(-data)
-
 # pct.df %>%
 #   mutate(data = "nested dataframe") %>%
 #   head() %>%
@@ -541,17 +592,14 @@ pct.df <- nest.df %>%
 ```
 
 
-# Sequence Metrics
+## Sequence Metrics
 
 ```{r}
-
-# Why is .counts_col for these commented out in Matt's code?
-# Spot-check: not completed
 
 seq.df <- nest.df %>%
   # Append all of the results as columns to a single DF.
   bind_cols(
-    # Sequence through target_taxon for each unique column specified in the .filter_cols_vec.
+    # Sequence through ttaxa for each unique column specified in the .filter_cols_vec.
     taxa_seq(.data = .,
              .key_col = site_id,
              # .counts_col = count,
@@ -560,11 +608,12 @@ seq.df <- nest.df %>%
                                   "family",
                                   "tol_char",
                                   "ffg"),
-             .group_col = target_taxon,
+             .group_col = ttaxa,
              .job = "rich",
+             .exclude_pattern = "unidentified",
              .unnest_col = data),
     # Sequence through each unique column specified in the .filter_cols_vec 
-    # to calculate target_taxon percent richness.
+    # to calculate ttaxa percent richness.
     taxa_seq(.data = .,
              .key_col = site_id,
              # .counts_col = count,
@@ -573,8 +622,9 @@ seq.df <- nest.df %>%
                                   "family",
                                   "tol_char",
                                   "ffg"),
-             .group_col = target_taxon,
+             .group_col = ttaxa,
              .job = "pct_rich",
+             .exclude_pattern = "unidentified",
              .unnest_col = data),
     taxa_seq(.data = .,
              .key_col = site_id,
@@ -587,7 +637,9 @@ seq.df <- nest.df %>%
                                   "tol_char",
                                   "ffg"),
              .job = "pct",
+             .exclude_pattern = "unidentified",
              .unnest_col = data),
+    # Spot-checked that manual pct_amphi came out the same as pct_NULL_amphipoda (produced by below)
     taxa_seq(.data = .,
              .key_col = site_id,
              .counts_col = count,
@@ -596,9 +648,10 @@ seq.df <- nest.df %>%
                                   "family",
                                   "tol_char",
                                   "ffg"),
-             .group_col = target_taxon,
+             .group_col = ttaxa,
              .base_log = 2,
              .job = "shannon",
+             .exclude_pattern = "unidentified",
              .unnest_col = data),
     taxa_seq(.data = .,
              .key_col = site_id,
@@ -608,75 +661,367 @@ seq.df <- nest.df %>%
                                   "family",
                                   "tol_char",
                                   "ffg"),
-             .group_col = target_taxon,
+             .group_col = ttaxa,
              .job = "simpson",
+             .exclude_pattern = "unidentified",
              .unnest_col = data)
   ) %>% 
   select(-data)
 
-seq.df.filter <- seq.df %>% 
-  select(-contains("unidentified"))
-
 seq.names <- as.data.frame(names(seq.df))
-
-### CONTAINS MANY NAMES WITH "NULL"!! Zach looking into this weekend...
-
 
 ```
 
 
-# Combine metrics dataframes
+
+## Combine metrics dataframes
 
 ```{r}
-metrics.all <- div_subgr.df %>%
-  left_join(div.df) %>% 
-  left_join(dom.df) %>% 
-  left_join(pct.df) %>% 
-  left_join(rich_std_rel.df) %>% 
-  left_join(rich_subgr.df) %>% 
-  left_join(taxa_tol.df) %>% 
-  left_join(seq.df)
+# metrics.all <- div_subgr.df %>%
+#   left_join(div.df) %>% 
+#   left_join(dom.df) %>% 
+#   left_join(rich_std.df) %>% 
+#   left_join(rich_pct.df) %>% 
+#   left_join(pct.df) %>% 
+#   left_join(rich_subgr.df) %>% 
+#   left_join(taxa_tol.df) %>% 
+#   left_join(seq.df)
+
+# Cleaner way to join
+metrics.df <- list(div_subgr.df,
+                     div.df,
+                     dom.df,
+                     rich_std.df,
+                     rich_pct.df,
+                     pct.df,
+                     rich_subgr.df,
+                     taxa_tol.df,
+                     seq.df) %>% 
+  plyr::join_all(by = c("site_id"))
+
+metrics.names <- names(metrics.df)
+metrics.names.df <- as.data.frame(metrics.names, col.names = c("metrics", "x"))
+
+# Look for dups
+# metrics.dups <- metrics.names.df %>%
+#   mutate(n = n()) %>%
+#   group_by(metrics.names) %>%
+#   filter(n>1)
+# 
+#   group_by(accession) %>%
+#   mutate(n = n()) %>%
+#   filter(n > 1)
+# 
+# metrics.dups %>% janitor::get_dupes(metrics.all)
+# 
+# # library(digest)
+# test <- metrics.all[!duplicated(lapply(metrics.all, digest::digest))]
+
 
 # Attach disturbance categories
 condition <- read.csv(file.path("C:/Data/LGSS_scripting/lgss/data/compile_2015-2019/condition_classes", "2015-2019_LG_condclasses_20201203.csv"))
-metrics.all <- metrics.all %>%
+metrics.df <- metrics.df %>%
   left_join(., condition) %>% 
   select(site_id, condition_class, everything()) #%>% 
   # filter(!is.na(condition_class))
 
+# Investigate certain metrics
+# metrics.sub <- metrics.all %>% 
+#   select(site_id, pct_amphi, pct_NULL_amphipoda)
+
 ```
 
 
 
+## PMA calculation
+
+Percent Model Affinity of Orders - (PMA-O) Is a measure of order level similarity to a model based
+on the reference streams Novak and Bode (1992).
+
+Calculation: Determine the percent composition for each major group - Coleoptera, Diptera,
+Ephemeroptera, Plecoptera, Trichoptera, Oligochaeta, Other. Compare to the "Model" for the appropriate
+stream community (see below), then add up the lower of the two values for each of the groups (assessment
+site vs Model), this is the PMA-O for the assessment site. 
+
+See https://apps.epscor.w3.uvm.edu/web/streams/PDFFiles/Manual_Calc_Of_Metrics.pdf for details
+
+```{r, eval= FALSE}
+
+  ##    Where do the numbers below come from? PMA calculation chunk below? Why eval = FALSE?
+
+metrics.df_PMA <- metrics.df %>% 
+    mutate(PMA_diptera = 47.76484, PMA_clitellata = 9.610563, PMA_ephemeroptera = 4.494907, PMA_odonata = 2.20276, PMA_trichoptera = 2.589185, PMA_coleoptera = 2.301258, PMA_other =31.03648) %>% 
+  group_by(site_id) %>% 
+  mutate(pct_other = sum(pct_diptera, pct_clitellata, pct_ephemeroptera, pct_odonata, pct_trichoptera, pct_coleoptera)) %>% 
+  mutate(pct_other= 100-pct_other) %>% 
+  ungroup() %>% 
+  mutate(PMA_value_diptera= case_when(
+    PMA_diptera < pct_diptera ~ PMA_diptera,
+    PMA_diptera > pct_diptera ~ pct_diptera,
+  )) %>% 
+  mutate(PMA_value_clitellata= case_when(
+    PMA_clitellata < pct_clitellata ~ PMA_clitellata,
+    PMA_clitellata > pct_clitellata ~ pct_clitellata,
+  )) %>% 
+  mutate(PMA_value_ephemeroptera= case_when(
+    PMA_ephemeroptera < pct_ephemeroptera ~ PMA_ephemeroptera,
+    PMA_ephemeroptera > pct_ephemeroptera ~ pct_ephemeroptera,
+  )) %>% 
+  mutate(PMA_value_odonata= case_when(
+    PMA_odonata < pct_odonata ~ PMA_odonata,
+    PMA_odonata > pct_odonata ~ pct_odonata,
+  )) %>% 
+  mutate(PMA_value_trichoptera= case_when(
+    PMA_trichoptera < pct_trichoptera ~ PMA_trichoptera,
+    PMA_trichoptera > pct_trichoptera ~ pct_trichoptera,
+  )) %>% 
+  mutate(PMA_value_coleoptera= case_when(
+    PMA_coleoptera < pct_coleoptera ~ PMA_coleoptera,
+    PMA_coleoptera > pct_coleoptera ~ pct_coleoptera,
+  )) %>% 
+  mutate(PMA_value_other= case_when(
+    PMA_other < pct_other ~ PMA_other,
+    PMA_other > pct_other ~ pct_other,
+  )) %>% 
+  group_by(site_id) %>% 
+  mutate(PMA = sum(PMA_value_diptera, PMA_value_clitellata, PMA_value_coleoptera, PMA_value_ephemeroptera, PMA_value_odonata, PMA_value_trichoptera, PMA_value_other)) %>% 
+  ungroup() %>% 
+  select(-PMA_value_diptera, -PMA_value_clitellata, -PMA_value_coleoptera, -PMA_value_ephemeroptera, -PMA_value_odonata, -PMA_value_trichoptera, -PMA_value_other)
+
+```
 
 
 
+# Modeling and filtering
 
 
-## Running mmir example data
-```{r eval = FALSE}
-data("nrsa_nap_0809", package = "mmir")
+```{r Split into training dataset}
 
-test.nest.df <- nrsa_nap_0809 %>%
-  group_nest(uid,  rt_nrsa_cat, .key = "data")
+## Q: Why 42?
+
+set.seed(42)
+train_test_split <- metrics.df %>% 
+  # mutate(condition_class = factor(condition_class, levels = c("1","3","4","2"))) %>% 
+  # filter(condition_class %in% c("1", "3")) %>%
+  rsample::initial_split(strata = condition_class)
+
+## Q: Why did matt change this to 1 and 3?
+train.df <- training(train_test_split) %>% 
+  filter(condition_class %in% c("1", "4")) 
+
+## Q: Same as above (see commented below)
+test.df <- testing(train_test_split)
+# test.df <- testing(train_test_split) %>% 
+#   filter(condition_class %in% c("1", "3"))
+```
+
+```{r PMA calculation}
+
+### For use in above block?
+### Determining percent composition of each major group for PMA calculation above???
+
+train.df.PMA<-train.df %>% 
+  filter(condition_class == "1") %>% 
+  group_by(site_id) %>% 
+  select(site_id, pct_diptera, pct_clitellata, pct_ephemeroptera, pct_odonata, pct_trichoptera, pct_coleoptera) %>% 
+  mutate(other = sum(pct_diptera, pct_clitellata, pct_ephemeroptera, pct_odonata, pct_trichoptera, pct_coleoptera)) %>% 
+  mutate(other= 100-other) %>% 
+  ungroup() %>% 
+  summarise_all(list(mean))
+
+```
 
 
-test.rich.df <- test.nest.df %>%
-  mutate(
-    rich_family = taxa_rich(.dataframe = .,
-                            .key_col = uid,
-                            .group_col = family,
-                            .unnest_col = data),
-    rich_genus = taxa_rich(.dataframe = .,
-                            .key_col = uid,
-                            .group_col = genus,
-                            .unnest_col = data)
-  )
+```{r Kolmogorov Mmirnov K-S Test, eval=FALSE}
+
+## Kolmogorov Mmirnov K-S Test to ensure equal distribution of "condition" in training and calibration sets 
+
+### ADAPT FROM MATT'S SCRIPT
+## Q: What is the target result here?
+
+# PULL IN DATA and replace below
+# all_abiotic_classified <- read_csv(file.path(here::here(),
+#                                              "data",
+#                                              "all.abiotic.classified.chem.watershed.csv")) %>% 
+  # Keep only the specified columns
+  select(uniqueID, PC1) %>% 
+  rename(uniqueid=uniqueID)
+
+test.df.sites<-test.df %>% 
+  select(uniqueid)
+test.df.pc1<-left_join(test.df.sites, all_abiotic_classified, by=c("uniqueid"))
+
+train.df.sites<-train.df %>% 
+  select(uniqueid)
+train.df.pc1<-left_join(train.df.sites, all_abiotic_classified, by=c("uniqueid"))
 
 
-test.rich.df %>%
-  mutate(data = "nested dataframe") %>%
-  head() %>%
-  knitr::kable()
+ks.test(train.df.pc1$PC1, test.df.pc1$PC1)
+
+```
+
+
+```{r Calculate Sensitivity and filter}
+
+# For full dataset
+long.df <- tidyr::pivot_longer(data = metrics.df,
+                               cols = -c(site_id, condition_class),
+                               names_to = "metric",
+                               values_to = "value")
+sens.df <- sensitivity(.dataframe = long.df,
+                              .metric_col = metric,
+                              .value_col = value,
+                              .condition_col = condition_class,
+                              .reference = "1",
+                              .degraded = "4")
+
+# For training dataset
+long.train.df <- tidyr::pivot_longer(data = train.df,
+                               cols = -c(site_id, condition_class),
+                               names_to = "metric",
+                               values_to = "value")
+sens.train.df <- sensitivity(.dataframe = long.train.df,
+                              .metric_col = metric,
+                              .value_col = value,
+                              .condition_col = condition_class,
+                              .reference = "1",
+                              .degraded = "4")
+
+# From Matt's code...
+sensitive_mets.vec <- sens.train.df %>% 
+  filter(barbour >= 2) %>% 
+  # filter(de >= 70) %>%
+  pull(metric)
+
+train_sensitive.df <- train.df %>% 
+  select(condition_class, all_of(sensitive_mets.vec)) %>% 
+  mutate(condition_class = as.character(condition_class))
+
+# Purpose?
+train_10cv.df <- train_sensitive.df %>% 
+  rsample::vfold_cv(v = 10, repeats = 1, strata = condition_class)
+```
+
+```{r Look at metrics correlations}
+sensitivity.df.subset<-train.df %>% 
+  select(site_id, condition_class, all_of(sensitive_mets.vec))
+
+sensitivity.df.rank<-sensitivity.df %>% 
+  unite("rank",metric, barbour, de, disturbance, sep = "_", remove = FALSE) %>% 
+  select(rank, metric)
+
+sensitivity.df.subset.long<-sensitivity.df.subset %>% 
+  select(-condition_class) %>% 
+  pivot_longer(!site_id, names_to = "metric", values_to="value")
+
+sensitivity.df.subset.long<-left_join(sensitivity.df.subset.long, sensitivity.df.rank, by=c("metric"))
+
+sensitivity.df.subset.wide<-sensitivity.df.subset.long %>% 
+  select(-metric) %>% 
+  rename(metric=rank) %>% 
+  pivot_wider(names_from = metric, values_from = value)
+
+
+correlations<-sensitivity.df.subset %>% 
+  select(-condition_class, -site_id) %>% 
+  corrr::correlate(use = "pairwise.complete.obs", method = "spearman") %>% 
+  corrr::rearrange() %>% 
+  corrr::shave() 
+
+correlations %>% 
+  corrr::rplot()
+```
+
+```{r Various metric stats}
+sensitivity.df.subset.range<-sensitivity.df.subset %>%
+  select(-condition_class) %>% 
+  summarise_at(vars(-site_id), range) %>%
+  rownames_to_column() %>%
+  rename(summary_stat=rowname) %>% 
+   mutate(summary_stat = case_when(
+     summary_stat== 1 ~ "min",
+     summary_stat == 2  ~ "max"))
+
+sensitivity.df.subset.mean<-sensitivity.df.subset %>%
+  select(-condition_class) %>% 
+  summarise_at(vars(-site_id), mean) %>%
+  rownames_to_column() %>%
+  rename(summary_stat=rowname) %>% 
+   mutate(summary_stat = case_when(
+     summary_stat== 1 ~ "mean"))
+
+
+sensitivity.df.subset.IQR<-sensitivity.df.subset %>%
+   filter(condition_class=="1") %>% 
+  select(-condition_class) %>% 
+  summarise_at(vars(-site_id), IQR) %>%
+  rownames_to_column() %>%
+  rename(summary_stat=rowname) %>% 
+   mutate(summary_stat = case_when(
+     summary_stat== 1 ~ "IQR"))
+```
+
+
+
+```{r >50% same values}
+#Determine which metrics have >50% same values 
+
+# Q: What does this tell us?
+
+sensitivity.df.subset.long.round<-sensitivity.df.subset.long %>% 
+  mutate(value = case_when(
+    str_detect(metric, "rich_") ~ round(value, digits = 0),
+    str_detect(metric, "pct_") ~ ceiling(value),
+    str_detect(metric, "shannon_") ~ round(value, digits = 1),
+    str_detect(metric, "simpson_") ~ round(value, digits = 1),
+    TRUE ~ value
+    
+  ))
+
+sensitivity.df.subset.long.count<-sensitivity.df.subset.long %>%
+  group_by(metric, value) %>% 
+  count(value) %>%
+  ungroup() %>% 
+  mutate(n_samples = 40) %>% 
+  mutate(percent_similar = ((n/n_samples)*100)) %>% 
+  group_by(metric, percent_similar) %>% 
+  filter(!percent_similar<50)
+```
+
+```{r SOI}
+## Calculate Relative Scope of Impairment
+
+reference_sites<-sensitivity.df.subset %>% 
+  filter(condition_class =="1") %>% 
+  select(site_id)
+reference.vec<-c(reference_sites$site_id)
+
+SOI.df<-sensitivity.df.subset.long %>%
+  filter(site_id %in% c(reference.vec)) %>% 
+  group_by(metric) %>% 
+  mutate(Q1 = case_when(
+    str_detect(rank, "_decrease") ~ quantile(value, probs = 0.25),
+    str_detect(rank, "_increase") ~ quantile(value, probs = 1),
+    TRUE ~ value
+  )) %>% 
+  mutate(Q2 = case_when(
+    str_detect(rank, "_decrease") ~ quantile(value, probs = 0),
+    str_detect(rank, "_increase") ~ quantile(value, probs = 0.75),
+    TRUE ~ value
+  )) %>% 
+  mutate(IQR = IQR(value)) %>% 
+  ungroup() %>% 
+  distinct(metric, Q1, Q2, IQR)
+
+SOI.df<-SOI.df %>% 
+  mutate(SOI = (IQR/(Q1-Q2)))
+
+
+```
+
+## Summarize and remove failed metrics
+```{r }
+
+
 ```
 
