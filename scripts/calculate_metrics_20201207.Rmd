@@ -719,7 +719,7 @@ metrics.names.df <- as.data.frame(metrics.names, col.names = c("metrics", "x"))
 
 
 # Attach disturbance categories
-condition <- read.csv(file.path("C:/Data/LGSS_scripting/lgss/data/compile_2015-2019/condition_classes", "2015-2019_LG_condclasses_20201203.csv"))
+condition <- read.csv(file.path("C:/Data/LGSS_scripting/lgss/data/compile_2015-2019/condition_classes", "2015-2019_LG_condclasses_20201216.csv"))
 metrics.df <- metrics.df %>%
   left_join(., condition) %>% 
   select(site_id, condition_class, everything()) #%>% 
@@ -745,9 +745,11 @@ site vs Model), this is the PMA-O for the assessment site.
 
 See https://apps.epscor.w3.uvm.edu/web/streams/PDFFiles/Manual_Calc_Of_Metrics.pdf for details
 
-```{r, eval= FALSE}
+```{r, eval = TRUE}
 
-  ##    Where do the numbers below come from? PMA calculation chunk below? Why eval = FALSE?
+  ##    Calculate the numbers below PMA calculation chunk below
+
+##### Look at biomonitoring SOP to see which groups to use for Streams
 
 metrics.df_PMA <- metrics.df %>% 
     mutate(PMA_diptera = 47.76484, PMA_clitellata = 9.610563, PMA_ephemeroptera = 4.494907, PMA_odonata = 2.20276, PMA_trichoptera = 2.589185, PMA_coleoptera = 2.301258, PMA_other =31.03648) %>% 
@@ -797,6 +799,7 @@ metrics.df_PMA <- metrics.df %>%
 
 ```{r Split into training dataset}
 
+library(tidymodels)
 ## Q: Why 42?
 
 set.seed(42)
@@ -807,7 +810,7 @@ train_test_split <- metrics.df %>%
 
 ## Q: Why did matt change this to 1 and 3?
 train.df <- training(train_test_split) %>% 
-  filter(condition_class %in% c("1", "4")) 
+  filter(condition_class %in% c("1", "3")) 
 
 ## Q: Same as above (see commented below)
 test.df <- testing(train_test_split)
@@ -834,18 +837,18 @@ train.df.PMA<-train.df %>%
 
 ```{r Kolmogorov Mmirnov K-S Test, eval=FALSE}
 
+### Probably not necessary because of even split we do above. 
+
 ## Kolmogorov Mmirnov K-S Test to ensure equal distribution of "condition" in training and calibration sets 
+## Noted in Blocksom, 2009
 
 ### ADAPT FROM MATT'S SCRIPT
 ## Q: What is the target result here?
 
 # PULL IN DATA and replace below
-# all_abiotic_classified <- read_csv(file.path(here::here(),
-#                                              "data",
-#                                              "all.abiotic.classified.chem.watershed.csv")) %>% 
-  # Keep only the specified columns
-  select(uniqueID, PC1) %>% 
-  rename(uniqueid=uniqueID)
+all_abiotic_classified <- read_csv(file.path("C:/Data/LGSS_scripting/lgss/data/compile_2015-2019/condition_classes",
+                                             "2015-2019_LG_condclasses_20201216.csv")) %>%
+  select(site_id, PC1)  
 
 test.df.sites<-test.df %>% 
   select(uniqueid)
@@ -873,7 +876,7 @@ sens.df <- sensitivity(.dataframe = long.df,
                               .value_col = value,
                               .condition_col = condition_class,
                               .reference = "1",
-                              .degraded = "4")
+                              .degraded = "3")
 
 # For training dataset
 long.train.df <- tidyr::pivot_longer(data = train.df,
@@ -885,24 +888,26 @@ sens.train.df <- sensitivity(.dataframe = long.train.df,
                               .value_col = value,
                               .condition_col = condition_class,
                               .reference = "1",
-                              .degraded = "4")
+                              .degraded = "3")
 
 # From Matt's code...
 sensitive_mets.vec <- sens.train.df %>% 
   filter(barbour >= 2) %>% 
-  # filter(de >= 70) %>%
+  # filter(de >= 50) %>%
   pull(metric)
 
 train_sensitive.df <- train.df %>% 
   select(condition_class, all_of(sensitive_mets.vec)) %>% 
   mutate(condition_class = as.character(condition_class))
 
-# Purpose?
+# Creating cross-validation set. Comes into play later during validation set (logistic regression model- calculate probability for if site is impaired)
 train_10cv.df <- train_sensitive.df %>% 
   rsample::vfold_cv(v = 10, repeats = 1, strata = condition_class)
 ```
 
 ```{r Look at metrics correlations}
+
+## No point in looking at these until end. Use at end to further filter (remove redundant metrics). Flag any >0.75 (found in lit; Blocksom 2009).
 sensitivity.df.subset<-train.df %>% 
   select(site_id, condition_class, all_of(sensitive_mets.vec))
 
@@ -933,6 +938,8 @@ correlations %>%
 ```
 
 ```{r Various metric stats}
+
+# Use this to ones with bad ranges. Remove pct metrics <10, richness <5, div <1
 sensitivity.df.subset.range<-sensitivity.df.subset %>%
   select(-condition_class) %>% 
   summarise_at(vars(-site_id), range) %>%
@@ -964,9 +971,7 @@ sensitivity.df.subset.IQR<-sensitivity.df.subset %>%
 
 
 ```{r >50% same values}
-#Determine which metrics have >50% same values 
-
-# Q: What does this tell us?
+#Determine which metrics have >50% same values. These don't tell much about sample differences.
 
 sensitivity.df.subset.long.round<-sensitivity.df.subset.long %>% 
   mutate(value = case_when(
@@ -989,7 +994,10 @@ sensitivity.df.subset.long.count<-sensitivity.df.subset.long %>%
 ```
 
 ```{r SOI}
-## Calculate Relative Scope of Impairment
+## Calculate Relative Scope of Impairment. Filter to ref, take metrics that pass 1st screening (barbour >2), combine metric name and predicted response (increase/decrease), take lower 25% for decrease, take top 75% for increase, take IQR
+## From Blocksom et al 2001.
+## Zach will add this and other screening tools.
+
 
 reference_sites<-sensitivity.df.subset %>% 
   filter(condition_class =="1") %>% 
@@ -1021,7 +1029,46 @@ SOI.df<-SOI.df %>%
 
 ## Summarize and remove failed metrics
 ```{r }
+# Remove bad metrics
+# Replot correlations. 
 
+
+# Standardizing scores
+# Maybe Skip Standardizing scores (old IBI method in place of logistic regr.). Matt checked to see how this performed in comparison.
+#       Convert to long DF, determine 5th and 9th percetile for all sites (not just training). If decreases. Block below calculates score for each metric for each site.
+
+metrics.df.standardized.long.percentiles <-metrics.df.standardized.long %>%
+  group_by(metric) %>% 
+  mutate(Q_5th = quantile(value, probs = 0.05)) %>% 
+  mutate(Q_95th =  quantile(value, probs = 0.95)) %>% 
+  ungroup() %>% 
+  mutate(SCORE = case_when(
+    disturbance == "decrease" ~ ((value - Q_5th)/(Q_95th-Q_5th)),
+    disturbance == "increase" ~ ((Q_95th - value)/(Q_95th-Q_5th)),
+    
+  )) %>% 
+  mutate(SCORE = SCORE*100) %>% 
+  select(uniqueid, metric, SCORE)
+
+# Need to Truncate Scores >100 to 100 and <0 to 0 (is this for traditional method?)
+
+
+# Remove redundant metrics from corr.
+# Sum scores for standardized (is this for traditional method?)
+
+
+
+# Look to see how metric and score correlate with abiotic
+
+
+# DL most recent edits, run through code
+
+# Matt sent- Cross validation (logistic regression?) https://www.youtube.com/watch?v=fSytzGwwBVw 
+
+```
+
+
+```{r}
 
 ```
 
