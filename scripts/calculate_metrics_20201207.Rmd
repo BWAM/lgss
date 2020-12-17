@@ -5,9 +5,20 @@ output: html_document
 
 # Data prep 
 
-```{r Load libs}
+```{r Load libs and dirs}
 library(tidyverse)
 library(mmir)
+# library(ggfortify)
+# library(klaR) #Load this before tidyverse to avoid conflicts between MASS and dplyr
+# library(rsample)
+# library(recipes)
+# library(parsnip)
+# library(workflows)
+# library(yardstick)
+# library(themis)
+# library(rstanarm)
+# library(corrr)
+# library(purrr)
 
 root.dir <- rprojroot::find_root("lgss.Rproj")
 datamod.dir <- file.path("C:/Users/gmlemley/New York State Office of Information Technology Services/SMAS - Streams Data Modernization/Cleaned Files/FINAL_RELOADS_SEPT2020")
@@ -719,7 +730,9 @@ metrics.names.df <- as.data.frame(metrics.names, col.names = c("metrics", "x"))
 
 
 # Attach disturbance categories
-condition <- read.csv(file.path("C:/Data/LGSS_scripting/lgss/data/compile_2015-2019/condition_classes", "2015-2019_LG_condclasses_20201216.csv"))
+condition <- read.csv(file.path("C:/Data/LGSS_scripting/lgss/data/compile_2015-2019/condition_classes", "2015-2019_LG_condclasses_20201216.csv")) %>% 
+  select(-PC1)
+
 metrics.df <- metrics.df %>%
   left_join(., condition) %>% 
   select(site_id, condition_class, everything()) #%>% 
@@ -731,6 +744,22 @@ metrics.df <- metrics.df %>%
 
 ```
 
+```{r Clean up workspace, eval=FALSE}
+rm(master.taxa.fill,
+   taxa.df,
+   nest.df,
+   div_subgr.df,
+   div.df,
+   dom.df,
+   rich_std.df,
+   rich_pct.df,
+   pct.df,
+   rich_subgr.df,
+   taxa_tol.df,
+   seq.df,
+   seq.names,
+   condition)
+```
 
 
 ## PMA calculation
@@ -748,11 +777,10 @@ See https://apps.epscor.w3.uvm.edu/web/streams/PDFFiles/Manual_Calc_Of_Metrics.p
 ```{r, eval = TRUE}
 
   ##    Calculate the numbers below PMA calculation chunk below
-
-##### Look at biomonitoring SOP to see which groups to use for Streams
+#### Look at biomonitoring SOP to see which groups to use for Streams (change in both chunks)
 
 metrics.df_PMA <- metrics.df %>% 
-    mutate(PMA_diptera = 47.76484, PMA_clitellata = 9.610563, PMA_ephemeroptera = 4.494907, PMA_odonata = 2.20276, PMA_trichoptera = 2.589185, PMA_coleoptera = 2.301258, PMA_other =31.03648) %>% 
+    mutate(PMA_diptera = 45.13895, PMA_clitellata = 4.062837, PMA_ephemeroptera = 9.958143, PMA_odonata = 3.69906, PMA_trichoptera = 3.891864, PMA_coleoptera = 6.178895, PMA_other = 27.07026) %>% 
   group_by(site_id) %>% 
   mutate(pct_other = sum(pct_diptera, pct_clitellata, pct_ephemeroptera, pct_odonata, pct_trichoptera, pct_coleoptera)) %>% 
   mutate(pct_other= 100-pct_other) %>% 
@@ -800,37 +828,49 @@ metrics.df_PMA <- metrics.df %>%
 ```{r Split into training dataset}
 
 library(tidymodels)
-## Q: Why 42?
 
-set.seed(42)
+# Keep the set.seed number the same to get the same subsampled traning dataset for each run. (Change this to create a new training dataset)
+set.seed(80)
 train_test_split <- metrics.df %>% 
   # mutate(condition_class = factor(condition_class, levels = c("1","3","4","2"))) %>% 
   # filter(condition_class %in% c("1", "3")) %>%
   rsample::initial_split(strata = condition_class)
 
-## Q: Why did matt change this to 1 and 3?
+# Create training dataset
 train.df <- training(train_test_split) %>% 
   filter(condition_class %in% c("1", "3")) 
 
-## Q: Same as above (see commented below)
-test.df <- testing(train_test_split)
-# test.df <- testing(train_test_split) %>% 
-#   filter(condition_class %in% c("1", "3"))
+# Create testing dataset
+test.df <- testing(train_test_split) %>% 
+  filter(condition_class %in% c("1", "3"))
+  
 ```
 
-```{r PMA calculation}
+```{r PMA percept comp, eval=FALSE}
 
-### For use in above block?
-### Determining percent composition of each major group for PMA calculation above???
+### Need to determine what to use for oligocheata
+### Determining percent composition of each major group for PMA calculation above
 
-train.df.PMA<-train.df %>% 
+train.df.PMA <- train.df %>% 
   filter(condition_class == "1") %>% 
   group_by(site_id) %>% 
-  select(site_id, pct_diptera, pct_clitellata, pct_ephemeroptera, pct_odonata, pct_trichoptera, pct_coleoptera) %>% 
-  mutate(other = sum(pct_diptera, pct_clitellata, pct_ephemeroptera, pct_odonata, pct_trichoptera, pct_coleoptera)) %>% 
+  # select(site_id, pct_diptera, pct_clitellata, pct_ephemeroptera, pct_odonata, pct_trichoptera, pct_coleoptera) %>% 
+  select(site_id, 
+         # Oligochaeta, 
+         pct_ephemeroptera, 
+         pct_plecoptera, 
+         pct_coleoptera, 
+         pct_trichoptera,
+         pct_chironomidae,
+         Other)  %>% 
+  # mutate(other = sum(pct_diptera, pct_clitellata, pct_ephemeroptera, pct_odonata, pct_trichoptera, pct_coleoptera)) %>% 
+  mutate(other = sum(               )) %>% 
   mutate(other= 100-other) %>% 
   ungroup() %>% 
   summarise_all(list(mean))
+
+
+### Could also calculate PMA for FFG Composition (PMA-FFG)
 
 ```
 
@@ -840,6 +880,7 @@ train.df.PMA<-train.df %>%
 ### Probably not necessary because of even split we do above. 
 
 ## Kolmogorov Mmirnov K-S Test to ensure equal distribution of "condition" in training and calibration sets 
+
 ## Noted in Blocksom, 2009
 
 ### ADAPT FROM MATT'S SCRIPT
@@ -867,33 +908,35 @@ ks.test(train.df.pc1$PC1, test.df.pc1$PC1)
 ```{r Calculate Sensitivity and filter}
 
 # For full dataset
-long.df <- tidyr::pivot_longer(data = metrics.df,
-                               cols = -c(site_id, condition_class),
-                               names_to = "metric",
-                               values_to = "value")
-sens.df <- sensitivity(.dataframe = long.df,
-                              .metric_col = metric,
-                              .value_col = value,
-                              .condition_col = condition_class,
-                              .reference = "1",
-                              .degraded = "3")
+# long.all.df <- metrics.df %>% 
+#   pivot_longer(cols = c(-condition_class, -site_id),
+#                names_to = "metric",
+#                values_to = "value")
+# 
+# sens.all.df <- mmir::sensitivity(.dataframe = long.all.df,
+#                               .metric_col = metric,
+#                               .value_col = value,
+#                               .condition_col = condition_class,
+#                               .reference = "1",
+#                               .degraded = "3") 
 
 # For training dataset
-long.train.df <- tidyr::pivot_longer(data = train.df,
-                               cols = -c(site_id, condition_class),
-                               names_to = "metric",
-                               values_to = "value")
-sens.train.df <- sensitivity(.dataframe = long.train.df,
+long.df <- train.df %>% 
+  pivot_longer(cols = c(-condition_class, -site_id),
+               names_to = "metric",
+               values_to = "value")
+
+sensitivity.df <- mmir::sensitivity(.dataframe = long.df,
                               .metric_col = metric,
                               .value_col = value,
                               .condition_col = condition_class,
                               .reference = "1",
-                              .degraded = "3")
+                              .degraded = "3") 
 
-# From Matt's code...
-sensitive_mets.vec <- sens.train.df %>% 
+sensitive_mets.vec <- sensitivity.df %>% 
   filter(barbour >= 2) %>% 
-  # filter(de >= 50) %>%
+  # Shull et al., ,2019 uses >70%
+  filter(de >= 70) %>%
   pull(metric)
 
 train_sensitive.df <- train.df %>% 
@@ -905,49 +948,28 @@ train_10cv.df <- train_sensitive.df %>%
   rsample::vfold_cv(v = 10, repeats = 1, strata = condition_class)
 ```
 
-```{r Look at metrics correlations}
-
-## No point in looking at these until end. Use at end to further filter (remove redundant metrics). Flag any >0.75 (found in lit; Blocksom 2009).
-sensitivity.df.subset<-train.df %>% 
-  select(site_id, condition_class, all_of(sensitive_mets.vec))
-
-sensitivity.df.rank<-sensitivity.df %>% 
-  unite("rank",metric, barbour, de, disturbance, sep = "_", remove = FALSE) %>% 
-  select(rank, metric)
-
-sensitivity.df.subset.long<-sensitivity.df.subset %>% 
-  select(-condition_class) %>% 
-  pivot_longer(!site_id, names_to = "metric", values_to="value")
-
-sensitivity.df.subset.long<-left_join(sensitivity.df.subset.long, sensitivity.df.rank, by=c("metric"))
-
-sensitivity.df.subset.wide<-sensitivity.df.subset.long %>% 
-  select(-metric) %>% 
-  rename(metric=rank) %>% 
-  pivot_wider(names_from = metric, values_from = value)
-
-
-correlations<-sensitivity.df.subset %>% 
-  select(-condition_class, -site_id) %>% 
-  corrr::correlate(use = "pairwise.complete.obs", method = "spearman") %>% 
-  corrr::rearrange() %>% 
-  corrr::shave() 
-
-correlations %>% 
-  corrr::rplot()
-```
 
 ```{r Various metric stats}
 
-# Use this to ones with bad ranges. Remove pct metrics <10, richness <5, div <1
+sensitivity.df.subset<-train.df %>% 
+  select(site_id, condition_class, all_of(sensitive_mets.vec))
+
+# Use to identify poor ranges. Remove pct metrics <=10, richness <=5, div <=1 (as per Matt. Refs?)
 sensitivity.df.subset.range<-sensitivity.df.subset %>%
   select(-condition_class) %>% 
   summarise_at(vars(-site_id), range) %>%
   rownames_to_column() %>%
   rename(summary_stat=rowname) %>% 
    mutate(summary_stat = case_when(
-     summary_stat== 1 ~ "min",
-     summary_stat == 2  ~ "max"))
+     summary_stat == 1 ~ "min",
+     summary_stat == 2 ~ "max"))
+
+# sens.range.long <- pivot_longer(sensitivity.df.subset.range, cols = summary_stat, names_to = "metric", values_to = "value")
+# 
+# sensitivity.df.subset.range.long <- gather(sensitivity.df.subset.range, metric, value)
+#                                            # rich_ttaxa_toe:simpson_ttaxa_baetidae)
+# write.csv(sensitivity.df.subset.range, "sens.ranges.csv")
+# (see data/metrics/sens.ranges.xlsx)
 
 sensitivity.df.subset.mean<-sensitivity.df.subset %>%
   select(-condition_class) %>% 
@@ -970,8 +992,25 @@ sensitivity.df.subset.IQR<-sensitivity.df.subset %>%
 
 
 
-```{r >50% same values}
+```{r Redundancy}
 #Determine which metrics have >50% same values. These don't tell much about sample differences.
+# Reference?
+
+
+sensitivity.df.subset.long<-sensitivity.df.subset %>% 
+  select(-condition_class) %>% 
+  pivot_longer(!site_id, names_to = "metric", values_to="value")
+
+sensitivity.df.rank<-sensitivity.df %>% 
+  unite("rank",metric, barbour, de, disturbance, sep = "_", remove = FALSE) %>% 
+  select(rank, metric)
+
+sensitivity.df.subset.long<-left_join(sensitivity.df.subset.long, sensitivity.df.rank, by=c("metric"))
+
+# sensitivity.df.subset.wide<-sensitivity.df.subset.long %>% 
+#   select(-metric) %>% 
+#   rename(metric=rank) %>% 
+#   pivot_wider(names_from = metric, values_from = value)
 
 sensitivity.df.subset.long.round<-sensitivity.df.subset.long %>% 
   mutate(value = case_when(
@@ -979,6 +1018,10 @@ sensitivity.df.subset.long.round<-sensitivity.df.subset.long %>%
     str_detect(metric, "pct_") ~ ceiling(value),
     str_detect(metric, "shannon_") ~ round(value, digits = 1),
     str_detect(metric, "simpson_") ~ round(value, digits = 1),
+    str_detect(metric, "margalef_") ~ round(value, digits = 1),
+    str_detect(metric, "menhinick_") ~ round(value, digits = 1),
+    str_detect(metric, "pielou_") ~ round(value, digits = 1),
+    str_detect(metric, "dom_") ~  ceiling(value),
     TRUE ~ value
     
   ))
@@ -991,10 +1034,23 @@ sensitivity.df.subset.long.count<-sensitivity.df.subset.long %>%
   mutate(percent_similar = ((n/n_samples)*100)) %>% 
   group_by(metric, percent_similar) %>% 
   filter(!percent_similar<50)
+
+redund.metrics <-  sensitivity.df.subset.long.count %>% 
+  pull(metric) %>% 
+  unique()
+cat(redund.metrics, sep = ", ")
 ```
 
+
+Relative scope of impairment (SOI) is calculated as the ratio of the range
+of possible impairment (values beyond the poorer quality 25th
+percentile) and the IQR of reference sites, a measure of
+variability. Relative SOI values larger than 1 are more desirable,
+with values less than 1 indicating too much variability among
+reference sites compared to the range of impairment. (Blocksom 2009)
+
 ```{r SOI}
-## Calculate Relative Scope of Impairment. Filter to ref, take metrics that pass 1st screening (barbour >2), combine metric name and predicted response (increase/decrease), take lower 25% for decrease, take top 75% for increase, take IQR
+## Calculate Relative Scope of Impairment. Take metrics that pass 1st screening (barbour >2 & DE >70%), Filter to ref, combine metric name and predicted response (increase/decrease), take lower 25% for decrease, take top 75% for increase, take IQR
 ## From Blocksom et al 2001.
 ## Zach will add this and other screening tools.
 
@@ -1024,14 +1080,71 @@ SOI.df<-sensitivity.df.subset.long %>%
 SOI.df<-SOI.df %>% 
   mutate(SOI = (IQR/(Q1-Q2)))
 
+SOI.df.filter <- SOI.df %>% 
+  filter(SOI >= 1) %>% 
+  filter(SOI <= 2)
+
+SOI.fail <-  SOI.df.filter %>% 
+  pull(metric) %>% 
+  unique()
+cat(SOI.fail, sep = ", ")
 
 ```
 
-## Summarize and remove failed metrics
-```{r }
-# Remove bad metrics
-# Replot correlations. 
 
+## Summarize and remove underperforming metrics
+
+```{r}
+## Metrics with poor range: (see data/metrics/sens.ranges.xlsx) [8 total; 2 unique]
+
+# rich_ttaxa_gammaridae, rich_ttaxa_baetidae,	pct_anisoptera,	pielou_ttaxa,	gini_simpson_ttaxa_ept,	simpson_ttaxa_gammaridae,	simpson_ttaxa_baetidae,	simpson_ttaxa_cot
+# All are included below except pielou_ttaxa and simpson_ttaxa_cot
+
+
+## Metrics with >50% same value: [26 unique]
+
+# gini_simpson_ttaxa_ept, pct_anisoptera, pct_baetidae, pct_dubiraphia, pct_elmidae, pct_ep, pct_ephemeroptera, pct_furcatergalia, pct_gammaridae, pct_gammarus, pct_pisciforma, pct_pt, pct_rich_ttaxa_baetidae, pct_rich_ttaxa_ep, pct_rich_ttaxa_ephemeroptera, pct_rich_ttaxa_gammaridae, pct_tanytarsus, rich_ttaxa_baetidae, rich_ttaxa_ep, rich_ttaxa_ephemeroptera, rich_ttaxa_gammaridae, shannon_ttaxa_ephemeroptera, shannon_ttaxa_ept, shannon_ttaxa_intolerant, simpson_ttaxa_baetidae, simpson_ttaxa_gammaridae
+
+## Metrics with SOI (>=1 & <=2): [15 unique]
+
+# rich_ttaxa_toe, rich_ttaxa_ephemeroptera, shannon_ttaxa_ephemeroptera, rich_ttaxa_ep, rich_ttaxa_ept, rich_ttaxa_et, shannon_ttaxa_intolerant, rich_ttaxa_cote, rich_ttaxa_potec, rich_ttaxa_insecta, pct_rich_ttaxa_ep, rich_ttaxa_cot, pct_intolerant, pct_rich_ttaxa_baetidae, pct_rich_ttaxa_ephemeroptera, pct_rich_ttaxa_et, rich_ttaxa_intolerant, rich_ttaxa_baetidae, pct_rich_ttaxa_insecta, simpson_ttaxa_baetidae, pct_cot, pct_rich_ttaxa_ept, pct_insecta, pct_rich_ttaxa_intolerant
+
+
+# 43 unique above, brings total from 62 down to 19.
+
+# SOI (>2):
+
+
+train.df.final <- train.df %>% 
+  select(site_id, condition_class,all_of(sensitive_mets.vec)) %>% 
+  # Removing metrics with poor ranges
+  select(-c(rich_ttaxa_gammaridae, rich_ttaxa_baetidae,	pct_anisoptera,	pielou_ttaxa,	gini_simpson_ttaxa_ept,	simpson_ttaxa_gammaridae,	simpson_ttaxa_baetidae,	simpson_ttaxa_cot)) %>% 
+  # Removing redundant metrics
+  select(-c(pct_baetidae, pct_dubiraphia, pct_elmidae, pct_ep, pct_ephemeroptera, pct_furcatergalia, pct_gammaridae, pct_gammarus, pct_pisciforma, pct_pt, pct_rich_ttaxa_baetidae, pct_rich_ttaxa_ep, pct_rich_ttaxa_ephemeroptera, pct_rich_ttaxa_gammaridae, pct_tanytarsus, rich_ttaxa_ep, rich_ttaxa_ephemeroptera, shannon_ttaxa_ephemeroptera, shannon_ttaxa_ept, shannon_ttaxa_intolerant)) %>% 
+  # Removing metrics based on SOI
+  select(-c(rich_ttaxa_toe, rich_ttaxa_ept, rich_ttaxa_et, rich_ttaxa_cote, rich_ttaxa_potec, rich_ttaxa_insecta, rich_ttaxa_cot, pct_intolerant, pct_rich_ttaxa_et, rich_ttaxa_intolerant, pct_rich_ttaxa_insecta, pct_cot, pct_rich_ttaxa_ept, pct_insecta, pct_rich_ttaxa_intolerant))
+
+
+```
+
+
+```{r Plot metric correlations}
+library(corrr)
+
+correlations.final<-train.df.final %>% 
+  select(-condition_class, -site_id) %>% 
+  correlate(use = "pairwise.complete.obs", method = "spearman") %>% 
+  rearrange() %>% 
+  shave() 
+
+correlations.final %>%
+  rplot()
+```
+
+
+```{r }
+
+# Misc notes from meeting with Matt
 
 # Standardizing scores
 # Maybe Skip Standardizing scores (old IBI method in place of logistic regr.). Matt checked to see how this performed in comparison.
@@ -1067,8 +1180,4 @@ metrics.df.standardized.long.percentiles <-metrics.df.standardized.long %>%
 
 ```
 
-
-```{r}
-
-```
 
