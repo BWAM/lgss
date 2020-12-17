@@ -1128,17 +1128,38 @@ train.df.final <- train.df %>%
 ```
 
 
-```{r Plot metric correlations}
+```{r Plot metric correlations, fig.width=10, fig.height=10}
 library(corrr)
 
 correlations.final<-train.df.final %>% 
   select(-condition_class, -site_id) %>% 
   correlate(use = "pairwise.complete.obs", method = "spearman") %>% 
   rearrange() %>% 
-  shave() 
+  shave()
 
-correlations.final %>%
-  rplot()
+# correlations.final %>%
+#   rplot()
+
+correlations.final_rownames <- correlations.final %>%
+  # mutate_all(~replace(., is.na(.), 1)) %>% 
+  remove_rownames %>% 
+  column_to_rownames(var="term")  
+  
+ggcorrplot::ggcorrplot(correlations.final_rownames)
+
+
+# corrplot::corrplot(correlations.final_rownames, method="circle")
+
+# col <- colorRampPalette(c("#BB4444", "#EE9988", "#FFFFFF", "#77AADD", "#4477AA"))
+# corrplot::corrplot(correlations.final_rownames, method="color", col=col(200),  
+#          type="upper", order="hclust", 
+#          addCoef.col = "black", # Add coefficient of correlation
+#          tl.col="black", tl.srt=45, #Text label color and rotation
+#          # Combine with significance
+#          # p.mat = p.mat, sig.level = 0.01, insig = "blank", 
+#          # hide correlation coefficient on the principal diagonal
+#          diag=FALSE 
+#          )
 ```
 
 
