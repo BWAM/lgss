@@ -926,14 +926,16 @@ long.df <- train.df %>%
                names_to = "metric",
                values_to = "value")
 
-sensitivity.df <- mmir::sensitivity(.dataframe = long.df,
+sens.df <- mmir::sensitivity(.dataframe = long.df,
                               .metric_col = metric,
                               .value_col = value,
                               .condition_col = condition_class,
                               .reference = "1",
                               .degraded = "3") 
 
-sensitive_mets.vec <- sensitivity.df %>% 
+DT::datatable(sens.df, options = list(scrollX = TRUE))
+
+sensitive_mets.vec <- sens.df %>% 
   filter(barbour >= 2) %>% 
   # Shull et al., ,2019 uses >70%
   filter(de >= 70) %>%
@@ -951,11 +953,11 @@ train_10cv.df <- train_sensitive.df %>%
 
 ```{r Various metric stats}
 
-sensitivity.df.subset<-train.df %>% 
+sens.df.subset<-train.df %>% 
   select(site_id, condition_class, all_of(sensitive_mets.vec))
 
 # Use to identify poor ranges. Remove pct metrics <=10, richness <=5, div <=1 (as per Matt. Refs?)
-sensitivity.df.subset.range<-sensitivity.df.subset %>%
+sens.df.subset.range<-sens.df.subset %>%
   select(-condition_class) %>% 
   summarise_at(vars(-site_id), range) %>%
   rownames_to_column() %>%
@@ -964,14 +966,14 @@ sensitivity.df.subset.range<-sensitivity.df.subset %>%
      summary_stat == 1 ~ "min",
      summary_stat == 2 ~ "max"))
 
-# sens.range.long <- pivot_longer(sensitivity.df.subset.range, cols = summary_stat, names_to = "metric", values_to = "value")
+# sens.range.long <- pivot_longer(sens.df.subset.range, cols = summary_stat, names_to = "metric", values_to = "value")
 # 
-# sensitivity.df.subset.range.long <- gather(sensitivity.df.subset.range, metric, value)
+# sens.df.subset.range.long <- gather(sens.df.subset.range, metric, value)
 #                                            # rich_ttaxa_toe:simpson_ttaxa_baetidae)
-# write.csv(sensitivity.df.subset.range, "sens.ranges.csv")
+# write.csv(sens.df.subset.range, "sens.ranges.csv")
 # (see data/metrics/sens.ranges.xlsx)
 
-sensitivity.df.subset.mean<-sensitivity.df.subset %>%
+sens.df.subset.mean<-sens.df.subset %>%
   select(-condition_class) %>% 
   summarise_at(vars(-site_id), mean) %>%
   rownames_to_column() %>%
@@ -980,7 +982,7 @@ sensitivity.df.subset.mean<-sensitivity.df.subset %>%
      summary_stat== 1 ~ "mean"))
 
 
-sensitivity.df.subset.IQR<-sensitivity.df.subset %>%
+sens.df.subset.IQR<-sens.df.subset %>%
    filter(condition_class=="1") %>% 
   select(-condition_class) %>% 
   summarise_at(vars(-site_id), IQR) %>%
@@ -992,27 +994,27 @@ sensitivity.df.subset.IQR<-sensitivity.df.subset %>%
 
 
 
-```{r Redundancy}
+```{r Redundancy by similarity}
 #Determine which metrics have >50% same values. These don't tell much about sample differences.
 # Reference?
 
 
-sensitivity.df.subset.long<-sensitivity.df.subset %>% 
+sens.df.subset.long<-sens.df.subset %>% 
   select(-condition_class) %>% 
   pivot_longer(!site_id, names_to = "metric", values_to="value")
 
-sensitivity.df.rank<-sensitivity.df %>% 
+sens.df.rank<-sens.df %>% 
   unite("rank",metric, barbour, de, disturbance, sep = "_", remove = FALSE) %>% 
   select(rank, metric)
 
-sensitivity.df.subset.long<-left_join(sensitivity.df.subset.long, sensitivity.df.rank, by=c("metric"))
+sens.df.subset.long<-left_join(sens.df.subset.long, sens.df.rank, by=c("metric"))
 
-# sensitivity.df.subset.wide<-sensitivity.df.subset.long %>% 
+# sens.df.subset.wide<-sens.df.subset.long %>% 
 #   select(-metric) %>% 
 #   rename(metric=rank) %>% 
 #   pivot_wider(names_from = metric, values_from = value)
 
-sensitivity.df.subset.long.round<-sensitivity.df.subset.long %>% 
+sens.df.subset.long.round<-sens.df.subset.long %>% 
   mutate(value = case_when(
     str_detect(metric, "rich_") ~ round(value, digits = 0),
     str_detect(metric, "pct_") ~ ceiling(value),
@@ -1026,7 +1028,7 @@ sensitivity.df.subset.long.round<-sensitivity.df.subset.long %>%
     
   ))
 
-sensitivity.df.subset.long.count<-sensitivity.df.subset.long %>%
+sens.df.subset.long.count<-sens.df.subset.long %>%
   group_by(metric, value) %>% 
   count(value) %>%
   ungroup() %>% 
@@ -1035,7 +1037,7 @@ sensitivity.df.subset.long.count<-sensitivity.df.subset.long %>%
   group_by(metric, percent_similar) %>% 
   filter(!percent_similar<50)
 
-redund.metrics <-  sensitivity.df.subset.long.count %>% 
+redund.metrics <-  sens.df.subset.long.count %>% 
   pull(metric) %>% 
   unique()
 cat(redund.metrics, sep = ", ")
@@ -1055,12 +1057,12 @@ reference sites compared to the range of impairment. (Blocksom 2009)
 ## Zach will add this and other screening tools.
 
 
-reference_sites<-sensitivity.df.subset %>% 
+reference_sites<-sens.df.subset %>% 
   filter(condition_class =="1") %>% 
   select(site_id)
 reference.vec<-c(reference_sites$site_id)
 
-SOI.df<-sensitivity.df.subset.long %>%
+SOI.df<-sens.df.subset.long %>%
   filter(site_id %in% c(reference.vec)) %>% 
   group_by(metric) %>% 
   mutate(Q1 = case_when(
@@ -1084,10 +1086,18 @@ SOI.df.filter <- SOI.df %>%
   filter(SOI >= 1) %>% 
   filter(SOI <= 2)
 
+SOI.df.filter_2 <- SOI.df %>% 
+  filter(SOI >= 2) 
+
 SOI.fail <-  SOI.df.filter %>% 
   pull(metric) %>% 
   unique()
 cat(SOI.fail, sep = ", ")
+
+SOI.fail_2 <-  SOI.df.filter_2 %>% 
+  pull(metric) %>% 
+  unique()
+cat(SOI.fail_2, sep = ", ")
 
 ```
 
@@ -1109,10 +1119,14 @@ cat(SOI.fail, sep = ", ")
 
 # rich_ttaxa_toe, rich_ttaxa_ephemeroptera, shannon_ttaxa_ephemeroptera, rich_ttaxa_ep, rich_ttaxa_ept, rich_ttaxa_et, shannon_ttaxa_intolerant, rich_ttaxa_cote, rich_ttaxa_potec, rich_ttaxa_insecta, pct_rich_ttaxa_ep, rich_ttaxa_cot, pct_intolerant, pct_rich_ttaxa_baetidae, pct_rich_ttaxa_ephemeroptera, pct_rich_ttaxa_et, rich_ttaxa_intolerant, rich_ttaxa_baetidae, pct_rich_ttaxa_insecta, simpson_ttaxa_baetidae, pct_cot, pct_rich_ttaxa_ept, pct_insecta, pct_rich_ttaxa_intolerant
 
+#... SOI >=2  
+### Ask Matt [if/why] he excluded these?
+# pct_ep, pct_ephemeroptera, pct_furcatergalia, pct_baetidae, pct_anisoptera, pct_dubiraphia, pct_pisciforma, pct_toe, pct_elmidae, pct_et, pct_tanytarsus, pct_cote, pct_ept, pct_potec, pct_pt
+
 
 # 43 unique above, brings total from 62 down to 19.
 
-# SOI (>2):
+# SOI (>2): ...Ask Brian/Matt about this
 
 
 train.df.final <- train.df %>% 
@@ -1123,44 +1137,133 @@ train.df.final <- train.df %>%
   select(-c(pct_baetidae, pct_dubiraphia, pct_elmidae, pct_ep, pct_ephemeroptera, pct_furcatergalia, pct_gammaridae, pct_gammarus, pct_pisciforma, pct_pt, pct_rich_ttaxa_baetidae, pct_rich_ttaxa_ep, pct_rich_ttaxa_ephemeroptera, pct_rich_ttaxa_gammaridae, pct_tanytarsus, rich_ttaxa_ep, rich_ttaxa_ephemeroptera, shannon_ttaxa_ephemeroptera, shannon_ttaxa_ept, shannon_ttaxa_intolerant)) %>% 
   # Removing metrics based on SOI
   select(-c(rich_ttaxa_toe, rich_ttaxa_ept, rich_ttaxa_et, rich_ttaxa_cote, rich_ttaxa_potec, rich_ttaxa_insecta, rich_ttaxa_cot, pct_intolerant, pct_rich_ttaxa_et, rich_ttaxa_intolerant, pct_rich_ttaxa_insecta, pct_cot, pct_rich_ttaxa_ept, pct_insecta, pct_rich_ttaxa_intolerant))
-
+  # Remove further metrics based on high intercorrelations and visual inspecion (code chunks below)
+  # (to be added)
 
 ```
 
 
-```{r Plot metric correlations, fig.width=10, fig.height=10}
+```{r Redundancy by correlation, fig.width=8, fig.height=8}
 library(corrr)
 
-correlations.final<-train.df.final %>% 
+# Plot correlations of remaining metrics
+# Bowman (yr?; GLIMPSS): "While there is no consensus on “hard cutoffs” for detecting metric redundancy, several workers have chosen r-values in excess of 0.75 (Maxted et al. 2000, Blocksom and Johnson 2009), 0.85 (Butcher et al. 2003, Gerritsen et al. 2000a), and 0.90 (Barbour et al. 1996) to screen for metric redundancy. For GLIMPSS development, we chose Pearson r-values of 0.75 as the cutoff"
+
+
+corr.final<-train.df.final %>% 
   select(-condition_class, -site_id) %>% 
   correlate(use = "pairwise.complete.obs", method = "spearman") %>% 
   rearrange() %>% 
   shave()
-
-# correlations.final %>%
-#   rplot()
-
-correlations.final_rownames <- correlations.final %>%
+corr.final_rownames <- corr.final %>%
   # mutate_all(~replace(., is.na(.), 1)) %>% 
   remove_rownames %>% 
   column_to_rownames(var="term")  
-  
-ggcorrplot::ggcorrplot(correlations.final_rownames)
+corr.final_highcorr <- corr.final_rownames %>%
+  abs() %>% 
+  round(digits = 3) %>% 
+  rownames_to_column() %>%
+  # Remove values < 0.9
+  mutate_all(funs(replace(., . <= 0.75, NA))) %>%
+  # Remove columns and rows with all NAs
+  column_to_rownames() %>% 
+  purrr::discard(~all(is.na(.))) %>% 
+  filter_all(any_vars(!is.na(.)))
+ggcorrplot::ggcorrplot(corr.final_rownames)
+
+# Same as above for only cond class 1  (as per Shull et al. 2019)
+corr.final.cc1 <-train.df.final %>% 
+  filter(condition_class %in% "1") %>% 
+  select(-condition_class, -site_id) %>% 
+  correlate(use = "pairwise.complete.obs", method = "spearman") %>% 
+  rearrange() %>% 
+  shave()
+corr.final_rownames.cc1 <- corr.final.cc1 %>%
+  # mutate_all(~replace(., is.na(.), 1)) %>% 
+  remove_rownames %>% 
+  column_to_rownames(var="term")  
+corr.final_highcorr.cc1 <- corr.final_rownames.cc1 %>%
+  abs() %>% 
+  round(digits = 3) %>% 
+  rownames_to_column() %>%
+  # Remove values < 0.9
+  mutate_all(funs(replace(., . <= 0.75, NA))) %>%
+  # Remove columns and rows with all NAs
+  column_to_rownames() %>% 
+  purrr::discard(~all(is.na(.))) %>% 
+  filter_all(any_vars(!is.na(.)))
+ggcorrplot::ggcorrplot(corr.final_rownames.cc1)
 
 
-# corrplot::corrplot(correlations.final_rownames, method="circle")
 
-# col <- colorRampPalette(c("#BB4444", "#EE9988", "#FFFFFF", "#77AADD", "#4477AA"))
-# corrplot::corrplot(correlations.final_rownames, method="color", col=col(200),  
-#          type="upper", order="hclust", 
-#          addCoef.col = "black", # Add coefficient of correlation
-#          tl.col="black", tl.srt=45, #Text label color and rotation
-#          # Combine with significance
-#          # p.mat = p.mat, sig.level = 0.01, insig = "blank", 
-#          # hide correlation coefficient on the principal diagonal
-#          diag=FALSE 
-#          )
+# Additional redundant metrics to remove? (high correlations)
+# either pct_et or pct_ept
+# either pct_rich_ttaxa_potec or pct_rich_ttaxa_cote
+# either pct_potec or pct_cote
+# either rich_ttaxa or margalef_ttaxa
+
+
+## LOOK AT SCATTERPLOTS OF THOSE W/ CORR'S ABOVE THRESHOLD?
+  # Shull et al. 2019: "Metrics with correlation coefficients > 0.75 were evaluated further by visually inspecting scatterplots. Candidate metrics with correlation coefficients > 0.75 and insufficient spread in the scatterplot were removed as candidate metrics."
+ # Bowman: "...metric pairs approaching or slightly exceeding this value were further examined using scatterplots to see if nonlinear relationships were apparent or if there was sufficient dispersion (i.e., scatter) of the paired metric data points (Barbour et al. 1999). In this case, inclusion of both metrics could be beneficial to the multi-metric index."
+
+
+
 ```
+
+```{r Table: highly correlated metrics}
+DT::datatable(head(corr.final_highcorr.cc1, 500), options = list(scrollX = TRUE))
+
+```
+
+
+```{r Filtered metric boxplots, fig.width=10, fig.height=10}
+
+# train.df.final.long <- train.df.final %>% 
+#   pivot_longer(!c(site_id, condition_class), names_to = "metric", values_to="value")
+# 
+# train.df.final.long2 <- tidyr::gather(train.df.final, metric, value, -site_id, -condition_class)  #%>% 
+  # left_join(condition.df, by = "bas_loc_rm")
+
+
+# Get list of filtered metrics at this point
+metrics.filt <- train.df.final %>% 
+  select(-c(site_id, condition_class)) %>% 
+  names()
+
+sens.final <- sens.df %>% 
+  filter(metric %in% metrics.filt)
+
+
+sens.df %>% 
+  filter(metric %in% metrics.filt) %>%
+  # filter(barbour == 3) %>% 
+  arrange(metric) %>% 
+  inner_join(long.df, by = "metric") %>% 
+  mutate(metric = factor(metric, levels = unique(metric)),
+         condition_class = factor(condition_class, levels = unique(condition_class))) %>% 
+  ggplot(aes(condition_class, value)) +
+  geom_boxplot() +
+  facet_wrap(~metric, ncol = 4, scales = "free")
+
+```
+
+```{r View sens table for final metrics, eval=FALSE}
+DT::datatable(head(sens.final, 500), options = list(scrollX = TRUE))
+
+```
+
+
+
+Traditional method: Standardize metrics
+```{r Standardizing metrics}
+
+# Do this?
+
+```
+
+
+
 
 
 ```{r }
