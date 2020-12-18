@@ -933,7 +933,7 @@ sens.df <- mmir::sensitivity(.dataframe = long.df,
                               .reference = "1",
                               .degraded = "3") 
 
-DT::datatable(sensitivity.df, options = list(scrollX = TRUE))
+DT::datatable(sens.df, options = list(scrollX = TRUE))
 
 sensitive_mets.vec <- sens.df %>% 
   filter(barbour >= 2) %>% 
@@ -1234,11 +1234,11 @@ metrics.filt <- train.df.final %>%
   select(-c(site_id, condition_class)) %>% 
   names()
 
-sensitivity.final <- sensitivity.df %>% 
+sens.final <- sens.df %>% 
   filter(metric %in% metrics.filt)
 
 
-sensitivity.df %>% 
+sens.df %>% 
   filter(metric %in% metrics.filt) %>%
   # filter(barbour == 3) %>% 
   arrange(metric) %>% 
