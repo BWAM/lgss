@@ -843,7 +843,7 @@ train.df <- training(train_test_split) %>%
 # Create testing dataset
 test.df <- testing(train_test_split) %>% 
   filter(condition_class %in% c("1", "3"))
-  
+
 ```
 
 ```{r PMA percept comp, eval=FALSE}
@@ -933,7 +933,7 @@ sens.df <- mmir::sensitivity(.dataframe = long.df,
                               .reference = "1",
                               .degraded = "3") 
 
-DT::datatable(sens.df, options = list(scrollX = TRUE))
+DT::datatable(sensitivity.df, options = list(scrollX = TRUE))
 
 sensitive_mets.vec <- sens.df %>% 
   filter(barbour >= 2) %>% 
@@ -998,6 +998,7 @@ sens.df.subset.IQR<-sens.df.subset %>%
 #Determine which metrics have >50% same values. These don't tell much about sample differences.
 # Reference?
 
+### GO OVER WITH MATT.. Same outcome as redundancy correlation?
 
 sens.df.subset.long<-sens.df.subset %>% 
   select(-condition_class) %>% 
@@ -1056,6 +1057,8 @@ reference sites compared to the range of impairment. (Blocksom 2009)
 ## From Blocksom et al 2001.
 ## Zach will add this and other screening tools.
 
+
+### ASK MATT, WORK ON UNDERSTANDING
 
 reference_sites<-sens.df.subset %>% 
   filter(condition_class =="1") %>% 
@@ -1217,7 +1220,7 @@ DT::datatable(head(corr.final_highcorr.cc1, 500), options = list(scrollX = TRUE)
 ```
 
 
-```{r Filtered metric boxplots, fig.width=10, fig.height=10}
+```{r Filtered metric boxplots, fig.width=12, fig.height=12}
 
 # train.df.final.long <- train.df.final %>% 
 #   pivot_longer(!c(site_id, condition_class), names_to = "metric", values_to="value")
@@ -1231,11 +1234,11 @@ metrics.filt <- train.df.final %>%
   select(-c(site_id, condition_class)) %>% 
   names()
 
-sens.final <- sens.df %>% 
+sensitivity.final <- sensitivity.df %>% 
   filter(metric %in% metrics.filt)
 
 
-sens.df %>% 
+sensitivity.df %>% 
   filter(metric %in% metrics.filt) %>%
   # filter(barbour == 3) %>% 
   arrange(metric) %>% 
