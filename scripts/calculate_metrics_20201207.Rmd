@@ -825,7 +825,7 @@ metrics.df_PMA <- metrics.df %>%
 # Modeling and filtering
 
 
-```{r Split into training dataset}
+```{r Split into training and test (validation) datasets}
 
 library(tidymodels)
 
@@ -848,14 +848,15 @@ test.df <- testing(train_test_split) %>%
 
 ```{r PMA percept comp, eval=FALSE}
 
-### Need to determine what to use for oligocheata
 ### Determining percent composition of each major group for PMA calculation above
 
 train.df.PMA <- train.df %>% 
   filter(condition_class == "1") %>% 
   group_by(site_id) %>% 
+  # From Lake IBI:
   # select(site_id, pct_diptera, pct_clitellata, pct_ephemeroptera, pct_odonata, pct_trichoptera, pct_coleoptera) %>% 
   select(site_id, 
+         ### Need to determine what to use for oligocheata
          # Oligochaeta, 
          pct_ephemeroptera, 
          pct_plecoptera, 
@@ -863,8 +864,13 @@ train.df.PMA <- train.df %>%
          pct_trichoptera,
          pct_chironomidae,
          Other)  %>% 
+  
+  ### Complete this ###
   # mutate(other = sum(pct_diptera, pct_clitellata, pct_ephemeroptera, pct_odonata, pct_trichoptera, pct_coleoptera)) %>% 
   mutate(other = sum(               )) %>% 
+  ###
+  
+  
   mutate(other= 100-other) %>% 
   ungroup() %>% 
   summarise_all(list(mean))
@@ -874,17 +880,14 @@ train.df.PMA <- train.df %>%
 
 ```
 
-
+Not necessary because of even split we do using training and testing functions. 
 ```{r Kolmogorov Mmirnov K-S Test, eval=FALSE}
 
-### Probably not necessary because of even split we do above. 
-
 ## Kolmogorov Mmirnov K-S Test to ensure equal distribution of "condition" in training and calibration sets 
-
 ## Noted in Blocksom, 2009
 
-### ADAPT FROM MATT'S SCRIPT
-## Q: What is the target result here?
+### Not necessary because of even split we do using training and testing functions. 
+
 
 # PULL IN DATA and replace below
 all_abiotic_classified <- read_csv(file.path("C:/Data/LGSS_scripting/lgss/data/compile_2015-2019/condition_classes",
@@ -941,12 +944,22 @@ sensitive_mets.vec <- sens.df %>%
   filter(de >= 70) %>%
   pull(metric)
 
+# Creating training dataset
 train_sensitive.df <- train.df %>% 
   select(condition_class, all_of(sensitive_mets.vec)) %>% 
   mutate(condition_class = as.character(condition_class))
 
-# Creating cross-validation set. Comes into play later during validation set (logistic regression model- calculate probability for if site is impaired)
+# Creating cross-validation set. Comes into play later during validation...
 train_10cv.df <- train_sensitive.df %>% 
+  rsample::vfold_cv(v = 10, repeats = 1, strata = condition_class)
+
+
+# Creating testing dataset
+test_sensitive.df <- test.df %>% 
+  select(condition_class, all_of(sensitive_mets.vec)) %>% 
+  mutate(condition_class = as.character(condition_class))
+
+test_10cv.df <- test_sensitive.df %>% 
   rsample::vfold_cv(v = 10, repeats = 1, strata = condition_class)
 ```
 
@@ -994,11 +1007,10 @@ sens.df.subset.IQR<-sens.df.subset %>%
 
 
 
-```{r Redundancy by similarity}
-#Determine which metrics have >50% same values. These don't tell much about sample differences.
-# Reference?
-
-### GO OVER WITH MATT.. Same outcome as redundancy correlation?
+```{r Responsiveness}
+#Determine which metrics have >50% same values across all sites. Picks out metrics that have poor ability to differentiate btw sites.
+  # Different from filtering by range b/c could have high range but many similar output values (poor differentiation). 
+# Matt reference?
 
 sens.df.subset.long<-sens.df.subset %>% 
   select(-condition_class) %>% 
@@ -1045,20 +1057,12 @@ cat(redund.metrics, sep = ", ")
 ```
 
 
-Relative scope of impairment (SOI) is calculated as the ratio of the range
-of possible impairment (values beyond the poorer quality 25th
-percentile) and the IQR of reference sites, a measure of
-variability. Relative SOI values larger than 1 are more desirable,
-with values less than 1 indicating too much variability among
-reference sites compared to the range of impairment. (Blocksom 2009)
+Relative scope of impairment (SOI) looks at variability of metrics for ref sites. If varies by more than IQR, then potentially not a good metric bc too much variability among reference sites compared to the range of impairment.
 
+Calculated as the ratio of the range of possible impairment (values beyond the poorer quality 25th percentile) and the IQR of reference sites, a measure of variability. Relative SOI values larger than 1 are more desirable, with values less than 1 indicating too much variability among reference sites compared to the range of impairment. (Blocksom 2009)
 ```{r SOI}
-## Calculate Relative Scope of Impairment. Take metrics that pass 1st screening (barbour >2 & DE >70%), Filter to ref, combine metric name and predicted response (increase/decrease), take lower 25% for decrease, take top 75% for increase, take IQR
-## From Blocksom et al 2001.
-## Zach will add this and other screening tools.
 
-
-### ASK MATT, WORK ON UNDERSTANDING
+# Take metrics that pass 1st screening (barbour >2 & DE >70%), Filter to ref, combine metric name and predicted response (increase/decrease), take lower 25% for decrease, take top 75% for increase, take IQR
 
 reference_sites<-sens.df.subset %>% 
   filter(condition_class =="1") %>% 
@@ -1086,12 +1090,14 @@ SOI.df<-SOI.df %>%
   mutate(SOI = (IQR/(Q1-Q2)))
 
 SOI.df.filter <- SOI.df %>% 
-  filter(SOI >= 1) %>% 
-  filter(SOI <= 2)
+  filter(SOI >= 1) #%>% 
+  # filter(SOI <= 2)
 
 SOI.df.filter_2 <- SOI.df %>% 
   filter(SOI >= 2) 
 
+
+# [incomplete] code failed metrics as vector so don't have to list out metrics for removal later.
 SOI.fail <-  SOI.df.filter %>% 
   pull(metric) %>% 
   unique()
@@ -1123,7 +1129,6 @@ cat(SOI.fail_2, sep = ", ")
 # rich_ttaxa_toe, rich_ttaxa_ephemeroptera, shannon_ttaxa_ephemeroptera, rich_ttaxa_ep, rich_ttaxa_ept, rich_ttaxa_et, shannon_ttaxa_intolerant, rich_ttaxa_cote, rich_ttaxa_potec, rich_ttaxa_insecta, pct_rich_ttaxa_ep, rich_ttaxa_cot, pct_intolerant, pct_rich_ttaxa_baetidae, pct_rich_ttaxa_ephemeroptera, pct_rich_ttaxa_et, rich_ttaxa_intolerant, rich_ttaxa_baetidae, pct_rich_ttaxa_insecta, simpson_ttaxa_baetidae, pct_cot, pct_rich_ttaxa_ept, pct_insecta, pct_rich_ttaxa_intolerant
 
 #... SOI >=2  
-### Ask Matt [if/why] he excluded these?
 # pct_ep, pct_ephemeroptera, pct_furcatergalia, pct_baetidae, pct_anisoptera, pct_dubiraphia, pct_pisciforma, pct_toe, pct_elmidae, pct_et, pct_tanytarsus, pct_cote, pct_ept, pct_potec, pct_pt
 
 
@@ -1199,14 +1204,9 @@ ggcorrplot::ggcorrplot(corr.final_rownames.cc1)
 
 
 
-# Additional redundant metrics to remove? (high correlations)
-# either pct_et or pct_ept
-# either pct_rich_ttaxa_potec or pct_rich_ttaxa_cote
-# either pct_potec or pct_cote
-# either rich_ttaxa or margalef_ttaxa
+## LOOK AT SCATTERPLOTS OF THOSE W/ CORR'S ABOVE THRESHOLD to see if there are relationships other than linear (indicates duplicate metrics).
+# Use psych package (see abiotic corr plots Rmd).
 
-
-## LOOK AT SCATTERPLOTS OF THOSE W/ CORR'S ABOVE THRESHOLD?
   # Shull et al. 2019: "Metrics with correlation coefficients > 0.75 were evaluated further by visually inspecting scatterplots. Candidate metrics with correlation coefficients > 0.75 and insufficient spread in the scatterplot were removed as candidate metrics."
  # Bowman: "...metric pairs approaching or slightly exceeding this value were further examined using scatterplots to see if nonlinear relationships were apparent or if there was sufficient dispersion (i.e., scatter) of the paired metric data points (Barbour et al. 1999). In this case, inclusion of both metrics could be beneficial to the multi-metric index."
 
@@ -1229,14 +1229,10 @@ DT::datatable(head(corr.final_highcorr.cc1, 500), options = list(scrollX = TRUE)
   # left_join(condition.df, by = "bas_loc_rm")
 
 
-# Get list of filtered metrics at this point
+# Get list of filtered metrics to this point
 metrics.filt <- train.df.final %>% 
   select(-c(site_id, condition_class)) %>% 
   names()
-
-sens.final <- sens.df %>% 
-  filter(metric %in% metrics.filt)
-
 
 sens.df %>% 
   filter(metric %in% metrics.filt) %>%
@@ -1251,60 +1247,571 @@ sens.df %>%
 
 ```
 
-```{r View sens table for final metrics, eval=FALSE}
-DT::datatable(head(sens.final, 500), options = list(scrollX = TRUE))
+```{r View sens table for filtered metrics, eval=FALSE}
+sens.filt <- sens.df %>% 
+  filter(metric %in% metrics.filt)
+
+DT::datatable(head(sens.filt, 500), options = list(scrollX = TRUE))
 
 ```
 
 
+Select final metrics and plot
 
-Traditional method: Standardize metrics
+Removed rich_ttaxa_intol_facul for rich_ttaxa b/c say similar things but former has better DE. Removed  
+```{r}
+
+# BPJ...
+# PROVISIONAL SELECTION
+metrics.final <- c("margalef_ttaxa", "shannon_ttaxa_cot", "rich_ttaxa", "pct_rich_ttaxa_cote", "dom_5_ttaxa", "pct_toe")
+
+# train.df.final2 <- train.df %>% 
+#   select(site_id, condition_class, all_of(metrics.final))
+# 
+# # Get list of filtered metrics to this point
+# metrics.final <- train.df.final2 %>% 
+#   select(-c(site_id, condition_class)) %>% 
+#   names()
+
+
+sens.df %>% 
+  filter(metric %in% metrics.final) %>%
+  # filter(barbour == 3) %>% 
+  arrange(metric) %>% 
+  inner_join(long.df, by = "metric") %>% 
+  mutate(metric = factor(metric, levels = unique(metric)),
+         condition_class = factor(condition_class, levels = unique(condition_class))) %>% 
+  ggplot(aes(condition_class, value)) +
+  geom_boxplot() +
+  facet_wrap(~metric, ncol = 4, scales = "free")
+
+```
+
+
+# Traditional IBI method
+
 ```{r Standardizing metrics}
 
-# Do this?
+# Adapt code from matt, look at old LG script.
 
 ```
 
 
 
 
+#Training and Logistical Regression model
 
-```{r }
+```{r Data prep and model creation}
+# Create recipe object and ...
 
-# Misc notes from meeting with Matt
+rec_obj <- train_sensitive.df %>% 
+  select(condition_class, all_of(metrics.final)) %>% 
+  recipe(condition_class ~ ., data = .) %>% 
+  # update_role(uniqueid, new_role = "sample_id") %>%
+  step_normalize(all_predictors()) %>% 
+ # step_nzv(all_predictors()) %>%
+ # step_corr(all_predictors(),
+  #          threshold = 0.5) %>%
+ # step_pca(all_predictors()) %>%
+  themis::step_smote(condition_class)
+  # step_smote creates a specification of a recipe step that generate new examples of the minority class using nearest neighbors of these cases.
+  # Matt says step_smote is redundant if already balanced btw test and ref sites... but removing does not result in an identical DF!
 
-# Standardizing scores
-# Maybe Skip Standardizing scores (old IBI method in place of logistic regr.). Matt checked to see how this performed in comparison.
-#       Convert to long DF, determine 5th and 9th percetile for all sites (not just training). If decreases. Block below calculates score for each metric for each site.
 
-metrics.df.standardized.long.percentiles <-metrics.df.standardized.long %>%
-  group_by(metric) %>% 
-  mutate(Q_5th = quantile(value, probs = 0.05)) %>% 
-  mutate(Q_95th =  quantile(value, probs = 0.95)) %>% 
-  ungroup() %>% 
-  mutate(SCORE = case_when(
-    disturbance == "decrease" ~ ((value - Q_5th)/(Q_95th-Q_5th)),
-    disturbance == "increase" ~ ((Q_95th - value)/(Q_95th-Q_5th)),
-    
+# Extract finalized training set (juice function). Specifiy params for log regr. and engine.
+
+train.juice <- rec_obj %>% 
+  prep(training = train_sensitive.df) %>% 
+  juice()
+
+logit_mod <- logistic_reg() %>%
+  set_engine("stan")
+
+met.flow <- workflow() %>% 
+  add_recipe(rec_obj) %>% 
+  add_model(logit_mod)
+
+# Outputs weighting coefficients of metrics used... margalef_ttaxa heavily weighted!!!
+(fit_train <- fit(met.flow, data = train_sensitive.df))
+
+```
+
+
+```{r Cross validation and measuring performace}
+
+# Cross validation tutorial: https://www.youtube.com/watch?v=fSytzGwwBVw 
+
+library(tune)
+library(yardstick)
+
+# Training
+
+control <- control_resamples(save_pred = FALSE)
+metrics <- metric_set(roc_auc, bal_accuracy, pr_auc)
+
+spline_res <- fit_resamples(logit_mod, rec_obj, train_10cv.df,
+                            metrics = metrics,
+                            control = control)
+
+show_best(spline_res, metric = "roc_auc")
+show_best(spline_res, metric = "bal_accuracy")
+show_best(spline_res, metric = "pr_auc")
+
+# Output scores (mean) of 1 would be 100% accurate classification. Zach says anything >75 acceptible (reference?).
+
+
+# Validation (using test dataset) - dont need bc doing independent validation in confusion matrix below.
+
+control <- control_resamples(save_pred = FALSE)
+metrics <- metric_set(roc_auc, bal_accuracy, pr_auc)
+
+spline_res <- fit_resamples(logit_mod, rec_obj, test_10cv.df,
+                            metrics = metrics,
+                            control = control)
+
+show_best(spline_res, metric = "roc_auc")
+show_best(spline_res, metric = "bal_accuracy")
+show_best(spline_res, metric = "pr_auc")
+
+```
+
+```{r Create logistical regression model}
+
+test.df <- testing(train_test_split) %>% 
+  filter(condition_class %in% c("1", "3")) %>% 
+   select(condition_class, all_of(metrics.final))
+
+#Training
+pred_test <- predict(fit_train, new_data = train_sensitive.df, type = "prob") %>% 
+  bind_cols(select(train_sensitive.df, condition_class))
+
+# Validation (don't need this bc doing independent validation in confusion matrix below.)
+pred_test_validation <- predict(fit_train, new_data = test.df, type = "prob") %>% 
+  bind_cols(select(test.df, condition_class))
+pred_test_all <- predict(fit_train, new_data = metrics.df, type = "prob") %>% 
+  bind_cols(select(metrics.df, condition_class))
+
+
+```
+
+
+```{r Logistical regression model plots}
+
+# Training
+
+pred_test %>% 
+  # filter(condition_class %in% c("1", "4")) %>% 
+  mutate(condition_class = as.character(condition_class)) %>% 
+  mutate(condition = case_when(
+    condition_class %in% "3" ~ 1,
+    condition_class %in% "1" ~ 0,
+    TRUE ~ 9999
   )) %>% 
-  mutate(SCORE = SCORE*100) %>% 
-  select(uniqueid, metric, SCORE)
+ggplot(aes(.pred_1, condition)) +
+  geom_point() +
+  stat_smooth(method="glm", se=FALSE, method.args = list(family=binomial)) 
 
-# Need to Truncate Scores >100 to 100 and <0 to 0 (is this for traditional method?)
+# Validation (not needed; just plotting for visual comparison)
+
+pred_test_validation %>% 
+  # filter(condition_class %in% c("1", "4")) %>% 
+  mutate(condition_class = as.character(condition_class)) %>% 
+  mutate(condition = case_when(
+    condition_class %in% "3" ~ 1,
+    condition_class %in% "1" ~ 0,
+    TRUE ~ 9999
+  )) %>% 
+ggplot(aes(.pred_1, condition)) +
+  geom_point() +
+  stat_smooth(method="glm", se=FALSE, method.args = list(family=binomial)) 
+
+#All Data (not needed; just plotting for visual comparison)
+
+pred_test_all %>% 
+  filter(condition_class %in% c("1", "3")) %>% 
+  mutate(condition_class = as.character(condition_class)) %>% 
+  mutate(condition = case_when(
+    condition_class %in% "3" ~ 1,
+    condition_class %in% "1" ~ 0,
+    TRUE ~ 9999
+  )) %>% 
+ggplot(aes(.pred_1, condition)) +
+  geom_point() +
+  stat_smooth(method="glm", se=FALSE, method.args = list(family=binomial)) 
+
+```
+
+```{r Visualize model performance (ROC curve)}
+
+# Receiver operator curve
+# Add in resampling as shown at https://yardstick.tidymodels.org/ ?
+# Look up sensitivity vs specificity
+
+# Training
+# Goal is for model to have high sensitivity ("curve" tighter to top left corner). 
 
 
-# Remove redundant metrics from corr.
-# Sum scores for standardized (is this for traditional method?)
+simple_glm_roc <- pred_test %>% 
+  roc_curve(factor(condition_class), .pred_1)
+# computes the area under the ROC curve
+pred_test_validation %>% 
+  roc_auc(factor(condition_class), .pred_1)
+autoplot(simple_glm_roc)
+
+
+# Validation (not needed?; just plotting for visual comparison)
+
+simple_glm_roc <- pred_test_validation %>% 
+  roc_curve(factor(condition_class), .pred_1)
+pred_test_validation %>% 
+  roc_auc(factor(condition_class), .pred_1)
+autoplot(simple_glm_roc)
 
 
 
-# Look to see how metric and score correlate with abiotic
+```
+
+## Probilities from log regr. for each class - Summary of results!
+
+```{r Log regr boxplot}
 
 
-# DL most recent edits, run through code
+# ***Training***
 
-# Matt sent- Cross validation (logistic regression?) https://www.youtube.com/watch?v=fSytzGwwBVw 
+train.df <- predict(fit_train, new_data = training(train_test_split), type = "prob") %>% 
+  bind_cols(select(training(train_test_split), condition_class))
+
+train.df %>% 
+  mutate(condition_class = factor(condition_class, c("1", "2", "3"))) %>% 
+ggplot(aes(condition_class, .pred_1)) +
+  geom_boxplot()
+
+
+#Validation
+
+test.df <- predict(fit_train, new_data = testing(train_test_split), type = "prob") %>% 
+  bind_cols(select(testing(train_test_split), condition_class, site_id))
+
+test.df %>% 
+  mutate(condition_class = factor(condition_class, c("1", "2", "3"))) %>% 
+ggplot(aes(condition_class, .pred_1)) +
+  geom_boxplot()
+
+#All Data 
+
+all.df <- predict(fit_train, new_data = metrics.df, type = "prob") %>% 
+  bind_cols(select(metrics.df, condition_class, site_id))
+
+all.df %>% 
+  mutate(condition_class = factor(condition_class, c("1", "2", "3"))) %>% 
+ggplot(aes(condition_class, .pred_1)) +
+  geom_boxplot()
+
+
+### LOOK AT OUTLIERS
+
+
+```
+
+```{r, confusion matrix accuracy assessment for validation dataset}
+
+test.df <- predict(fit_train, new_data = testing(train_test_split), type = "prob") %>% 
+  bind_cols(select(testing(train_test_split), condition_class, site_id))
+
+# Assign prediction probabilities 
+test.df.confuse<-test.df %>% 
+  mutate(condition_class = factor(condition_class, c("1","3"))) %>%
+  filter(condition_class %in% c("1","3")) %>% 
+  mutate(prediction = case_when(
+    .pred_1>0.5 ~ "1",
+    .pred_1<0.5 ~ "3",
+  )) %>% 
+  rename(truth = condition_class) %>% 
+  mutate(prediction = factor(prediction, c("1","3")))
+  
+
+test.df.confuse %>%
+  conf_mat(truth, prediction) %>%
+  summary() %>%
+  filter(.metric %in%
+    c("accuracy", "precision", "recall", "f_meas")) %>%
+  as_tibble()
+  
+```
+
+
+
+
+# ADAPT FROM MATT'S CODE
+
+
+```{r plot params and probability binary classes}
+
+# Test
+
+all_abiotic_classified <- read_csv(file.path(here::here(),
+                                             "data",
+                                             "all.abiotic.classified.chem.watershed.csv"))
+all_abiotic_classified<-all_abiotic_classified %>% 
+  rename(uniqueid = uniqueID)
+
+
+test.df.stressors<-left_join(test.df, all_abiotic_classified, by=c("uniqueid"))
+
+test.df.stressors<-test.df.stressors %>% 
+  select(uniqueid,.pred_1, ALK, NH3, CHLA,SECCHI, TKN, NOx, PH, COND, TN, TP, DEV, IMPERV, FOREST, NATURAL, AGRI, PC1) %>% 
+  mutate(prediction = case_when(
+    .pred_1 > 0.5 ~ "above_50",
+    .pred_1 < 0.5 ~ "below_50",
+    
+  ))
+
+all_abiotic_classified <- read_csv(file.path(here::here(),
+                                             "data",
+                                             "all.abiotic.classified.chem.watershed.csv"))
+all_abiotic_classified<-all_abiotic_classified %>% 
+  rename(uniqueid = uniqueID)
+
+
+test.df.stressors<-left_join(test.df, all_abiotic_classified, by=c("uniqueid"))
+
+test.df.stressors<-test.df.stressors %>% 
+  filter(condition_class %in%c("1","3")) %>% 
+  select(uniqueid,.pred_1, ALK, NH3, CHLA,SECCHI, TKN, NOx, PH, COND, TN, TP, DEV, IMPERV, FOREST, NATURAL, AGRI, PC1) %>% 
+  mutate(prediction = case_when(
+    .pred_1 > 0.5 ~ "above_50",
+    .pred_1 < 0.5 ~ "below_50",
+    
+  ))
+
+test.df.stressors.long<-test.df.stressors %>% 
+  select(-prediction, -.pred_1) %>% 
+  pivot_longer(!uniqueid, values_to = "value", names_to = "parameter")
+
+
+test.df.stressor.class<-test.df.stressors %>% 
+  select(uniqueid, prediction)
+
+test.df.stressors.long<-left_join(test.df.stressors.long, test.df.stressor.class, by=c("uniqueid"))
+
+
+
+q <- test.df.stressors.long %>% 
+  ggplot(aes(prediction, value)) + geom_boxplot()
+
+q + facet_wrap(vars(parameter), scales = "free")
+
+
+# All Sites
+
+all_abiotic_classified <- read_csv(file.path(here::here(),
+                                             "data",
+                                             "all.abiotic.classified.chem.watershed.csv"))
+all_abiotic_classified<-all_abiotic_classified %>% 
+  rename(uniqueid = uniqueID)
+
+
+all.df.stressors<-left_join(all.df, all_abiotic_classified, by=c("uniqueid"))
+
+all.df.stressors<-all.df.stressors %>% 
+  select(uniqueid,.pred_1, ALK, NH3, CHLA,SECCHI, TKN, NOx, PH, COND, TN, TP, DEV, IMPERV, FOREST, NATURAL, AGRI, PC1) %>% 
+  mutate(prediction = case_when(
+    .pred_1 > 0.5 ~ "above_50",
+    .pred_1 < 0.5 ~ "below_50",
+    
+  ))
+
+all_abiotic_classified <- read_csv(file.path(here::here(),
+                                             "data",
+                                             "all.abiotic.classified.chem.watershed.csv"))
+all_abiotic_classified<-all_abiotic_classified %>% 
+  rename(uniqueid = uniqueID)
+
+
+all.df.stressors<-left_join(all.df, all_abiotic_classified, by=c("uniqueid"))
+
+all.df.stressors<-all.df.stressors %>% 
+  #filter(condition_class %in%c("1","3")) %>% 
+  select(uniqueid,.pred_1, ALK, NH3, CHLA,SECCHI, TKN, NOx, PH, COND, TN, TP, DEV, IMPERV, FOREST, NATURAL, AGRI, PC1) %>% 
+  mutate(prediction = case_when(
+    .pred_1 > 0.5 ~ "above_50",
+    .pred_1 < 0.5 ~ "below_50",
+    
+  ))
+
+all.df.stressors.long<-all.df.stressors %>% 
+  select(-prediction, -.pred_1) %>% 
+  pivot_longer(!uniqueid, values_to = "value", names_to = "parameter")
+
+
+all.df.stressor.class<-all.df.stressors %>% 
+  select(uniqueid, prediction)
+
+all.df.stressors.long<-left_join(all.df.stressors.long, all.df.stressor.class, by=c("uniqueid"))
+
+all.df.stressors.median<-all.df.stressors.long %>% 
+  group_by(parameter, prediction) %>% 
+  summarise(median = median(value), 
+            q25 = quantile(value, probs = 0.25),
+            q75 = quantile(value, probs = 0.75))
+
+
+q <- all.df.stressors.long %>% 
+  ggplot(aes(prediction, value)) + geom_boxplot()
+
+q + facet_wrap(vars(parameter), scales = "free")
+
+
+
+
+
+
+all.df.stressors.long %>% 
+  filter(parameter == "SECCHI") %>% 
+  ggplot(aes(prediction, value)) + geom_boxplot()+geom_hline(yintercept = 2)+
+  ylab("Secchi Depth (m)")
+
+all.df.stressors.long %>% 
+  filter(parameter == "TP") %>% 
+   ggplot(aes(prediction, value)) + geom_boxplot()+geom_hline(yintercept = 20)+
+  coord_cartesian(ylim=c(0, 100))+
+  ylab("TP (ug/L)")
+
+all.df.stressors.long %>% 
+  filter(parameter == "CHLA") %>% 
+   ggplot(aes(prediction, value)) + geom_boxplot()+geom_hline(yintercept = 8)+
+  coord_cartesian(ylim=c(0, 100))+
+  ylab("Chlorophyll-a (ug/L)")
+
+all.df.stressors.long %>% 
+  filter(parameter == "COND") %>% 
+   ggplot(aes(prediction, value)) + geom_boxplot()+
+  coord_cartesian(ylim=c(0, 1000))+
+  ylab("Specific Conductance (us/cm)")
+
+
+all.df.stressors.long %>% 
+  filter(parameter == "NATURAL") %>% 
+   ggplot(aes(prediction, value)) + geom_boxplot()+
+  coord_cartesian(ylim=c(0, 100))+
+  ylab("Watershed Natural Land Cover (%)")
+
+all.df.stressors.long %>% 
+  filter(parameter == "FOREST") %>% 
+   ggplot(aes(prediction, value)) + geom_boxplot()+
+  coord_cartesian(ylim=c(0, 100))+
+  ylab("Watershed Forest Land Cover (%)")
+
+all.df.stressors.long %>% 
+  filter(parameter == "IMPERV") %>% 
+   ggplot(aes(prediction, value)) + geom_boxplot()+
+  coord_cartesian(ylim=c(0, 60))+
+  ylab("Watershed Mean Impervious Cover (%)")
+
+all.df.stressors.long %>% 
+  filter(parameter == "DEV") %>% 
+   ggplot(aes(prediction, value)) + geom_boxplot()+
+  coord_cartesian(ylim=c(0, 100))+
+  ylab("Watershed Developed Land Cover (%)")
+
+all.df.stressors.long %>% 
+  filter(parameter == "AGRI") %>% 
+   ggplot(aes(prediction, value)) + geom_boxplot()+
+  coord_cartesian(ylim=c(0, 100))+
+  ylab("Watershed Agricultural Land Cover (%)")
+
+all.df.stressors.long %>% 
+  filter(parameter == "PH") %>% 
+   ggplot(aes(prediction, value)) + geom_boxplot()+
+  coord_cartesian(ylim=c(5, 10))+
+  ylab("pH")
+
+all.df.stressors.long %>% 
+  filter(parameter == "NOx") %>% 
+   ggplot(aes(prediction, value)) + geom_boxplot()+
+  coord_cartesian(ylim=c(0, 1000))+
+  ylab("NOx (ug/L)")
+
+all.df.stressors.long %>% 
+  filter(parameter == "TN") %>% 
+   ggplot(aes(prediction, value)) + geom_boxplot()+
+  coord_cartesian(ylim=c(0, 2500))+
+  ylab("TN (ug/L)")
+
+all.df.stressors.long %>% 
+  filter(parameter == "TKN") %>% 
+   ggplot(aes(prediction, value)) + geom_boxplot()+
+  coord_cartesian(ylim=c(0, 2500))+
+  ylab("TKN (ug/L)")
+
+all.df.stressors.long %>% 
+  filter(parameter == "ALK") %>% 
+   ggplot(aes(prediction, value)) + geom_boxplot()+
+  coord_cartesian(ylim=c(0, 150))+
+  ylab("Alkalinity (mg/L CaCO3)")
 
 ```
 
 
+
+
+# Plot individual and sensitive metrics (ALREADY DONE IN CHUNK 27)
+
+```{r Plot metrics}
+
+### SCRIPT STOPS AT CODE BELOW ###
+
+train.df %>% 
+  mutate(condition_class = factor(condition_class, c("1", "2", "3"))) %>% 
+ggplot(aes(condition_class, rich_genus)) +
+  geom_boxplot()
+
+
+
+train.df.sensitive<-train.df %>% 
+   select(uniqueid, condition_class,all_of(sensitive_mets.vec))
+  
+
+train.df.long<-train.df.sensitive %>%
+  select(-condition_class) %>% 
+  pivot_longer(!uniqueid, values_to = "value", names_to = "metric")
+
+train.df.class<-train.df %>% 
+  select(uniqueid, condition_class)
+
+train.df.long<-left_join(train.df.long, train.df.class, by=c("uniqueid"))
+
+
+p <- train.df.long %>% 
+  mutate(condition_class = factor(condition_class, c("1", "2", "3"))) %>%  
+  ggplot(aes(condition_class, value)) + geom_boxplot()
+
+p + facet_wrap(vars(metric), scales = "free")
+
+
+
+metrics.df.sensitive<-metrics.df %>% 
+   select(uniqueid, condition_class,all_of(sensitive_mets.vec))
+  
+
+metrics.df.long<-metrics.df.sensitive %>%
+  select(-condition_class) %>% 
+  pivot_longer(!uniqueid, values_to = "value", names_to = "metric")
+
+metrics.df.class<-metrics.df %>% 
+  select(uniqueid, condition_class)
+
+metrics.df.long<-left_join(metrics.df.long, metrics.df.class, by=c("uniqueid"))
+
+s <- metrics.df.long %>% 
+  mutate(condition_class = factor(condition_class, c("1", "2", "3"))) %>%  
+  ggplot(aes(condition_class, value)) + geom_boxplot()
+
+s + facet_wrap(vars(metric), scales = "free")
+
+
+
+
+
+
+```
