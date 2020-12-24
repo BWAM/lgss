@@ -1304,11 +1304,15 @@ Removed rich_ttaxa_intol_facul for rich_ttaxa b/c say similar things but former 
 ```{r}
 
 # BPJ...
-# PROVISIONAL SELECTION
+# PROVISIONAL SELECTION v1
 # metrics.final <- c("margalef_ttaxa", "shannon_ttaxa_cot", "rich_ttaxa", "pct_rich_ttaxa_cote", "dom_5_ttaxa", "pct_toe")
 
 # PROVISIONAL SELECTION v2
+### CHECK THESE IN CORR PLOT ###
 metrics.final <- c("dom_5_ttaxa", "pct_rich_ttaxa_potec", "rich_ttaxa_ept", "rich_ttaxa_gatherer", "rich_ttaxa_intolerant", "margalef_ttaxa")
+
+
+
 
 
 # train.df.final2 <- train.df %>% 
@@ -1333,6 +1337,33 @@ sens.df %>%
 
 ```
 
+```{r Corr plot for final metrics}
+
+train.df.final.corr <- train.df.final %>% 
+  select(site_id, condition_class, all_of(metrics.final))
+
+corr.finalfinal.cc1 <-train.df.final.corr %>% 
+  filter(condition_class %in% "1") %>% 
+  select(-condition_class, -site_id) %>% 
+  correlate(use = "pairwise.complete.obs", method = "spearman") %>% 
+  rearrange() %>% 
+  shave()
+corr.finalfinal_rownames.cc1 <- corr.finalfinal.cc1 %>%
+  # mutate_all(~replace(., is.na(.), 1)) %>% 
+  remove_rownames %>% 
+  column_to_rownames(var="term")  
+corr.finalfinal_highcorr.cc1 <- corr.finalfinal_rownames.cc1 %>%
+  abs() %>% 
+  round(digits = 3) %>% 
+  rownames_to_column() %>%
+  # Remove values < 0.9
+  mutate_all(funs(replace(., . <= 0.75, NA))) %>%
+  # Remove columns and rows with all NAs
+  column_to_rownames() %>% 
+  purrr::discard(~all(is.na(.))) %>% 
+  filter_all(any_vars(!is.na(.)))
+ggcorrplot::ggcorrplot(corr.finalfinal_rownames.cc1)
+```
 
 # Traditional IBI method
 
@@ -1555,8 +1586,20 @@ all.df %>%
 ggplot(aes(condition_class, .pred_1)) +
   geom_boxplot()
 
-
 ### LOOK AT OUTLIERS
+all.df.outliers.cl3 <- all.df %>% 
+  filter(condition_class == 3,
+         .pred_1 > 0.5) %>% 
+  pull(site_id)
+
+all.df.outliers.cl1 <- all.df %>% 
+  filter(condition_class == 1,
+         .pred_1 < 0.25) %>% 
+  pull(site_id)
+
+outliers <- c(all.df.outliers.cl3, all.df.outliers.cl1) %>% 
+  cat(sep = "\n")
+
 
 
 ```
