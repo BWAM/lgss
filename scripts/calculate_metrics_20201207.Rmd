@@ -1443,32 +1443,28 @@ DT::datatable(head(sens.filt, 500), options = list(scrollX = TRUE))
 
 Select final metrics and plot
 
-Removed rich_ttaxa_intol_facul for rich_ttaxa b/c say similar things but former has better DE. Removed  
 ```{r}
 
-# BPJ...
-# PROVISIONAL SELECTION v1
-# metrics.final <- c("margalef_ttaxa", "shannon_ttaxa_cot", "rich_ttaxa", "pct_rich_ttaxa_cote", "dom_5_ttaxa", "pct_toe")
-
-# PROVISIONAL SELECTION v2
-# metrics.final <- c("dom_5_ttaxa", "pct_rich_ttaxa_potec", "rich_ttaxa_ept", "rich_ttaxa_gatherer", "rich_ttaxa_intolerant", "margalef_ttaxa")
-
-# PROVISIONAL SELECTION v2
-### CHECK THESE IN CORR PLOT ###
+# Final set #1
 # metrics.final <- c("dom_5_ttaxa", "pct_rich_ttaxa_cote", "rich_ttaxa_et", "rich_ttaxa_gatherer", "rich_ttaxa_intolerant", "shannon_ttaxa_toe")
-metrics.final <- c("dom_5_ttaxa", "rich_ttaxa_et", "rich_ttaxa_gatherer", "rich_ttaxa_intolerant", "shannon_ttaxa_toe")
 
+# Final set #2 - Same as above removing pct_rich_ttaxa_cote, which is highly correlated with rich_taxa_et and shannon_taxa_toe.
+# metrics.final <- c("dom_5_ttaxa", "rich_ttaxa_et", "rich_ttaxa_gatherer", "rich_ttaxa_intolerant", "shannon_ttaxa_toe")
+    # results in 101 '0' metric scores. No metrics intercorr above 0.75.
 
+# Final set #3 - Similar to above using more inclusive counterparts to see if results in <101 '0' metric scores.
+metrics.final <- c("dom_5_ttaxa", "rich_ttaxa_ept", "rich_ttaxa_gatherer", "rich_ttaxa_intol_facul", "shannon_ttaxa_toe")
+    # results in only 64 '0' metric scores. Better final IBI DE! Able to score more sites.
+    # shannon_ttaxa_toe corr w rich_ttaxa_intol_facul at 0.77. But arguement to keep both, since different groups (one diversity, other tolerance/richness?)
+    ### FINAL CHOSEN SET ###
 
+# Final set #4 - Adding back in pct_rich_ttaxa_cote.
+# metrics.final <- c("dom_5_ttaxa", "pct_rich_ttaxa_cote", "rich_ttaxa_ept", "rich_ttaxa_gatherer", "rich_ttaxa_intol_facul", "shannon_ttaxa_toe")
+    # No significant difference. (68 '0' metrics scores)
 
-# train.df.final2 <- train.df %>% 
-#   select(site_id, condition_class, all_of(metrics.final))
-# 
-# # Get list of filtered metrics to this point
-# metrics.final <- train.df.final2 %>% 
-#   select(-c(site_id, condition_class)) %>% 
-#   names()
-
+# Final set #5 - Subbing in even more inclusing metric with slighly lower DE's.
+# metrics.final <- c("dom_5_ttaxa", "rich_ttaxa", "rich_ttaxa_gatherer", "rich_ttaxa_intol_facul", "shannon_ttaxa_cote")
+    # results in only 20 '0' metric scores!  BUT overall poorer DE.
 
 sens.df %>% 
   filter(metric %in% metrics.final) %>%
@@ -1536,7 +1532,6 @@ metrics.df.standardized.long.percentiles <-metrics.df.standardized.long %>%
   mutate(SCORE = case_when(
     disturbance == "decrease" ~ ((value - Q_5th)/(Q_95th-Q_5th)),
     disturbance == "increase" ~ ((Q_95th - value)/(Q_95th-Q_5th)),
-    
   )) %>% 
   mutate(SCORE = SCORE*100) %>% 
   select(site_id, metric, SCORE)
@@ -1548,21 +1543,30 @@ metrics.df.standardized.long.percentiles$SCORE<-ifelse(metrics.df.standardized.l
 metrics.scores<-metrics.df.standardized.long.percentiles %>% 
   pivot_wider(names_from = metric, values_from = SCORE)
 
-metrics.scores<-metrics.scores %>% 
-  group_by(site_id) %>% 
-  mutate(SITE_SCORE = sum(c(dom_5_ttaxa, rich_ttaxa_et, rich_ttaxa_gatherer, rich_ttaxa_intolerant, shannon_ttaxa_toe))) %>% 
-  mutate(SITE_SCORE = SITE_SCORE/5) %>% 
-  ungroup() %>% 
-  select(site_id, SITE_SCORE, dom_5_ttaxa, rich_ttaxa_et, rich_ttaxa_gatherer, rich_ttaxa_intolerant, shannon_ttaxa_toe)
+# Metrics set 3 (FINAL CHOSEN SET)
+metrics.scores<-metrics.scores %>%
+  group_by(site_id) %>%
+  mutate(SITE_SCORE = sum(c(dom_5_ttaxa, rich_ttaxa_ept, rich_ttaxa_gatherer, rich_ttaxa_intol_facul, shannon_ttaxa_toe))) %>%
+  mutate(SITE_SCORE = SITE_SCORE/5) %>%
+  ungroup() %>%
+  select(site_id, SITE_SCORE, dom_5_ttaxa, rich_ttaxa_ept, rich_ttaxa_gatherer, rich_ttaxa_intol_facul, shannon_ttaxa_toe)
  
+# Alternative metrics set
+# metrics.scores<-metrics.scores %>% 
+#   group_by(site_id) %>% 
+#   mutate(SITE_SCORE = sum(c(dom_5_ttaxa, rich_ttaxa_et, rich_ttaxa_gatherer, rich_ttaxa_intolerant, shannon_ttaxa_toe))) %>% 
+#   mutate(SITE_SCORE = SITE_SCORE/5) %>% 
+#   ungroup() %>% 
+#   select(site_id, SITE_SCORE, dom_5_ttaxa, rich_ttaxa_et, rich_ttaxa_gatherer, rich_ttaxa_intolerant, shannon_ttaxa_toe)
+
+
 cond_class<-metrics.df %>% 
   select(site_id, condition_class)
 
 metrics.scores<-left_join(metrics.scores, cond_class, by = c("site_id"))
 metrics.scores<-metrics.scores
-  #filter(condition_class %in% c("1","3"))
 
-# test.df.vec<-c(test.df$site_id)
+test.df.vec<-c(test.df$site_id)
 train.df.vec<-c(train.df$site_id)
 
 # Plot training
@@ -1572,14 +1576,33 @@ metrics.scores %>%
   ggplot(aes(condition_class, SITE_SCORE)) +
   coord_cartesian(ylim=c(0, 100))+
   geom_boxplot()
+ggsave(file.path(root.dir, "data/ibi", "lg_ibi_boxplot_set3_seed80-training.png"), dpi = "screen")
 
-# Plot all
+# Plot validation
 metrics.scores %>% 
-  # filter(site_id %in% c(train.df.vec)) %>% 
+  filter(site_id %in% c(test.df.vec)) %>% 
   mutate(condition_class = factor(condition_class, c("1", "2", "3"))) %>% 
   ggplot(aes(condition_class, SITE_SCORE)) +
   coord_cartesian(ylim=c(0, 100))+
   geom_boxplot()
+ggsave(file.path(root.dir, "data/ibi", "lg_ibi_boxplot_set3_seed80-val.png"), dpi = "screen")
+
+# Plot all (commented out bc not useful to plot training data alongside test data)
+# metrics.scores %>% 
+#   # filter(site_id %in% c(train.df.vec)) %>% 
+#   mutate(condition_class = factor(condition_class, c("1", "2", "3"))) %>% 
+#   ggplot(aes(condition_class, SITE_SCORE)) +
+#   coord_cartesian(ylim=c(0, 100))+
+#   geom_boxplot()
+
+# Plot validation + class 2 (all data minus training)
+metrics.scores %>% 
+  filter(!(site_id %in% train.df.vec)) %>%
+  mutate(condition_class = factor(condition_class, c("1", "2", "3"))) %>% 
+  ggplot(aes(condition_class, SITE_SCORE)) +
+  coord_cartesian(ylim=c(0, 100))+
+  geom_boxplot()
+ggsave(file.path(root.dir, "data/ibi", "lg_ibi_boxplot_set3_seed80-val+class2.png"), dpi = "screen")
 
 metrics.scores.ref<-metrics.scores %>% 
   filter(site_id %in% c(train.df.vec)) %>% 
@@ -1590,7 +1613,7 @@ metrics.scores.stress<-metrics.scores %>%
   filter(condition_class =="3") %>% 
   mutate(quant = quantile(SITE_SCORE, probs = 0.75))
 
-
+# write_csv(train.df, file.path(root.dir, "data/ibi", "lg_ibi_training_seed80.csv"))
 ```
 
 
