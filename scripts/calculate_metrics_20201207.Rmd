@@ -25,55 +25,12 @@ datamod.dir <- file.path("C:/Users/gmlemley/New York State Office of Information
 
 ```
 
-```{r Master taxa table prep}
-# Load master taxa table
-master.taxa <- read.csv(file.path(datamod.dir, "Final_Macro_ITS", "20201019_S_MSTR_MACRO_SPECIES.csv"), stringsAsFactors = FALSE, na.strings = c("", "NA")) %>% 
-  rename_all(tolower) %>% 
-  setNames(., sub("mms_", "", names(.))) 
 
-master.taxa.fill <- taxa_fill(master.taxa, .final_id = macro_genspecies, .prefix = "unidentified", kingdom:species) %>%
-  mutate(ttaxa = species) %>%
-  relocate(ttaxa) %>%
-  rename(ffg = feeding_habits,
-         tol_char = tolerance_name,
-         tol_int = tolerance)
+```{r Load sample taxa and prep}
 
-```
+taxa.df <- read_csv(file.path(root.dir, "data/compile_2015-2019/bugs", "2015-2019_lowgrad_taxa_unique_long_speciesfill_20210105.csv"))
 
-```{r Sample taxa table prep}
-
-# Load bug matrix
-taxa.df.wide <- read.csv(file.path(root.dir, "data/compile_2015-2019/bugs/2015-2019_lowgrad_bugs_matrix_UNIQUE_20201210.csv"), check.names = FALSE)
-
-# List taxa names for troublshooting
-# bugnames <- as.data.frame(names(taxa.df)) %>% 
-#   rename(genspecies = "names(taxa.df)") %>% 
-#   filter(!grepl("site_id", genspecies))
-
-# Convert from wide to long
-taxa.df <- taxa.df.wide %>% 
-  gather(final_id, count, -site_id) %>% 
-  filter(!is.na(count),
-         count > 0)  
-
-# Identify missing taxa
-missing.df <- taxa.df %>% 
-  select(final_id) %>% 
-  distinct() %>% 
-  anti_join(master.taxa, by = c("final_id" = "macro_genspecies"))
-
-# Join attributes to data
-taxa.df <- taxa.df %>% 
-  rename(macro_genspecies = final_id) %>%
-  left_join(master.taxa.fill, by = "macro_genspecies") #%>% 
-  # fill_taxa(taxa.df, final_id, kingdom:subspecies)
-
-# write.csv(taxa.df, "lowgrad_taxa_zach.csv")
-
-rm(master.taxa, missing.df, taxa.df.wide)
-```
-
-```{r Create nested dataframe}
+# Create nested dataframe
 nest.df <- taxa.df %>%
   group_nest(site_id, .key = "data")
 
@@ -96,8 +53,6 @@ taxa_tol.df <- nest.df %>%
   select(-data)
 
 ```
-
-
 
 ## Richness Metrics
 
@@ -758,7 +713,7 @@ seq.df <- nest.df %>%
                                   "ffg"),
              .group_col = ttaxa,
              .job = "rich",
-             .exclude_pattern = "unidentified",
+             .exclude_pattern = "undetermined",
              .unnest_col = data),
     # Sequence through each unique column specified in the .filter_cols_vec 
     # to calculate ttaxa percent richness.
@@ -772,7 +727,7 @@ seq.df <- nest.df %>%
                                   "ffg"),
              .group_col = ttaxa,
              .job = "pct_rich",
-             .exclude_pattern = "unidentified",
+             .exclude_pattern = "undetermined",
              .unnest_col = data),
     taxa_seq(.data = .,
              .key_col = site_id,
@@ -785,7 +740,7 @@ seq.df <- nest.df %>%
                                   "tol_char",
                                   "ffg"),
              .job = "pct",
-             .exclude_pattern = "unidentified",
+             .exclude_pattern = "undetermined",
              .unnest_col = data),
     # Spot-checked that manual pct_amphi came out the same as pct_NULL_amphipoda (produced by below)
     taxa_seq(.data = .,
@@ -799,7 +754,7 @@ seq.df <- nest.df %>%
              .group_col = ttaxa,
              .base_log = 2,
              .job = "shannon",
-             .exclude_pattern = "unidentified",
+             .exclude_pattern = "undetermined",
              .unnest_col = data),
     taxa_seq(.data = .,
              .key_col = site_id,
@@ -811,7 +766,7 @@ seq.df <- nest.df %>%
                                   "ffg"),
              .group_col = ttaxa,
              .job = "simpson",
-             .exclude_pattern = "unidentified",
+             .exclude_pattern = "undetermined",
              .unnest_col = data)
   ) %>% 
   select(-data)
@@ -915,13 +870,13 @@ on the reference streams Novak and Bode (1992).
 #### Look at biomonitoring SOP to see which groups to use for Streams (change in both chunks)
 
 metrics.df <- metrics.df %>% 
-    mutate(PMA_clitellata = 4.06,
-           PMA_ephemeroptera = 9.96,
-           PMA_plecoptera = 0.138,
-           PMA_coleoptera = 6.18,
-           PMA_trichoptera = 3.89,
-           PMA_chironomidae = 42.8,
-           PMA_other = 33.0
+    mutate(PMA_clitellata = 4.59,
+           PMA_ephemeroptera = 9.11,
+           PMA_plecoptera = 0.28,
+           PMA_coleoptera = 5.37,
+           PMA_trichoptera = 4.45,
+           PMA_chironomidae = 43.5,
+           PMA_other = 32.7
     ) %>% 
   group_by(site_id) %>% 
   mutate(pct_other = sum(pct_clitellata, pct_ephemeroptera, pct_plecoptera, pct_coleoptera, pct_trichoptera, pct_chironomidae)) %>% 
@@ -971,8 +926,10 @@ metrics.df <- metrics.df %>%
 
 library(tidymodels)
 
-# Keep the set.seed number the same to get the same subsampled traning dataset for each run. (Change this to create a new training dataset)
+# Keep the set.seed number the same to get the same subsampled traning dataset for each run. (Change this to create a new training dataset. Original is 80)
+
 set.seed(80)
+
 train_test_split <- metrics.df %>% 
   # mutate(condition_class = factor(condition_class, levels = c("1","3","4","2"))) %>% 
   # filter(condition_class %in% c("1", "3")) %>%
@@ -1437,7 +1394,7 @@ sens.filt <- sens.df %>%
 
 DT::datatable(head(sens.filt, 500), options = list(scrollX = TRUE))
 
-# write.csv(sens.filt, file.path(root.dir, "data/metrics/sens.filt.20201228.csv"))
+write.csv(sens.filt, file.path(root.dir, "data/metrics/sens.filt.20210105_b.csv"))
 ```
 
 
@@ -1613,7 +1570,7 @@ metrics.scores.stress<-metrics.scores %>%
   filter(condition_class =="3") %>% 
   mutate(quant = quantile(SITE_SCORE, probs = 0.75))
 
-# write_csv(train.df, file.path(root.dir, "data/ibi", "lg_ibi_training_seed80.csv"))
+write_csv(train.df, file.path(root.dir, "data/ibi", "lg_ibi_training_seed80_20210105.csv"))
 ```
 
 

@@ -279,7 +279,11 @@ Check full bug list against master taxa table and reformat/update accordingly (a
 
 # Load in current version of master macro species taxa table
 
-master.taxa <- read.csv(file.path(datamod.dir, "Final_Macro_ITS", "20201019_S_MSTR_MACRO_SPECIES.csv"), stringsAsFactors = FALSE)
+# master.taxa <- read.csv(file.path(datamod.dir, "Final_Macro_ITS", "20201019_S_MSTR_MACRO_SPECIES.csv"), stringsAsFactors = FALSE)
+
+master.taxa <- read.csv(file.path(datamod.dir, "Final_Macro_ITS", "20201019_S_MSTR_MACRO_SPECIES.csv"), stringsAsFactors = FALSE, na.strings = c("", "NA")) %>% 
+  rename_all(tolower) %>% 
+  setNames(., sub("mms_", "", names(.))) 
 
 bugnames.15to19 <- as.data.frame(names(bugmatrix.15to19)) %>% 
   rename(genspecies = "names(bugmatrix.15to19)") %>% 
@@ -287,7 +291,7 @@ bugnames.15to19 <- as.data.frame(names(bugmatrix.15to19)) %>%
          !grepl("sample_date", genspecies))
 
 bugnames.15to19.mismatch <- bugnames.15to19 %>% 
-  filter(!(genspecies %in% master.taxa$MMS_MACRO_GENSPECIES))
+  filter(!(genspecies %in% master.taxa$macro_genspecies))
 
 ```
 
@@ -312,8 +316,8 @@ matchlist <- bugmatrix.15to19 %>%
 ```
 
 
-Export matrices
-```{r}
+Export matrices for use elsewhere
+```{r, eval = FALSE}
 
 teams.datadir <- "C:/Users/gmlemley/New York State Office of Information Technology Services/SMAS - Low Gradient IBI/data"
 
@@ -329,6 +333,52 @@ write.table(bugmatrix.15to19.unique, file.path(teams.datadir, "bugs", "2015-2019
 
 
 ```{r}
-# Add total indiv count fields, remove those <200???
+# Add total indiv count fields, flag those <200???
+```
+
+
+```{r Perform taxa_fill function}
+
+# Convert from wide to long
+bugs.unique.long <- bugmatrix.15to19.unique %>% 
+  gather(final_id, count, -site_id) %>% 
+  filter(!is.na(count),
+         count > 0)  
+
+# Identify taxa missing from master table
+# missing.df <- bugs.unique.long %>% 
+#   select(final_id) %>% 
+#   distinct() %>% 
+#   anti_join(master.taxa, by = c("final_id" = "macro_genspecies"))
+
+# Fill empty taxa fields in master table with "unidentified_[previous column]" 
+master.taxa.fill <- mmir::taxa_fill(master.taxa, .final_id = macro_genspecies, .prefix = "undetermined", kingdom:species) %>%
+  mutate(ttaxa = species) %>%
+  relocate(ttaxa) %>%
+  rename(ffg = feeding_habits,
+         tol_char = tolerance_name,
+         tol_int = tolerance)
+
+# Join attributes to data with "filled" master taxa
+bugs.unique.long <- bugs.unique.long %>% 
+  rename(macro_genspecies = final_id) %>%
+  left_join(master.taxa.fill, by = "macro_genspecies") #%>% 
+  # fill_taxa(bugs.unique.long, final_id, kingdom:subspecies)
+
+# Convert back to wide (matrix) using filled "species" field as names (to be used for ordination)
+bugs.unique.wide <- bugs.unique.long %>% 
+  select(site_id, species, count) %>% 
+  group_by(site_id, species) %>% 
+  summarise(count = sum(count)) %>% 
+  spread(species, count, fill = 0)
+
+```
+
+# Export long and wide sample taxa tables
+
+```{r, eval = FALSE}
+write_csv(bugs.unique.long, file.path(root.dir, "data/compile_2015-2019/bugs", "2015-2019_lowgrad_taxa_unique_long_speciesfill_20210105.csv"))
+write_csv(bugs.unique.wide, file.path(root.dir, "data/compile_2015-2019/bugs", "2015-2019_lowgrad_taxa_unique_wide_speciesfill_20210105.csv"))
+
 ```
 
