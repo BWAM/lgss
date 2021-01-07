@@ -931,9 +931,9 @@ library(tidymodels)
 
 # Keep the set.seed number the same to get the same subsampled traning dataset for each run. (Change this to create a new training dataset. Original is 80)
 
-### NEED TO RUN FURTHER SUBSAMPLES TO SEE WHICH METRICS COME OUT through filter. Then set final seed for training.
-# set.seed(80)
-set.seed(50)
+### RUN FURTHER SUBSAMPLES TO SEE WHICH METRICS COME OUT through filter. Then set final seed for training.
+set.seed(80)
+# set.seed(50)
 
 train_test_split <- metrics.df %>% 
   # mutate(condition_class = factor(condition_class, levels = c("1","3","4","2"))) %>% 
@@ -1244,36 +1244,6 @@ metrics.drop <- c(metrics.drop.range, metrics.drop.SOI, metrics.drop.sim) %>%
 train.df.final <- train.df %>% 
   select(site_id, condition_class, all_of(sensitive_mets.vec), -all_of(metrics.drop)) 
     
-### OLD CODE:
-
-# Metrics with poor range:
-# rich_ttaxa_gammaridae, rich_ttaxa_baetidae,	pct_anisoptera,	pielou_ttaxa,	gini_simpson_ttaxa_ept,	simpson_ttaxa_gammaridae,	simpson_ttaxa_baetidae,	simpson_ttaxa_cot
-# All are included below except pielou_ttaxa and simpson_ttaxa_cot
-
-
-## Metrics with >50% same value: [26 unique]
-
-# gini_simpson_ttaxa_ept, pct_anisoptera, pct_baetidae, pct_dubiraphia, pct_elmidae, pct_ep, pct_ephemeroptera, pct_furcatergalia, pct_gammaridae, pct_gammarus, pct_pisciforma, pct_pt, pct_rich_ttaxa_baetidae, pct_rich_ttaxa_ep, pct_rich_ttaxa_ephemeroptera, pct_rich_ttaxa_gammaridae, pct_tanytarsus, rich_ttaxa_baetidae, rich_ttaxa_ep, rich_ttaxa_ephemeroptera, rich_ttaxa_gammaridae, shannon_ttaxa_ephemeroptera, shannon_ttaxa_ept, shannon_ttaxa_intolerant, simpson_ttaxa_baetidae, simpson_ttaxa_gammaridae
-
-
-# Poor SOI
-#(>=1 & <=2): [15 unique]
-# rich_ttaxa_toe, rich_ttaxa_ephemeroptera, shannon_ttaxa_ephemeroptera, rich_ttaxa_ep, rich_ttaxa_ept, rich_ttaxa_et, shannon_ttaxa_intolerant, rich_ttaxa_cote, rich_ttaxa_potec, rich_ttaxa_insecta, pct_rich_ttaxa_ep, rich_ttaxa_cot, pct_intolerant, pct_rich_ttaxa_baetidae, pct_rich_ttaxa_ephemeroptera, pct_rich_ttaxa_et, rich_ttaxa_intolerant, rich_ttaxa_baetidae, pct_rich_ttaxa_insecta, simpson_ttaxa_baetidae, pct_cot, pct_rich_ttaxa_ept, pct_insecta, pct_rich_ttaxa_intolerant
-
-
-# 43 unique above, brings total from 62 down to 19.
-
-# train.df.final_OLD <- train.df %>% 
-#   select(site_id, condition_class,all_of(sensitive_mets.vec)) %>% 
-#   # Removing metrics with poor ranges
-#   select(-c(rich_ttaxa_gammaridae, rich_ttaxa_baetidae,	pct_anisoptera,	pielou_ttaxa,	gini_simpson_ttaxa_ept,	simpson_ttaxa_gammaridae,	simpson_ttaxa_baetidae,	simpson_ttaxa_cot)) %>% 
-#   # Removing redundant metrics
-#   select(-c(pct_baetidae, pct_dubiraphia, pct_elmidae, pct_ep, pct_ephemeroptera, pct_furcatergalia, pct_gammaridae, pct_gammarus, pct_pisciforma, pct_pt, pct_rich_ttaxa_baetidae, pct_rich_ttaxa_ep, pct_rich_ttaxa_ephemeroptera, pct_rich_ttaxa_gammaridae, pct_tanytarsus, rich_ttaxa_ep, rich_ttaxa_ephemeroptera, shannon_ttaxa_ephemeroptera, shannon_ttaxa_ept, shannon_ttaxa_intolerant)) %>% 
-#   # Removing metrics based on SOI
-#   select(-c(rich_ttaxa_toe, rich_ttaxa_ept, rich_ttaxa_et, rich_ttaxa_cote, rich_ttaxa_potec, rich_ttaxa_insecta, rich_ttaxa_cot, pct_intolerant, pct_rich_ttaxa_et, rich_ttaxa_intolerant, pct_rich_ttaxa_insecta, pct_cot, pct_rich_ttaxa_ept, pct_insecta, pct_rich_ttaxa_intolerant))
-  # Remove further metrics based on high intercorrelations and visual inspecion (code chunks below)
-  # (to be added)
-
 ```
 
 
@@ -1399,7 +1369,7 @@ sens.filt <- sens.df %>%
 
 DT::datatable(head(sens.filt, 500), options = list(scrollX = TRUE))
 
-# write.csv(sens.filt, file.path(root.dir, "data/metrics/sens.filt.20210105_b.csv"))
+# write.csv(sens.filt, file.path(root.dir, "data/metrics/sens.filt_seed50_20210106.csv"))
 ```
 
 
@@ -1415,7 +1385,7 @@ Select final metrics and plot
     # results in 101 '0' metric scores. No metrics intercorr above 0.75.
 
 # Final set #3 - Similar to above using more inclusive counterparts to see if results in <101 '0' metric scores.
-metrics.final <- c("dom_5_ttaxa", "rich_ttaxa_ept", "rich_ttaxa_gatherer", "rich_ttaxa_intol_facul", "shannon_ttaxa_toe")
+# metrics.final <- c("dom_5_ttaxa", "rich_ttaxa_ept", "rich_ttaxa_gatherer", "rich_ttaxa_intol_facul", "shannon_ttaxa_toe")
     # results in only 64 '0' metric scores. Better final IBI DE! Able to score more sites.
     # shannon_ttaxa_toe corr w rich_ttaxa_intol_facul at 0.77. But arguement to keep both, since different groups (one diversity, other tolerance/richness?)
     ### FINAL CHOSEN SET ###
@@ -1427,6 +1397,9 @@ metrics.final <- c("dom_5_ttaxa", "rich_ttaxa_ept", "rich_ttaxa_gatherer", "rich
 # Final set #5 - Subbing in even more inclusing metric with slighly lower DE's.
 # metrics.final <- c("dom_5_ttaxa", "rich_ttaxa", "rich_ttaxa_gatherer", "rich_ttaxa_intol_facul", "shannon_ttaxa_cote")
     # results in only 20 '0' metric scores!  BUT overall poorer DE.
+
+# Final set #6 - Resample using "new" set.seed(80) subsample. New metrics chosen based on new training sensitivities.
+metrics.final <- c("dom_5_ttaxa", "pct_gatherer", "rich_ttaxa", "rich_ttaxa_toe", "rich_ttaxa_intol_facul", "shannon_ttaxa_toe")
 
 sens.df %>% 
   filter(metric %in% metrics.final) %>%
@@ -1444,8 +1417,8 @@ sens.final <- sens.df %>%
   filter(metric %in% metrics.final)
 
 # Export boxplots and sensitivites of the final metrics for the current run
-ggsave(file.path(root.dir, "data/ibi/reruns", "metrics_boxplots_set3_seed50_20210105.png"), dpi = "screen")
-write_csv(sens.final, file.path(root.dir, "data/ibi/reruns/sens_final_seed50_20210105.csv"))
+ggsave(file.path(root.dir, "data/ibi/reruns", "metrics_boxplots_set6_seed80new_20210106.png"), dpi = "screen")
+write_csv(sens.final, file.path(root.dir, "data/ibi/reruns/sens_final_seed80new_20210106.csv"))
 
 
 ```
@@ -1517,10 +1490,10 @@ metrics.scores<-metrics.df.standardized.long.percentiles %>%
 # Metrics set 3 (FINAL CHOSEN SET)
 metrics.scores<-metrics.scores %>%
   group_by(site_id) %>%
-  mutate(SITE_SCORE = sum(c(dom_5_ttaxa, rich_ttaxa_ept, rich_ttaxa_gatherer, rich_ttaxa_intol_facul, shannon_ttaxa_toe))) %>%
+  mutate(SITE_SCORE = sum(c(dom_5_ttaxa, pct_gatherer, rich_ttaxa, rich_ttaxa_toe, rich_ttaxa_intol_facul, shannon_ttaxa_toe))) %>%
   mutate(SITE_SCORE = SITE_SCORE/5) %>%
   ungroup() %>%
-  select(site_id, SITE_SCORE, dom_5_ttaxa, rich_ttaxa_ept, rich_ttaxa_gatherer, rich_ttaxa_intol_facul, shannon_ttaxa_toe)
+  select(site_id, SITE_SCORE, dom_5_ttaxa, pct_gatherer, rich_ttaxa, rich_ttaxa_toe, rich_ttaxa_intol_facul, shannon_ttaxa_toe)
  
 # Alternative metrics set
 # metrics.scores<-metrics.scores %>% 
@@ -1573,7 +1546,7 @@ metrics.scores %>%
   ggplot(aes(condition_class, SITE_SCORE)) +
   coord_cartesian(ylim=c(0, 100))+
   geom_boxplot()
-ggsave(file.path(root.dir, "data/ibi/reruns", "lg_ibi_boxplot_set3_seed50-val+class2.png"), dpi = "screen")
+ggsave(file.path(root.dir, "data/ibi/reruns", "lg_ibi_boxplot_set6_seed80new-val+class2.png"), dpi = "screen")
 
 metrics.scores.ref<-metrics.scores %>% 
   filter(site_id %in% c(train.df.vec)) %>% 
@@ -1584,7 +1557,7 @@ metrics.scores.stress<-metrics.scores %>%
   filter(condition_class =="3") %>% 
   mutate(quant = quantile(SITE_SCORE, probs = 0.75))
 
-write_csv(train.df, file.path(root.dir, "data/ibi/reruns", "lg_ibi_training_seed50_20210105.csv"))
+write_csv(train.df, file.path(root.dir, "data/ibi/reruns", "lg_ibi_training_seed80new_20210106.csv"))
 ```
 
 
