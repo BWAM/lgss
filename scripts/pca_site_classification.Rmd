@@ -117,6 +117,8 @@ fielddata.pca.disturb2 <- fielddata.pca.disturb %>%
   # select(site_id, landcover_nat_pct, landcover_dev_pct, landcover_ag_pct, landcover_water_pct, spcond, ph, habitat_total_score)
   select(-c(do_pct_sat, temp))
 
+# write_csv(fielddata.pca.disturb2, file.path(root.dir, "data", "compile_2015-2019", "condition_classes", "LG_abiotic_pca_variables_20210112.csv"))
+
 # Subset further to remove all landcover but NAT
 fielddata.pca.disturb.nat <- fielddata.pca.disturb %>% 
   select(-c(landcover_dev_pct, landcover_ag_pct))
@@ -352,7 +354,7 @@ unique(class.LD.basins$basin)
 ```
 
 Exporting data
-```{r}
+```{r, eval = FALSE}
 # Export joined data with classes
 write.table(all.abiotic.classified, file.path(root.dir, "data/compile_2015-2019/field_data/2015-2019_LG_field_landcover_condclasses_20201216.csv"),sep=",", row.names = FALSE)
 

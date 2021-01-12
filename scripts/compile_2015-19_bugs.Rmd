@@ -267,8 +267,19 @@ bugmatrix.15to19[is.na(bugmatrix.15to19)] <- 0
 bugmatrix.15to19.unique <- bugmatrix.15to19 %>% 
   arrange(sample_date) %>% 
   distinct(site_id, .keep_all = TRUE) %>% 
-  select(-sample_date) %>% 
+  select(-sample_date) %>%
   filter(!(site_id %in% c("03-LSAM_N-7.9", "01-BLKE-0.1")))
+
+# Creating unique IDs (added later)
+    # Get sample dates (uncomment above), create unique ID and export
+# bugmatrix.15to19.unique.dates <- bugmatrix.15to19.unique %>% 
+#   select(site_id, sample_date) %>% 
+#   mutate(year = substr(sample_date, 3, 4),
+#     uniqueid = paste0(site_id, "_", year)) %>% 
+#   select(-year)
+# 
+# write.table(bugmatrix.15to19.unique.dates, file.path(root.dir, "data/compile_2015-2019/bugs/2015-2019_lowgrad_bugs_UNIQUEdates_20210111.csv"),sep=",", row.names = FALSE)
+
 
 ```
 
@@ -283,7 +294,10 @@ Check full bug list against master taxa table and reformat/update accordingly (a
 
 master.taxa <- read.csv(file.path(datamod.dir, "Final_Macro_ITS", "20201019_S_MSTR_MACRO_SPECIES.csv"), stringsAsFactors = FALSE, na.strings = c("", "NA")) %>% 
   rename_all(tolower) %>% 
-  setNames(., sub("mms_", "", names(.))) 
+  setNames(., sub("mms_", "", names(.))) %>% 
+  mutate(tolerance_name = ifelse(tolerance > 7, "tolerant", NA),
+         tolerance_name = ifelse(tolerance < 5, "intolerant", tolerance_name),
+         tolerance_name = ifelse(tolerance >= 5 & tolerance <= 7, "facultative", tolerance_name)) 
 
 bugnames.15to19 <- as.data.frame(names(bugmatrix.15to19)) %>% 
   rename(genspecies = "names(bugmatrix.15to19)") %>% 
@@ -293,6 +307,23 @@ bugnames.15to19 <- as.data.frame(names(bugmatrix.15to19)) %>%
 bugnames.15to19.mismatch <- bugnames.15to19 %>% 
   filter(!(genspecies %in% master.taxa$macro_genspecies))
 
+```
+
+Look into bad tolerance naming conventions
+```{r, eval = FALSE}
+master.taxa.tol <- master.taxa %>% 
+  filter(tolerance_name %in% "tolerant")
+sort(unique(master.taxa.tol$tolerance))
+
+master.taxa.fac <- master.taxa %>% 
+  filter(tolerance_name %in% "facultative")
+sort(unique(master.taxa.fac$tolerance))
+
+master.taxa.int <- master.taxa %>% 
+  filter(tolerance_name %in% "intolerant")
+sort(unique(master.taxa.int$tolerance))
+
+### Confirmed that these needed to be reclassified based on TVs. Did this in above chunk.
 ```
 
 
@@ -377,7 +408,7 @@ bugs.unique.wide <- bugs.unique.long %>%
 # Export long and wide sample taxa tables
 
 ```{r, eval = FALSE}
-write_csv(bugs.unique.long, file.path(root.dir, "data/compile_2015-2019/bugs", "2015-2019_lowgrad_taxa_unique_long_speciesfill_20210105.csv"))
+write_csv(bugs.unique.long, file.path(root.dir, "data/compile_2015-2019/bugs", "2015-2019_lowgrad_taxa_unique_long_speciesfill_20210111.csv"))
 write_csv(bugs.unique.wide, file.path(root.dir, "data/compile_2015-2019/bugs", "2015-2019_lowgrad_taxa_unique_wide_speciesfill_20210105.csv"))
 
 ```

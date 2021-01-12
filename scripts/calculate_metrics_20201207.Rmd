@@ -5,20 +5,9 @@ output: html_document
 
 # Data prep 
 
-```{r Load libs and dirs}
+```{r Load main libs and set directories}
 library(tidyverse)
 library(mmir)
-# library(ggfortify)
-# library(klaR) #Load this before tidyverse to avoid conflicts between MASS and dplyr
-# library(rsample)
-# library(recipes)
-# library(parsnip)
-# library(workflows)
-# library(yardstick)
-# library(themis)
-# library(rstanarm)
-# library(corrr)
-# library(purrr)
 
 root.dir <- rprojroot::find_root("lgss.Rproj")
 datamod.dir <- file.path("C:/Users/gmlemley/New York State Office of Information Technology Services/SMAS - Streams Data Modernization/Cleaned Files/FINAL_RELOADS_SEPT2020")
@@ -28,13 +17,22 @@ datamod.dir <- file.path("C:/Users/gmlemley/New York State Office of Information
 
 ```{r Load sample taxa and prep}
 
-taxa.df <- read_csv(file.path(root.dir, "data/compile_2015-2019/bugs", "2015-2019_lowgrad_taxa_unique_long_speciesfill_20210105.csv"))
+taxa.df <- read_csv(file.path(root.dir, "data/compile_2015-2019/bugs", "2015-2019_lowgrad_taxa_unique_long_speciesfill_20210111.csv"))
 
 # Create nested dataframe
 nest.df <- taxa.df %>%
   group_nest(site_id, .key = "data")
 
 ```
+
+```{r Exploring taxa, eval = FALSE}
+taxa.df.coleop.fam <- taxa.df %>% 
+  filter(order %in% "coleoptera") #%>% 
+  # distinct(family)
+
+
+```
+
 
 # Calculate metrics
 
@@ -974,34 +972,6 @@ train.df.PMA <- train.df %>%
 
 ```
 
-Not necessary because of even split we do using training and testing functions. 
-```{r Kolmogorov Mmirnov K-S Test, eval=FALSE}
-
-## Kolmogorov Mmirnov K-S Test to ensure equal distribution of "condition" in training and calibration sets 
-## Noted in Blocksom, 2009
-
-### Not necessary because of even split we do using training and testing functions. 
-
-
-# PULL IN DATA and replace below
-all_abiotic_classified <- read_csv(file.path("C:/Data/LGSS_scripting/lgss/data/compile_2015-2019/condition_classes",
-                                             "2015-2019_LG_condclasses_20201216.csv")) %>%
-  select(site_id, PC1)  
-
-test.df.sites<-test.df %>% 
-  select(uniqueid)
-test.df.pc1<-left_join(test.df.sites, all_abiotic_classified, by=c("uniqueid"))
-
-train.df.sites<-train.df %>% 
-  select(uniqueid)
-train.df.pc1<-left_join(train.df.sites, all_abiotic_classified, by=c("uniqueid"))
-
-
-ks.test(train.df.pc1$PC1, test.df.pc1$PC1)
-
-```
-
-
 ```{r Calculate Sensitivity and filter}
 
 # For full dataset
@@ -1399,7 +1369,8 @@ Select final metrics and plot
     # results in only 20 '0' metric scores!  BUT overall poorer DE.
 
 # Final set #6 - Resample using "new" set.seed(80) subsample. New metrics chosen based on new training sensitivities.
-metrics.final <- c("dom_5_ttaxa", "pct_gatherer", "rich_ttaxa", "rich_ttaxa_toe", "rich_ttaxa_intol_facul", "shannon_ttaxa_toe")
+# metrics.final <- c("dom_5_ttaxa", "pct_gatherer", "rich_ttaxa", "rich_ttaxa_toe", "rich_ttaxa_intol_facul", "shannon_ttaxa_toe")
+metrics.final <- c("dom_5_ttaxa", "pct_gatherer", "rich_ttaxa", "rich_ttaxa_toe", "rich_ttaxa_intol_facul", "shannon_ttaxa_toe", "pct_rich_ttaxa_cte")
 
 sens.df %>% 
   filter(metric %in% metrics.final) %>%
@@ -1417,8 +1388,8 @@ sens.final <- sens.df %>%
   filter(metric %in% metrics.final)
 
 # Export boxplots and sensitivites of the final metrics for the current run
-ggsave(file.path(root.dir, "data/ibi/reruns", "metrics_boxplots_set6_seed80new_20210106.png"), dpi = "screen")
-write_csv(sens.final, file.path(root.dir, "data/ibi/reruns/sens_final_seed80new_20210106.csv"))
+# ggsave(file.path(root.dir, "data/ibi/reruns", "metrics_boxplots_set6_seed80new_20210106.png"), dpi = "screen")
+# write_csv(sens.final, file.path(root.dir, "data/ibi/reruns/sens_final_seed80new_20210106.csv"))
 
 
 ```
@@ -1427,6 +1398,8 @@ write_csv(sens.final, file.path(root.dir, "data/ibi/reruns/sens_final_seed80new_
 
 train.df.final.corr <- train.df.final %>% 
   select(site_id, condition_class, all_of(metrics.final))
+
+### CREATE PLOTS USING PSYCH PACKAGE ###
 
 corr.finalfinal.cc1 <-train.df.final.corr %>% 
   filter(condition_class %in% "1") %>% 
@@ -1454,6 +1427,85 @@ tryCatch({
 
 ggcorrplot::ggcorrplot(corr.finalfinal_rownames.cc1)
 ```
+
+Plot metrics against abiotic variables 
+```{r}
+# Import sample dates for rejoining
+sample.dates <- read_csv(file.path(root.dir, "data", "compile_2015-2019", "bugs", "2015-2019_lowgrad_bugs_UNIQUEdates_20210111.csv"))
+
+# Import abiotic data (from PCA site classification script) and join sample dates
+abiotic <- read_csv(file.path(root.dir, "data", "compile_2015-2019", "condition_classes", "LG_abiotic_pca_variables_20210112.csv")) %>% 
+  left_join(sample.dates, by = "site_id") 
+  # select(-sample_date, -uniqueid)
+
+rm(sample.dates)
+
+# Import chem data for 2017-2019 samples (does not exist for 2015 & 2016) and transform as needed
+abiotic.chem <- read_csv(file.path(root.dir, "data/chemistry/2017-2019_chem_lowgrad_assoc_20210111.csv")) %>% 
+  mutate(result_value = ifelse(lab_qualifiers %in% "U", 0, result_value)) %>% 
+  filter(!is.na(result_value)) %>% 
+  mutate(year = substr(sample_date, 3, 4),
+    uniqueid = paste0(site_id, "_", year)) %>%
+  select(-year) %>% 
+  select(site_id, uniqueid, sample_date, chemical_name, result_value) %>% 
+  group_by(site_id, chemical_name) %>% 
+  spread(chemical_name, result_value) %>% 
+# Only retain unique sites used in IBI dev (some were resampled in 2017-2019)
+  filter(uniqueid %in% abiotic$uniqueid) %>% 
+  select(-c(sample_date, uniqueid, "temperature of ph analysis", "conductivity at 25 degrees celsius", "silver", "ph", "chlorophyll a",
+            "nitrogen, kjeldahl, total", "nitrogen"
+            ))
+
+abiotic <- abiotic %>% 
+  select(-sample_date, -uniqueid)
+
+train.df.cor <- train.df.final.corr %>% 
+  select(-condition_class)
+
+
+# Abiotic param correlations w metrics
+metrics.cor.abiotic<-left_join(train.df.cor, abiotic, by=c("site_id"))
+metric.param.corr<-metrics.cor.abiotic %>% 
+  select(-site_id) %>% 
+  correlate(use = "pairwise.complete.obs", method = "spearman")
+metric.param.corr<-metric.param.corr %>% 
+  select(term, dom_5_ttaxa, pct_gatherer, rich_ttaxa, rich_ttaxa_toe, rich_ttaxa_intol_facul, shannon_ttaxa_toe, pct_rich_ttaxa_cte) %>%
+  slice(8:14) %>% 
+  remove_rownames %>% 
+  column_to_rownames(var="term")  
+
+ggcorrplot::ggcorrplot(metric.param.corr)
+
+# Chemisty param correlations w metrics
+metrics.cor.chem<-left_join(train.df.cor, abiotic.chem, by=c("site_id"))
+metric.param.corr.chem<-metrics.cor.chem %>% 
+  select(-site_id) %>% 
+  correlate(use = "pairwise.complete.obs", method = "spearman")
+metric.param.corr.chem<-metric.param.corr.chem %>% 
+  select(term, dom_5_ttaxa, pct_gatherer, rich_ttaxa, rich_ttaxa_toe, rich_ttaxa_intol_facul, shannon_ttaxa_toe, pct_rich_ttaxa_cte) %>%
+  slice(8:33) %>% 
+  remove_rownames %>% 
+  column_to_rownames(var="term")  
+
+ggcorrplot::ggcorrplot(metric.param.corr.chem)
+
+
+# Look at cumulative correlations for each metric
+metric.abiotic.corscore <- metric.param.corr %>% 
+  abs()
+colSums(metric.abiotic.corscore) %>% 
+   knitr::kable()
+
+metric.chem.corscore <- metric.param.corr.chem %>% 
+  abs()
+colSums(metric.chem.corscore) %>% 
+   knitr::kable()
+
+
+```
+
+
+
 
 # Traditional IBI method
 
@@ -1546,7 +1598,7 @@ metrics.scores %>%
   ggplot(aes(condition_class, SITE_SCORE)) +
   coord_cartesian(ylim=c(0, 100))+
   geom_boxplot()
-ggsave(file.path(root.dir, "data/ibi/reruns", "lg_ibi_boxplot_set6_seed80new-val+class2.png"), dpi = "screen")
+# ggsave(file.path(root.dir, "data/ibi/reruns", "lg_ibi_boxplot_set6_seed80new-val+class2.png"), dpi = "screen")
 
 metrics.scores.ref<-metrics.scores %>% 
   filter(site_id %in% c(train.df.vec)) %>% 
@@ -1557,9 +1609,8 @@ metrics.scores.stress<-metrics.scores %>%
   filter(condition_class =="3") %>% 
   mutate(quant = quantile(SITE_SCORE, probs = 0.75))
 
-write_csv(train.df, file.path(root.dir, "data/ibi/reruns", "lg_ibi_training_seed80new_20210106.csv"))
+# write_csv(train.df, file.path(root.dir, "data/ibi/reruns", "lg_ibi_training_seed80new_20210106.csv"))
 ```
-
 
 
 
