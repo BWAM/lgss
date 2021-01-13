@@ -30,15 +30,12 @@ taxa.df.coleop.fam <- taxa.df %>%
   filter(order %in% "coleoptera") #%>% 
   # distinct(family)
 
-
 ```
 
 
 # Calculate metrics
 
 ```{r Tolerance Metric (HBI)}
-
-# Spot-check: not completed
 
 taxa_tol.df <- nest.df %>%
   mutate(
@@ -219,8 +216,6 @@ rich_subgr.df <- nest.df %>%
 ```
 
 ```{r Percent Richness}
-
-# Spot check: not completed
 
 rich_pct.df <- nest.df %>% 
   mutate(
@@ -946,6 +941,14 @@ train.df <- training(train_test_split) %>%
 test.df <- testing(train_test_split) %>% 
   filter(condition_class %in% c("1", "3"))
 
+# List sites for each
+test.df.vec<-c(test.df$site_id)
+train.df.vec<-c(train.df$site_id)
+
+# Create dataset with class 2 (set aside to help validate later)
+# test.class2.df <- metrics.df %>% 
+#   filter(condition_class %in% "2") 
+
 ```
 
 ```{r PMA percent comp, eval=FALSE}
@@ -1160,7 +1163,7 @@ Relative scope of impairment (SOI) looks at variability of metrics for ref sites
 Calculated as the ratio of the IQR of reference sites and the range of possible impairment (values beyond the poorer quality 25th percentile). Relative SOI values greater than 1 indicate too much variability among reference sites compared to the range of impairment. (See Blocksom 2002, 2009 (uses reverse equation))
 ```{r SOI}
 
-# Take metrics that pass 1st screening (barbour >2 & DE >70%), Filter to ref, combine metric name and predicted response (increase/decrease), take lower 25% for decrease, take top 75% for increase, take IQR
+# Take metrics that pass 1st screening, Filter to ref, combine metric name and predicted response (increase/decrease), take lower 25% for decrease, take top 75% for increase, take IQR
 
 reference_sites<-sens.df.subset %>% 
   filter(condition_class =="1") %>% 
@@ -1211,7 +1214,7 @@ metrics.drop.SOI <- SOI.df %>%
 metrics.drop <- c(metrics.drop.range, metrics.drop.SOI, metrics.drop.sim) %>% 
   unique()
 
-train.df.final <- train.df %>% 
+train.df.sens <- train.df %>% 
   select(site_id, condition_class, all_of(sensitive_mets.vec), -all_of(metrics.drop)) 
     
 ```
@@ -1224,16 +1227,16 @@ library(corrr)
 # Bowman (yr?; GLIMPSS): "While there is no consensus on “hard cutoffs” for detecting metric redundancy, several workers have chosen r-values in excess of 0.75 (Maxted et al. 2000, Blocksom and Johnson 2009), 0.85 (Butcher et al. 2003, Gerritsen et al. 2000a), and 0.90 (Barbour et al. 1996) to screen for metric redundancy. For GLIMPSS development, we chose Pearson r-values of 0.75 as the cutoff"
 
 
-corr.final<-train.df.final %>% 
+corr.sens<-train.df.sens %>% 
   select(-condition_class, -site_id) %>% 
   correlate(use = "pairwise.complete.obs", method = "spearman") %>% 
   rearrange() %>% 
   shave()
-corr.final_rownames <- corr.final %>%
+corr.sens_rownames <- corr.sens %>%
   # mutate_all(~replace(., is.na(.), 1)) %>% 
   remove_rownames %>% 
   column_to_rownames(var="term")  
-corr.final_highcorr <- corr.final_rownames %>%
+corr.sens_highcorr <- corr.sens_rownames %>%
   abs() %>% 
   round(digits = 3) %>% 
   rownames_to_column() %>%
@@ -1243,20 +1246,20 @@ corr.final_highcorr <- corr.final_rownames %>%
   column_to_rownames() %>% 
   purrr::discard(~all(is.na(.))) %>% 
   filter_all(any_vars(!is.na(.)))
-ggcorrplot::ggcorrplot(corr.final_rownames)
+ggcorrplot::ggcorrplot(corr.sens_rownames)
 
 # Same as above for only cond class 1  (as per Shull et al. 2019)
-corr.final.cc1 <-train.df.final %>% 
+corr.sens.cc1 <-train.df.sens %>% 
   filter(condition_class %in% "1") %>% 
   select(-condition_class, -site_id) %>% 
   correlate(use = "pairwise.complete.obs", method = "spearman") %>% 
   rearrange() %>% 
   shave()
-corr.final_rownames.cc1 <- corr.final.cc1 %>%
+corr.sens_rownames.cc1 <- corr.sens.cc1 %>%
   # mutate_all(~replace(., is.na(.), 1)) %>% 
   remove_rownames %>% 
   column_to_rownames(var="term")  
-corr.final_highcorr.cc1 <- corr.final_rownames.cc1 %>%
+corr.sens_highcorr.cc1 <- corr.sens_rownames.cc1 %>%
   abs() %>% 
   round(digits = 3) %>% 
   rownames_to_column() %>%
@@ -1266,7 +1269,7 @@ corr.final_highcorr.cc1 <- corr.final_rownames.cc1 %>%
   column_to_rownames() %>% 
   purrr::discard(~all(is.na(.))) %>% 
   filter_all(any_vars(!is.na(.)))
-ggcorrplot::ggcorrplot(corr.final_rownames.cc1)
+ggcorrplot::ggcorrplot(corr.sens_rownames.cc1)
 
 
 
@@ -1281,27 +1284,27 @@ ggcorrplot::ggcorrplot(corr.final_rownames.cc1)
 ```
 
 ```{r Table: highly correlated metrics}
-DT::datatable(head(corr.final_highcorr.cc1, 500), options = list(scrollX = TRUE))
+DT::datatable(head(corr.sens_highcorr.cc1, 500), options = list(scrollX = TRUE))
 
 ```
 
 
 ```{r Filtered metric boxplots, fig.width=12, fig.height=18}
 
-# train.df.final.long <- train.df.final %>% 
+# train.df.sens.long <- train.df.sens %>% 
 #   pivot_longer(!c(site_id, condition_class), names_to = "metric", values_to="value")
 # 
-# train.df.final.long2 <- tidyr::gather(train.df.final, metric, value, -site_id, -condition_class)  #%>% 
+# train.df.sens.long2 <- tidyr::gather(train.df.sens, metric, value, -site_id, -condition_class)  #%>% 
   # left_join(condition.df, by = "bas_loc_rm")
 
 
 # Get list of filtered metrics to this point
-metrics.filt <- train.df.final %>% 
+metrics.filt <- train.df.sens %>% 
   select(-c(site_id, condition_class)) %>% 
   names() %>% 
   sort()
 
-# metrics.filt_OLD <- train.df.final_OLD %>% 
+# metrics.filt_OLD <- train.df.sens_OLD %>% 
 #   select(-c(site_id, condition_class)) %>% 
 #   names() %>% 
 #   sort()
@@ -1339,7 +1342,7 @@ sens.filt <- sens.df %>%
 
 DT::datatable(head(sens.filt, 500), options = list(scrollX = TRUE))
 
-# write.csv(sens.filt, file.path(root.dir, "data/metrics/sens.filt_seed50_20210106.csv"))
+# write.csv(sens.filt, file.path(root.dir, "data/metrics/sens.filt_seed80new_20210113.csv"))
 ```
 
 
@@ -1396,23 +1399,23 @@ sens.final <- sens.df %>%
 
 ```{r Corr plot for final metrics}
 
-train.df.final.corr <- train.df.final %>% 
+train.df.final <- train.df.sens %>% 
   select(site_id, condition_class, all_of(metrics.final))
 
 ### CREATE PLOTS USING PSYCH PACKAGE ###
 
-corr.finalfinal.cc1 <-train.df.final.corr %>% 
+corr.final.cc1 <-train.df.final %>% 
   filter(condition_class %in% "1") %>% 
   select(-condition_class, -site_id) %>% 
   correlate(use = "pairwise.complete.obs", method = "spearman") %>% 
   rearrange() %>% 
   shave()
-corr.finalfinal_rownames.cc1 <- corr.finalfinal.cc1 %>%
+corr.final_rownames.cc1 <- corr.final.cc1 %>%
   # mutate_all(~replace(., is.na(.), 1)) %>% 
   remove_rownames %>% 
   column_to_rownames(var="term")  
 tryCatch({
-  corr.finalfinal_highcorr.cc1 <- corr.finalfinal_rownames.cc1 %>%
+  corr.final_highcorr.cc1 <- corr.final_rownames.cc1 %>%
     abs() %>% 
     round(digits = 3) %>% 
     rownames_to_column() %>%
@@ -1425,7 +1428,7 @@ tryCatch({
   error=function(e){cat("ERROR :",conditionMessage(e), "\n")}
 )
 
-ggcorrplot::ggcorrplot(corr.finalfinal_rownames.cc1)
+ggcorrplot::ggcorrplot(corr.final_rownames.cc1)
 ```
 
 Plot metrics against abiotic variables 
@@ -1452,42 +1455,110 @@ abiotic.chem <- read_csv(file.path(root.dir, "data/chemistry/2017-2019_chem_lowg
   spread(chemical_name, result_value) %>% 
 # Only retain unique sites used in IBI dev (some were resampled in 2017-2019)
   filter(uniqueid %in% abiotic$uniqueid) %>% 
-  select(-c(sample_date, uniqueid, "temperature of ph analysis", "conductivity at 25 degrees celsius", "silver", "ph", "chlorophyll a",
-            "nitrogen, kjeldahl, total", "nitrogen"
+  select(-c(sample_date, uniqueid, "temperature of ph analysis", "conductivity at 25 degrees celsius", "ph", "chlorophyll a", "silver"
+            #  "nitrogen, kjeldahl, total", "nitrogen"
             ))
 
 abiotic <- abiotic %>% 
   select(-sample_date, -uniqueid)
 
-train.df.cor <- train.df.final.corr %>% 
-  select(-condition_class)
 
+# train.df.sens.2 <- train.df.final %>% 
+#   select(-condition_class)
 
-# Abiotic param correlations w metrics
-metrics.cor.abiotic<-left_join(train.df.cor, abiotic, by=c("site_id"))
+# test.class2.df.cor <- test.class2.df %>% 
+#   select(site_id, all_of(metrics.final))
+
+# Abiotic param correlations w metrics (training)
+# metrics.cor.abiotic<-left_join(train.df.final.2, abiotic, by=c("site_id"))
+# metric.param.corr<-metrics.cor.abiotic %>% 
+#   select(-site_id) %>% 
+#   correlate(use = "pairwise.complete.obs", method = "spearman")
+# metric.param.corr<-metric.param.corr %>% 
+#   select(term, dom_5_ttaxa, pct_gatherer, rich_ttaxa, rich_ttaxa_toe, rich_ttaxa_intol_facul, shannon_ttaxa_toe, pct_rich_ttaxa_cte) %>%
+#   slice(8:14) %>% 
+#   remove_rownames %>% 
+#   column_to_rownames(var="term")  
+# ggcorrplot::ggcorrplot(metric.param.corr)
+
+# Abiotic param correlations w metrics (validation)
+test.df.cor <- test.df %>% 
+  select(site_id, all_of(metrics.final))
+
+metrics.cor.abiotic<-left_join(test.df.cor, abiotic, by=c("site_id"))
 metric.param.corr<-metrics.cor.abiotic %>% 
   select(-site_id) %>% 
   correlate(use = "pairwise.complete.obs", method = "spearman")
 metric.param.corr<-metric.param.corr %>% 
-  select(term, dom_5_ttaxa, pct_gatherer, rich_ttaxa, rich_ttaxa_toe, rich_ttaxa_intol_facul, shannon_ttaxa_toe, pct_rich_ttaxa_cte) %>%
+  select(term, all_of(metrics.final)) %>%
   slice(8:14) %>% 
   remove_rownames %>% 
   column_to_rownames(var="term")  
-
 ggcorrplot::ggcorrplot(metric.param.corr)
 
-# Chemisty param correlations w metrics
-metrics.cor.chem<-left_join(train.df.cor, abiotic.chem, by=c("site_id"))
+## Plot above w validation + class 2?
+
+# Chemistry (independent dataset) correlations w metrics (all sites (44), final metrics)
+chemsites.metrics.final <- metrics.df %>%
+  select(site_id, all_of(metrics.final)) %>% 
+  filter(site_id %in% abiotic.chem$site_id)
+
+metrics.cor.chem<-left_join(chemsites.metrics.final, abiotic.chem, by=c("site_id"))
 metric.param.corr.chem<-metrics.cor.chem %>% 
   select(-site_id) %>% 
   correlate(use = "pairwise.complete.obs", method = "spearman")
 metric.param.corr.chem<-metric.param.corr.chem %>% 
-  select(term, dom_5_ttaxa, pct_gatherer, rich_ttaxa, rich_ttaxa_toe, rich_ttaxa_intol_facul, shannon_ttaxa_toe, pct_rich_ttaxa_cte) %>%
+  select(term, all_of(metrics.final)) %>% 
   slice(8:33) %>% 
   remove_rownames %>% 
   column_to_rownames(var="term")  
-
 ggcorrplot::ggcorrplot(metric.param.corr.chem)
+
+# Chemistry (independent dataset) correlations w metrics (training only; 17 site matches)
+train.df.final.2 <- train.df.final %>%
+  select(-condition_class)
+
+metrics.cor.chem<-left_join(train.df.final.2, abiotic.chem, by=c("site_id"))
+metric.param.corr.chem<-metrics.cor.chem %>% 
+  select(-site_id) %>% 
+  correlate(use = "pairwise.complete.obs", method = "spearman")
+metric.param.corr.chem<-metric.param.corr.chem %>% 
+  select(term, all_of(metrics.final)) %>%
+  slice(8:33) %>% 
+  remove_rownames %>% 
+  column_to_rownames(var="term")  
+ggcorrplot::ggcorrplot(metric.param.corr.chem)
+
+# Chemisty param correlations w metrics (validation only; 5 SITES ONLY)
+metrics.cor.chem<-left_join(test.df.cor, abiotic.chem, by=c("site_id"))
+metric.param.corr.chem<-metrics.cor.chem %>%
+  select(-site_id) %>%
+  correlate(use = "pairwise.complete.obs", method = "spearman")
+metric.param.corr.chem<-metric.param.corr.chem %>%
+  select(term, all_of(metrics.final)) %>%
+  slice(8:33) %>%
+  remove_rownames %>%
+  column_to_rownames(var="term")
+ggcorrplot::ggcorrplot(metric.param.corr.chem)
+
+
+# Chemistry (independent dataset) correlations w metrics (all sites, filtered metrics)
+chemsites.metrics.filt <- metrics.df %>%
+  select(site_id, all_of(metrics.filt)) %>% 
+  filter(site_id %in% abiotic.chem$site_id)
+
+metrics.cor.chem<-left_join(chemsites.metrics.filt, abiotic.chem, by=c("site_id"))
+metric.param.corr.chem<-metrics.cor.chem %>% 
+  select(-site_id) %>% 
+  correlate(use = "pairwise.complete.obs", method = "spearman")
+metric.param.corr.chem<-metric.param.corr.chem %>% 
+  select(term, all_of(metrics.filt)) %>% 
+  slice(35:53) %>% 
+  remove_rownames %>% 
+  column_to_rownames(var="term")  
+ggcorrplot::ggcorrplot(metric.param.corr.chem)
+
+# ggsave(file.path(root.dir, "data/metrics/abiotic_corr", "metrics_chem_corr_seed80new_filt_20210212.png"), dpi = "print")
 
 
 # Look at cumulative correlations for each metric
@@ -1496,10 +1567,24 @@ metric.abiotic.corscore <- metric.param.corr %>%
 colSums(metric.abiotic.corscore) %>% 
    knitr::kable()
 
-metric.chem.corscore <- metric.param.corr.chem %>% 
-  abs()
-colSums(metric.chem.corscore) %>% 
-   knitr::kable()
+# metric.chem.corscore <- metric.param.corr.chem %>% 
+#   abs() %>% 
+#   mutate(sum = rowSums(.))
+
+metric.chem.corscore2 <- metric.param.corr.chem %>% 
+  t() %>% 
+  as.data.frame() %>% 
+  rownames_to_column(var = "metric") %>%
+  mutate(corrscore = abs(rowSums(.[2:20]))) %>% 
+  select(metric, corrscore, everything())
+
+metric.chem.corscore3 <- metric.chem.corscore2 %>% 
+  filter(metric %in% metrics.filt)
+
+# colSums(metric.chem.corscore) %>% 
+#    knitr::kable()
+
+# write_csv(metric.chem.corscore2, file.path(root.dir, "data/metrics/abiotic_corr", "metrics_chem_corr_scores_20210113.csv"))
 
 
 ```
@@ -1542,10 +1627,10 @@ metrics.scores<-metrics.df.standardized.long.percentiles %>%
 # Metrics set 3 (FINAL CHOSEN SET)
 metrics.scores<-metrics.scores %>%
   group_by(site_id) %>%
-  mutate(SITE_SCORE = sum(c(dom_5_ttaxa, pct_gatherer, rich_ttaxa, rich_ttaxa_toe, rich_ttaxa_intol_facul, shannon_ttaxa_toe))) %>%
-  mutate(SITE_SCORE = SITE_SCORE/5) %>%
+  mutate(SITE_SCORE = sum(c(dom_5_ttaxa, pct_gatherer, rich_ttaxa, rich_ttaxa_toe, rich_ttaxa_intol_facul, shannon_ttaxa_toe, pct_rich_ttaxa_cte))) %>%
+  mutate(SITE_SCORE = SITE_SCORE/7) %>%
   ungroup() %>%
-  select(site_id, SITE_SCORE, dom_5_ttaxa, pct_gatherer, rich_ttaxa, rich_ttaxa_toe, rich_ttaxa_intol_facul, shannon_ttaxa_toe)
+  select(site_id, SITE_SCORE, dom_5_ttaxa, pct_gatherer, rich_ttaxa, rich_ttaxa_toe, rich_ttaxa_intol_facul, shannon_ttaxa_toe, pct_rich_ttaxa_cte)
  
 # Alternative metrics set
 # metrics.scores<-metrics.scores %>% 
@@ -1561,9 +1646,6 @@ cond_class<-metrics.df %>%
 
 metrics.scores<-left_join(metrics.scores, cond_class, by = c("site_id"))
 metrics.scores<-metrics.scores
-
-test.df.vec<-c(test.df$site_id)
-train.df.vec<-c(train.df$site_id)
 
 # Plot training
 metrics.scores %>% 
@@ -1612,6 +1694,11 @@ metrics.scores.stress<-metrics.scores %>%
 # write_csv(train.df, file.path(root.dir, "data/ibi/reruns", "lg_ibi_training_seed80new_20210106.csv"))
 ```
 
+
+
+
+
+# END TRADITIONAL IBI SECTION
 
 
 #Training and Logistical Regression model
@@ -1865,281 +1952,4 @@ test.df.confuse %>%
     c("accuracy", "precision", "recall", "f_meas")) %>%
   as_tibble()
   
-```
-
-
-
-
-# ADAPT FROM MATT'S CODE
-
-
-```{r plot params and probability binary classes}
-
-# Test
-
-all_abiotic_classified <- read_csv(file.path(here::here(),
-                                             "data",
-                                             "all.abiotic.classified.chem.watershed.csv"))
-all_abiotic_classified<-all_abiotic_classified %>% 
-  rename(uniqueid = uniqueID)
-
-
-test.df.stressors<-left_join(test.df, all_abiotic_classified, by=c("uniqueid"))
-
-test.df.stressors<-test.df.stressors %>% 
-  select(uniqueid,.pred_1, ALK, NH3, CHLA,SECCHI, TKN, NOx, PH, COND, TN, TP, DEV, IMPERV, FOREST, NATURAL, AGRI, PC1) %>% 
-  mutate(prediction = case_when(
-    .pred_1 > 0.5 ~ "above_50",
-    .pred_1 < 0.5 ~ "below_50",
-    
-  ))
-
-all_abiotic_classified <- read_csv(file.path(here::here(),
-                                             "data",
-                                             "all.abiotic.classified.chem.watershed.csv"))
-all_abiotic_classified<-all_abiotic_classified %>% 
-  rename(uniqueid = uniqueID)
-
-
-test.df.stressors<-left_join(test.df, all_abiotic_classified, by=c("uniqueid"))
-
-test.df.stressors<-test.df.stressors %>% 
-  filter(condition_class %in%c("1","3")) %>% 
-  select(uniqueid,.pred_1, ALK, NH3, CHLA,SECCHI, TKN, NOx, PH, COND, TN, TP, DEV, IMPERV, FOREST, NATURAL, AGRI, PC1) %>% 
-  mutate(prediction = case_when(
-    .pred_1 > 0.5 ~ "above_50",
-    .pred_1 < 0.5 ~ "below_50",
-    
-  ))
-
-test.df.stressors.long<-test.df.stressors %>% 
-  select(-prediction, -.pred_1) %>% 
-  pivot_longer(!uniqueid, values_to = "value", names_to = "parameter")
-
-
-test.df.stressor.class<-test.df.stressors %>% 
-  select(uniqueid, prediction)
-
-test.df.stressors.long<-left_join(test.df.stressors.long, test.df.stressor.class, by=c("uniqueid"))
-
-
-
-q <- test.df.stressors.long %>% 
-  ggplot(aes(prediction, value)) + geom_boxplot()
-
-q + facet_wrap(vars(parameter), scales = "free")
-
-
-# All Sites
-
-all_abiotic_classified <- read_csv(file.path(here::here(),
-                                             "data",
-                                             "all.abiotic.classified.chem.watershed.csv"))
-all_abiotic_classified<-all_abiotic_classified %>% 
-  rename(uniqueid = uniqueID)
-
-
-all.df.stressors<-left_join(all.df, all_abiotic_classified, by=c("uniqueid"))
-
-all.df.stressors<-all.df.stressors %>% 
-  select(uniqueid,.pred_1, ALK, NH3, CHLA,SECCHI, TKN, NOx, PH, COND, TN, TP, DEV, IMPERV, FOREST, NATURAL, AGRI, PC1) %>% 
-  mutate(prediction = case_when(
-    .pred_1 > 0.5 ~ "above_50",
-    .pred_1 < 0.5 ~ "below_50",
-    
-  ))
-
-all_abiotic_classified <- read_csv(file.path(here::here(),
-                                             "data",
-                                             "all.abiotic.classified.chem.watershed.csv"))
-all_abiotic_classified<-all_abiotic_classified %>% 
-  rename(uniqueid = uniqueID)
-
-
-all.df.stressors<-left_join(all.df, all_abiotic_classified, by=c("uniqueid"))
-
-all.df.stressors<-all.df.stressors %>% 
-  #filter(condition_class %in%c("1","3")) %>% 
-  select(uniqueid,.pred_1, ALK, NH3, CHLA,SECCHI, TKN, NOx, PH, COND, TN, TP, DEV, IMPERV, FOREST, NATURAL, AGRI, PC1) %>% 
-  mutate(prediction = case_when(
-    .pred_1 > 0.5 ~ "above_50",
-    .pred_1 < 0.5 ~ "below_50",
-    
-  ))
-
-all.df.stressors.long<-all.df.stressors %>% 
-  select(-prediction, -.pred_1) %>% 
-  pivot_longer(!uniqueid, values_to = "value", names_to = "parameter")
-
-
-all.df.stressor.class<-all.df.stressors %>% 
-  select(uniqueid, prediction)
-
-all.df.stressors.long<-left_join(all.df.stressors.long, all.df.stressor.class, by=c("uniqueid"))
-
-all.df.stressors.median<-all.df.stressors.long %>% 
-  group_by(parameter, prediction) %>% 
-  summarise(median = median(value), 
-            q25 = quantile(value, probs = 0.25),
-            q75 = quantile(value, probs = 0.75))
-
-
-q <- all.df.stressors.long %>% 
-  ggplot(aes(prediction, value)) + geom_boxplot()
-
-q + facet_wrap(vars(parameter), scales = "free")
-
-
-
-
-
-
-all.df.stressors.long %>% 
-  filter(parameter == "SECCHI") %>% 
-  ggplot(aes(prediction, value)) + geom_boxplot()+geom_hline(yintercept = 2)+
-  ylab("Secchi Depth (m)")
-
-all.df.stressors.long %>% 
-  filter(parameter == "TP") %>% 
-   ggplot(aes(prediction, value)) + geom_boxplot()+geom_hline(yintercept = 20)+
-  coord_cartesian(ylim=c(0, 100))+
-  ylab("TP (ug/L)")
-
-all.df.stressors.long %>% 
-  filter(parameter == "CHLA") %>% 
-   ggplot(aes(prediction, value)) + geom_boxplot()+geom_hline(yintercept = 8)+
-  coord_cartesian(ylim=c(0, 100))+
-  ylab("Chlorophyll-a (ug/L)")
-
-all.df.stressors.long %>% 
-  filter(parameter == "COND") %>% 
-   ggplot(aes(prediction, value)) + geom_boxplot()+
-  coord_cartesian(ylim=c(0, 1000))+
-  ylab("Specific Conductance (us/cm)")
-
-
-all.df.stressors.long %>% 
-  filter(parameter == "NATURAL") %>% 
-   ggplot(aes(prediction, value)) + geom_boxplot()+
-  coord_cartesian(ylim=c(0, 100))+
-  ylab("Watershed Natural Land Cover (%)")
-
-all.df.stressors.long %>% 
-  filter(parameter == "FOREST") %>% 
-   ggplot(aes(prediction, value)) + geom_boxplot()+
-  coord_cartesian(ylim=c(0, 100))+
-  ylab("Watershed Forest Land Cover (%)")
-
-all.df.stressors.long %>% 
-  filter(parameter == "IMPERV") %>% 
-   ggplot(aes(prediction, value)) + geom_boxplot()+
-  coord_cartesian(ylim=c(0, 60))+
-  ylab("Watershed Mean Impervious Cover (%)")
-
-all.df.stressors.long %>% 
-  filter(parameter == "DEV") %>% 
-   ggplot(aes(prediction, value)) + geom_boxplot()+
-  coord_cartesian(ylim=c(0, 100))+
-  ylab("Watershed Developed Land Cover (%)")
-
-all.df.stressors.long %>% 
-  filter(parameter == "AGRI") %>% 
-   ggplot(aes(prediction, value)) + geom_boxplot()+
-  coord_cartesian(ylim=c(0, 100))+
-  ylab("Watershed Agricultural Land Cover (%)")
-
-all.df.stressors.long %>% 
-  filter(parameter == "PH") %>% 
-   ggplot(aes(prediction, value)) + geom_boxplot()+
-  coord_cartesian(ylim=c(5, 10))+
-  ylab("pH")
-
-all.df.stressors.long %>% 
-  filter(parameter == "NOx") %>% 
-   ggplot(aes(prediction, value)) + geom_boxplot()+
-  coord_cartesian(ylim=c(0, 1000))+
-  ylab("NOx (ug/L)")
-
-all.df.stressors.long %>% 
-  filter(parameter == "TN") %>% 
-   ggplot(aes(prediction, value)) + geom_boxplot()+
-  coord_cartesian(ylim=c(0, 2500))+
-  ylab("TN (ug/L)")
-
-all.df.stressors.long %>% 
-  filter(parameter == "TKN") %>% 
-   ggplot(aes(prediction, value)) + geom_boxplot()+
-  coord_cartesian(ylim=c(0, 2500))+
-  ylab("TKN (ug/L)")
-
-all.df.stressors.long %>% 
-  filter(parameter == "ALK") %>% 
-   ggplot(aes(prediction, value)) + geom_boxplot()+
-  coord_cartesian(ylim=c(0, 150))+
-  ylab("Alkalinity (mg/L CaCO3)")
-
-```
-
-
-
-
-# Plot individual and sensitive metrics (ALREADY DONE IN CHUNK 27)
-
-```{r Plot metrics}
-
-### SCRIPT STOPS AT CODE BELOW ###
-
-train.df %>% 
-  mutate(condition_class = factor(condition_class, c("1", "2", "3"))) %>% 
-ggplot(aes(condition_class, rich_genus)) +
-  geom_boxplot()
-
-
-
-train.df.sensitive<-train.df %>% 
-   select(uniqueid, condition_class,all_of(sensitive_mets.vec))
-  
-
-train.df.long<-train.df.sensitive %>%
-  select(-condition_class) %>% 
-  pivot_longer(!uniqueid, values_to = "value", names_to = "metric")
-
-train.df.class<-train.df %>% 
-  select(uniqueid, condition_class)
-
-train.df.long<-left_join(train.df.long, train.df.class, by=c("uniqueid"))
-
-
-p <- train.df.long %>% 
-  mutate(condition_class = factor(condition_class, c("1", "2", "3"))) %>%  
-  ggplot(aes(condition_class, value)) + geom_boxplot()
-
-p + facet_wrap(vars(metric), scales = "free")
-
-
-
-metrics.df.sensitive<-metrics.df %>% 
-   select(uniqueid, condition_class,all_of(sensitive_mets.vec))
-  
-
-metrics.df.long<-metrics.df.sensitive %>%
-  select(-condition_class) %>% 
-  pivot_longer(!uniqueid, values_to = "value", names_to = "metric")
-
-metrics.df.class<-metrics.df %>% 
-  select(uniqueid, condition_class)
-
-metrics.df.long<-left_join(metrics.df.long, metrics.df.class, by=c("uniqueid"))
-
-s <- metrics.df.long %>% 
-  mutate(condition_class = factor(condition_class, c("1", "2", "3"))) %>%  
-  ggplot(aes(condition_class, value)) + geom_boxplot()
-
-s + facet_wrap(vars(metric), scales = "free")
-
-
-
-
-
-
 ```
