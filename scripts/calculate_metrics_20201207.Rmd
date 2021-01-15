@@ -39,7 +39,7 @@ taxa.df.coleop.fam <- taxa.df %>%
 
 taxa_tol.df <- nest.df %>%
   mutate(
-    hbi_taxa_tol = taxa_tol_index(.dataframe = .,
+    hbi_taxa_tolerance = taxa_tol_index(.dataframe = .,
                                     .key_col = site_id,
                                     .counts_col = count,
                                     .tol_col = tol_int,
@@ -88,12 +88,18 @@ rich_std.df <- nest.df %>%
                             .group_col = ffg,
                             .unnest_col = data,
                             .filter = !is.na(ffg)),
-    # Tolerance value richness
-    rich_tol = taxa_rich(.dataframe = .,
-                            .key_col = site_id,
-                            .group_col = tol_char,
-                            .unnest_col = data,
-                            .filter = !is.na(tol_char))
+    # Tolerance classification richness
+    # rich_tolerance = taxa_rich(.dataframe = .,
+    #                         .key_col = site_id,
+    #                         .group_col = tol_char,
+    #                         .unnest_col = data,
+    #                         .filter = !is.na(tol_char))
+    # # Tolerance value richness
+    # rich_tolerance_num = taxa_rich(.dataframe = .,
+    #                         .key_col = site_id,
+    #                         .group_col = tol_int,
+    #                         .unnest_col = data,
+    #                         .filter = !is.na(tol_int))
   ) %>% 
   select(-data)
 
@@ -201,7 +207,7 @@ rich_subgr.df <- nest.df %>%
                             .filter = subfamily %in% "chironominae",
                             .unnest_col = data),
     # Richness of intolerant and facultative Taxa 
-    rich_ttaxa_intol_facul = taxa_rich(.dataframe = .,
+    rich_ttaxa_tol_0to7 = taxa_rich(.dataframe = .,
                              .key_col = site_id,
                              .group_col = ttaxa,
                              .filter = tol_int <=6,
@@ -305,7 +311,7 @@ rich_pct.df <- nest.df %>%
                              .filter = subfamily %in% "chironominae",
                              .unnest_col = data),
     # Percent Richness of Intolerant and Facultative Taxa
-     pct_rich_ttaxa_intol_facul = taxa_pct_rich(.dataframe = .,
+     pct_rich_ttaxa_tol_0to7 = taxa_pct_rich(.dataframe = .,
                              .key_col = site_id,
                              .group_col = ttaxa,
                              .filter = tol_int <=6,
@@ -366,9 +372,6 @@ div.df <- nest.df %>%
 
 ```{r Subgroup Diversity}
 
-# Not spot-checked
-# Changed group_col from order to ttaxa. Output differences were large.
-
 div_subgr.df <- nest.df %>%
   mutate(
     gini_simpson_ttaxa_ept = taxa_div(.dataframe = .,
@@ -377,6 +380,23 @@ div_subgr.df <- nest.df %>%
                             .group_col = ttaxa,
                             .filter = order %in% c("ephemeroptera",
                                                    "plecoptera",
+                                                   "trichoptera"),
+                            .job = "gini_simpson",
+                            .unnest_col = data),
+    gini_simpson_ttaxa_toe = taxa_div(.dataframe = .,
+                            .key_col = site_id,
+                            .counts_col = count,
+                            .group_col = ttaxa,
+                            .filter = order %in% c("ephemeroptera",
+                                                   "odonata",
+                                                   "trichoptera"),
+                            .job = "gini_simpson",
+                            .unnest_col = data),
+    gini_simpson_ttaxa_et = taxa_div(.dataframe = .,
+                            .key_col = site_id,
+                            .counts_col = count,
+                            .group_col = ttaxa,
+                            .filter = order %in% c("ephemeroptera",
                                                    "trichoptera"),
                             .job = "gini_simpson",
                             .unnest_col = data),
@@ -389,7 +409,14 @@ div_subgr.df <- nest.df %>%
                                                    "trichoptera"),
                             .job = "simpson",
                             .unnest_col = data),
-    # Simpson Diversity of Coleoptera, Odonata, and Trichoptera Genus-Species
+    simpson_ttaxa_et = taxa_div(.dataframe = .,
+                            .key_col = site_id,
+                            .counts_col = count,
+                            .group_col = ttaxa,
+                            .filter = order %in% c("ephemeroptera",
+                                                   "trichoptera"),
+                            .job = "simpson",
+                            .unnest_col = data),
     simpson_ttaxa_potec = taxa_div(.data = .,
                             .key_col = site_id,
                             .group_col = ttaxa,
@@ -457,7 +484,15 @@ div_subgr.df <- nest.df %>%
                             .job = "shannon",
                             .base_log = 2,
                             .unnest_col = data),
-    # Shannon Diversity of Coleoptera, Odonata, and Trichoptera Genus-Species
+    shannon_ttaxa_et = taxa_div(.dataframe = .,
+                            .key_col = site_id,
+                            .counts_col = count,
+                            .group_col = ttaxa,
+                            .filter = order %in% c("ephemeroptera",
+                                                   "trichoptera"),
+                            .job = "shannon",
+                            .base_log = 2,
+                            .unnest_col = data),
     shannon_ttaxa_potec = taxa_div(.dataframe = .,
                             .key_col = site_id,
                             .group_col = ttaxa,
@@ -520,16 +555,95 @@ div_subgr.df <- nest.df %>%
                                                    "ephemeroptera"), 
                             .job = "shannon",
                             .base_log = 2,
-                            .unnest_col = data),  
-    # Shannon Diversity of Intolerant and Facultative Taxa
-    shannon_ttaxa_intol_facul = taxa_div(.dataframe = .,
-                            .key_col = site_id,
-                            .group_col = ttaxa,
-                            .counts_col = count,
-                            .filter = tol_int <=6,
-                            .job = "shannon",
-                            .base_log = 2,
-                            .unnest_col = data)
+                            .unnest_col = data),
+    # margalef_ttaxa_toe = taxa_div(.dataframe = .,
+    #                         .key_col = site_id,
+    #                         .counts_col = count,
+    #                         .group_col = ttaxa,
+    #                         .job = "margalef",
+    #                         .filter = order %in% c("odonata",
+    #                                                "trichoptera",
+    #                                                "ephemeroptera"), 
+    #                         .unnest_col = data),
+    # menhinick_ttaxa_toe = taxa_div(.dataframe = .,
+    #                         .key_col = site_id,
+    #                         .counts_col = count,
+    #                         .group_col = ttaxa,
+    #                         .job = "menhinick",
+    #                         .filter = order %in% c("odonata",
+    #                                                "trichoptera",
+    #                                                "ephemeroptera"), 
+    #                         .unnest_col = data),
+    # pielou_ttaxa_toe = taxa_div(.dataframe = .,
+    #                         .key_col = site_id,
+    #                         .counts_col = count,
+    #                         .group_col = ttaxa,
+    #                         .job = "pielou",
+    #                         .filter = order %in% c("odonata",
+    #                                                "trichoptera",
+    #                                                "ephemeroptera"), 
+    #                         .unnest_col = data),
+    # margalef_ttaxa_et = taxa_div(.dataframe = .,
+    #                         .key_col = site_id,
+    #                         .counts_col = count,
+    #                         .group_col = ttaxa,
+    #                         .job = "margalef",
+    #                         .filter = order %in% c("trichoptera",
+    #                                                "ephemeroptera"), 
+    #                         .unnest_col = data),
+    # menhinick_ttaxa_et = taxa_div(.dataframe = .,
+    #                         .key_col = site_id,
+    #                         .counts_col = count,
+    #                         .group_col = ttaxa,
+    #                         .job = "menhinick",
+    #                         .filter = order %in% c("trichoptera",
+    #                                                "ephemeroptera"), 
+    #                         .unnest_col = data),
+    # pielou_ttaxa_et = taxa_div(.dataframe = .,
+    #                         .key_col = site_id,
+    #                         .counts_col = count,
+    #                         .group_col = ttaxa,
+    #                         .job = "pielou",
+    #                         .filter = order %in% c("trichoptera",
+    #                                                "ephemeroptera"), 
+    #                         .unnest_col = data),
+    # Diversity of Intolerant and Facultative Taxa
+    # shannon_ttaxa_tol_0to7 = taxa_div(.dataframe = .,
+    #                         .key_col = site_id,
+    #                         .group_col = ttaxa,
+    #                         .counts_col = count,
+    #                         .filter = tol_int <=7,
+    #                         .job = "shannon",
+    #                         .base_log = 2,
+    #                         .unnest_col = data),
+    # simpson_ttaxa_tol_0to7 = taxa_div(.data = .,
+    #                         .key_col = site_id,
+    #                         .group_col = ttaxa,
+    #                         .counts_col = count,
+    #                         .filter = tol_int <=7,
+    #                         .job = "simpson",
+    #                         .unnest_col = data)
+    # margalef_ttaxa_tol_0to7 = taxa_div(.dataframe = .,
+    #                         .key_col = site_id,
+    #                         .counts_col = count,
+    #                         .group_col = ttaxa,
+    #                         .job = "margalef",
+    #                         .filter = tol_int <=7,
+    #                         .unnest_col = data),
+    # menhinick_ttaxa_tol_0to7 = taxa_div(.dataframe = .,
+    #                         .key_col = site_id,
+    #                         .counts_col = count,
+    #                         .group_col = ttaxa,
+    #                         .job = "menhinick",
+    #                         .filter = tol_int <=7,
+    #                         .unnest_col = data),
+    # pielou_ttaxa_tol_0to7 = taxa_div(.dataframe = .,
+    #                         .key_col = site_id,
+    #                         .counts_col = count,
+    #                         .group_col = ttaxa,
+    #                         .job = "pielou",
+    #                         .filter = tol_int <=7,
+    #                         .unnest_col = data)
   ) %>% 
   select(-data)
 
@@ -915,7 +1029,7 @@ metrics.df <- metrics.df %>%
 
 
 
-# Modeling and filtering
+# Subsampling
 
 
 ```{r Split into training and test (validation) datasets}
@@ -950,8 +1064,8 @@ train.df.vec<-c(train.df$site_id)
 #   filter(condition_class %in% "2") 
 
 ```
-
-```{r PMA percent comp, eval=FALSE}
+# Calculating pct comp for PMA metric above
+```{r, eval=FALSE}
 
 ### Determining percent composition of each major group for PMA calculation above
 
@@ -974,6 +1088,7 @@ train.df.PMA <- train.df %>%
 ### Could also calculate PMA for FFG Composition (PMA-FFG)
 
 ```
+# Calculating sensitivies and initial filtering 
 
 ```{r Calculate Sensitivity and filter}
 
@@ -1206,9 +1321,9 @@ metrics.drop.SOI <- SOI.df %>%
 ```
 
 
-## Compile and remove underperforming metrics
+# Metrics reduction stage 2
 
-```{r}
+```{r Compile and remove underperforming metrics}
 
 # Compile list of metrics to drop
 metrics.drop <- c(metrics.drop.range, metrics.drop.SOI, metrics.drop.sim) %>% 
@@ -1342,13 +1457,13 @@ sens.filt <- sens.df %>%
 
 DT::datatable(head(sens.filt, 500), options = list(scrollX = TRUE))
 
-# write.csv(sens.filt, file.path(root.dir, "data/metrics/sens.filt_seed80new_20210113.csv"))
+# write.csv(sens.filt, file.path(root.dir, "data/metrics/sens.filt_seed80new_20210114.csv"))
 ```
 
 
-Select final metrics and plot
+# Final metrics boxplots
 
-```{r}
+```{r Final metrics boxplots}
 
 # Final set #1
 # metrics.final <- c("dom_5_ttaxa", "pct_rich_ttaxa_cote", "rich_ttaxa_et", "rich_ttaxa_gatherer", "rich_ttaxa_intolerant", "shannon_ttaxa_toe")
@@ -1358,22 +1473,22 @@ Select final metrics and plot
     # results in 101 '0' metric scores. No metrics intercorr above 0.75.
 
 # Final set #3 - Similar to above using more inclusive counterparts to see if results in <101 '0' metric scores.
-# metrics.final <- c("dom_5_ttaxa", "rich_ttaxa_ept", "rich_ttaxa_gatherer", "rich_ttaxa_intol_facul", "shannon_ttaxa_toe")
+# metrics.final <- c("dom_5_ttaxa", "rich_ttaxa_ept", "rich_ttaxa_gatherer", "rich_ttaxa_tol_0to7", "shannon_ttaxa_toe")
     # results in only 64 '0' metric scores. Better final IBI DE! Able to score more sites.
-    # shannon_ttaxa_toe corr w rich_ttaxa_intol_facul at 0.77. But arguement to keep both, since different groups (one diversity, other tolerance/richness?)
+    # shannon_ttaxa_toe corr w rich_ttaxa_tol_0to7 at 0.77. But arguement to keep both, since different groups (one diversity, other tolerance/richness?)
     ### FINAL CHOSEN SET ###
 
 # Final set #4 - Adding back in pct_rich_ttaxa_cote.
-# metrics.final <- c("dom_5_ttaxa", "pct_rich_ttaxa_cote", "rich_ttaxa_ept", "rich_ttaxa_gatherer", "rich_ttaxa_intol_facul", "shannon_ttaxa_toe")
+# metrics.final <- c("dom_5_ttaxa", "pct_rich_ttaxa_cote", "rich_ttaxa_ept", "rich_ttaxa_gatherer", "rich_ttaxa_tol_0to7", "shannon_ttaxa_toe")
     # No significant difference. (68 '0' metrics scores)
 
 # Final set #5 - Subbing in even more inclusing metric with slighly lower DE's.
-# metrics.final <- c("dom_5_ttaxa", "rich_ttaxa", "rich_ttaxa_gatherer", "rich_ttaxa_intol_facul", "shannon_ttaxa_cote")
+# metrics.final <- c("dom_5_ttaxa", "rich_ttaxa", "rich_ttaxa_gatherer", "rich_ttaxa_tol_0to7", "shannon_ttaxa_cote")
     # results in only 20 '0' metric scores!  BUT overall poorer DE.
 
 # Final set #6 - Resample using "new" set.seed(80) subsample. New metrics chosen based on new training sensitivities.
-# metrics.final <- c("dom_5_ttaxa", "pct_gatherer", "rich_ttaxa", "rich_ttaxa_toe", "rich_ttaxa_intol_facul", "shannon_ttaxa_toe")
-metrics.final <- c("dom_5_ttaxa", "pct_gatherer", "rich_ttaxa", "rich_ttaxa_toe", "rich_ttaxa_intol_facul", "shannon_ttaxa_toe", "pct_rich_ttaxa_cte")
+# metrics.final <- c("dom_5_ttaxa", "pct_gatherer", "rich_ttaxa", "rich_ttaxa_toe", "rich_ttaxa_tol_0to7", "shannon_ttaxa_toe")
+metrics.final <- c("dom_5_ttaxa", "pct_gatherer", "rich_ttaxa", "rich_ttaxa_toe", "rich_ttaxa_tol_0to7", "shannon_ttaxa_toe", "pct_rich_ttaxa_cte")
 
 sens.df %>% 
   filter(metric %in% metrics.final) %>%
@@ -1430,9 +1545,9 @@ tryCatch({
 
 ggcorrplot::ggcorrplot(corr.final_rownames.cc1)
 ```
+# Metric corr w abiotic variables
 
-Plot metrics against abiotic variables 
-```{r}
+```{r Metric corr w abiotic variables}
 # Import sample dates for rejoining
 sample.dates <- read_csv(file.path(root.dir, "data", "compile_2015-2019", "bugs", "2015-2019_lowgrad_bugs_UNIQUEdates_20210111.csv"))
 
@@ -1475,7 +1590,7 @@ abiotic <- abiotic %>%
 #   select(-site_id) %>% 
 #   correlate(use = "pairwise.complete.obs", method = "spearman")
 # metric.param.corr<-metric.param.corr %>% 
-#   select(term, dom_5_ttaxa, pct_gatherer, rich_ttaxa, rich_ttaxa_toe, rich_ttaxa_intol_facul, shannon_ttaxa_toe, pct_rich_ttaxa_cte) %>%
+#   select(term, dom_5_ttaxa, pct_gatherer, rich_ttaxa, rich_ttaxa_toe, rich_ttaxa_tol_0to7, shannon_ttaxa_toe, pct_rich_ttaxa_cte) %>%
 #   slice(8:14) %>% 
 #   remove_rownames %>% 
 #   column_to_rownames(var="term")  
@@ -1627,10 +1742,10 @@ metrics.scores<-metrics.df.standardized.long.percentiles %>%
 # Metrics set 3 (FINAL CHOSEN SET)
 metrics.scores<-metrics.scores %>%
   group_by(site_id) %>%
-  mutate(SITE_SCORE = sum(c(dom_5_ttaxa, pct_gatherer, rich_ttaxa, rich_ttaxa_toe, rich_ttaxa_intol_facul, shannon_ttaxa_toe, pct_rich_ttaxa_cte))) %>%
+  mutate(SITE_SCORE = sum(c(dom_5_ttaxa, pct_gatherer, rich_ttaxa, rich_ttaxa_toe, rich_ttaxa_tol_0to7, shannon_ttaxa_toe, pct_rich_ttaxa_cte))) %>%
   mutate(SITE_SCORE = SITE_SCORE/7) %>%
   ungroup() %>%
-  select(site_id, SITE_SCORE, dom_5_ttaxa, pct_gatherer, rich_ttaxa, rich_ttaxa_toe, rich_ttaxa_intol_facul, shannon_ttaxa_toe, pct_rich_ttaxa_cte)
+  select(site_id, SITE_SCORE, dom_5_ttaxa, pct_gatherer, rich_ttaxa, rich_ttaxa_toe, rich_ttaxa_tol_0to7, shannon_ttaxa_toe, pct_rich_ttaxa_cte)
  
 # Alternative metrics set
 # metrics.scores<-metrics.scores %>% 
