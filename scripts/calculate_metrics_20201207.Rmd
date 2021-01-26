@@ -1487,8 +1487,15 @@ DT::datatable(head(sens.filt, 500), options = list(scrollX = TRUE))
     # results in only 20 '0' metric scores!  BUT overall poorer DE.
 
 # Final set #6 - Resample using "new" set.seed(80) subsample. New metrics chosen based on new training sensitivities.
-# metrics.final <- c("dom_5_ttaxa", "pct_gatherer", "rich_ttaxa", "rich_ttaxa_toe", "rich_ttaxa_tol_0to7", "shannon_ttaxa_toe")
-metrics.final <- c("dom_5_ttaxa", "pct_gatherer", "rich_ttaxa", "rich_ttaxa_toe", "rich_ttaxa_tol_0to7", "shannon_ttaxa_toe", "pct_rich_ttaxa_cte")
+# metrics.final <- c("dom_5_ttaxa", "pct_gatherer", "rich_ttaxa", "rich_ttaxa_toe", "rich_ttaxa_tol_0to7", "shannon_ttaxa_toe", "pct_rich_ttaxa_cte")
+
+# Final set #7 
+metrics.final <- c("dom_5_ttaxa", "pct_gatherer", "rich_ttaxa", "pct_rich_ttaxa_toe", "rich_ttaxa_tol_0to7", "shannon_ttaxa_toe")
+
+# Final set #8 - rich_ttaxa_tol_0to7 removed (high corr w 3 others)
+# metrics.final <- c("dom_5_ttaxa", "pct_gatherer", "rich_ttaxa", "pct_rich_ttaxa_toe", "shannon_ttaxa_toe")
+
+
 
 sens.df %>% 
   filter(metric %in% metrics.final) %>%
@@ -1560,7 +1567,8 @@ rm(sample.dates)
 
 # Import chem data for 2017-2019 samples (does not exist for 2015 & 2016) and transform as needed
 abiotic.chem <- read_csv(file.path(root.dir, "data/chemistry/2017-2019_chem_lowgrad_assoc_20210111.csv")) %>% 
-  mutate(result_value = ifelse(lab_qualifiers %in% "U", 0, result_value)) %>% 
+  mutate(result_value = ifelse(lab_qualifiers %in% "U", 0, result_value),
+         chemical_name = paste0(chemical_name, "_", result_unit)) %>% 
   filter(!is.na(result_value)) %>% 
   mutate(year = substr(sample_date, 3, 4),
     uniqueid = paste0(site_id, "_", year)) %>%
@@ -1570,7 +1578,7 @@ abiotic.chem <- read_csv(file.path(root.dir, "data/chemistry/2017-2019_chem_lowg
   spread(chemical_name, result_value) %>% 
 # Only retain unique sites used in IBI dev (some were resampled in 2017-2019)
   filter(uniqueid %in% abiotic$uniqueid) %>% 
-  select(-c(sample_date, uniqueid, "temperature of ph analysis", "conductivity at 25 degrees celsius", "ph", "chlorophyll a", "silver"
+  select(-c(sample_date, uniqueid, "temperature of ph analysis_deg c", "conductivity at 25 degrees celsius_umhos/cm", "ph_pH units", "chlorophyll a_ug/l", "silver_ug/l"
             #  "nitrogen, kjeldahl, total", "nitrogen"
             ))
 
@@ -1704,6 +1712,27 @@ metric.chem.corscore3 <- metric.chem.corscore2 %>%
 
 ```
 
+# Exploring IBI thresholds
+
+```{r chem boxplots, fig.width=10, fig.height=12}
+abiotic.chem.long <- abiotic.chem %>% 
+  filter(site_id %in% train.df$site_id) %>% 
+  left_join(cond_class) %>% 
+  pivot_longer(cols = c(-condition_class, -site_id),
+               names_to = "chem",
+               values_to = "value")  %>% 
+  filter(!(site_id %in% "17-SWML-1.4"))
+
+abiotic.chem.long %>% 
+  mutate(chem = factor(chem, levels = unique(chem)),
+         condition_class = factor(condition_class, levels = c("1", "2", "3"))) %>% 
+  arrange(condition_class) %>%
+  ggplot(aes(condition_class, value)) +
+  geom_boxplot() +
+  facet_wrap(~chem, ncol = 4, scales = "free")
+
+```
+
 
 
 
@@ -1739,23 +1768,19 @@ metrics.df.standardized.long.percentiles$SCORE<-ifelse(metrics.df.standardized.l
 metrics.scores<-metrics.df.standardized.long.percentiles %>% 
   pivot_wider(names_from = metric, values_from = SCORE)
 
-# Metrics set 3 (FINAL CHOSEN SET)
+# Use in console for pasting current final metrics in code below:
+# cat(metrics.final, sep = ", ")
+
+# Calculate final scores
 metrics.scores<-metrics.scores %>%
   group_by(site_id) %>%
-  mutate(SITE_SCORE = sum(c(dom_5_ttaxa, pct_gatherer, rich_ttaxa, rich_ttaxa_toe, rich_ttaxa_tol_0to7, shannon_ttaxa_toe, pct_rich_ttaxa_cte))) %>%
+  mutate(SITE_SCORE = sum(c(dom_5_ttaxa, pct_gatherer, rich_ttaxa, pct_rich_ttaxa_toe, rich_ttaxa_tol_0to7, shannon_ttaxa_toe))) %>%
+  # mutate(SITE_SCORE = sum(c(dom_5_ttaxa, pct_gatherer, rich_ttaxa, pct_rich_ttaxa_toe, shannon_ttaxa_toe))) %>%
   mutate(SITE_SCORE = SITE_SCORE/7) %>%
   ungroup() %>%
-  select(site_id, SITE_SCORE, dom_5_ttaxa, pct_gatherer, rich_ttaxa, rich_ttaxa_toe, rich_ttaxa_tol_0to7, shannon_ttaxa_toe, pct_rich_ttaxa_cte)
+  select(site_id, SITE_SCORE, dom_5_ttaxa, pct_gatherer, rich_ttaxa, pct_rich_ttaxa_toe, rich_ttaxa_tol_0to7, shannon_ttaxa_toe)
+  # select(site_id, SITE_SCORE, dom_5_ttaxa, pct_gatherer, rich_ttaxa, pct_rich_ttaxa_toe, shannon_ttaxa_toe)
  
-# Alternative metrics set
-# metrics.scores<-metrics.scores %>% 
-#   group_by(site_id) %>% 
-#   mutate(SITE_SCORE = sum(c(dom_5_ttaxa, rich_ttaxa_et, rich_ttaxa_gatherer, rich_ttaxa_intolerant, shannon_ttaxa_toe))) %>% 
-#   mutate(SITE_SCORE = SITE_SCORE/5) %>% 
-#   ungroup() %>% 
-#   select(site_id, SITE_SCORE, dom_5_ttaxa, rich_ttaxa_et, rich_ttaxa_gatherer, rich_ttaxa_intolerant, shannon_ttaxa_toe)
-
-
 cond_class<-metrics.df %>% 
   select(site_id, condition_class)
 
