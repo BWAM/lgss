@@ -1831,10 +1831,13 @@ quantile(metrics.scores.c3train$SITE_SCORE, probs = c(0, 0.25, 0.5, 0.75, 1))
 # Rescale using 25th percentile of class 3 as floor and 75th percentile of class 1 as ceiling.
 metrics.scores.rescale <- metrics.scores %>% 
   mutate(SITE_SCORE_FINAL = (((SITE_SCORE - 17.464382)/(70.24540-17.464382)) * 10)) %>% 
+  # Convert outer quartiles to 0 and 10 respectively
   mutate(SITE_SCORE_FINAL = ifelse(SITE_SCORE_FINAL > 10, 10, SITE_SCORE_FINAL)) %>% 
   mutate(SITE_SCORE_FINAL = ifelse(SITE_SCORE_FINAL < 0, 0, SITE_SCORE_FINAL)) 
-# Convert outer quartiles to 0 and 10 respectively
-  
+
+write_csv(metrics.scores.rescale, file.path(root.dir, "data/metrics/final_scores/metric_scores_all_lgbap_scaled_20210222.csv"))
+
+
 # Replot validation
 metrics.scores.rescale %>% 
   filter(!(site_id %in% train.df.vec)) %>%
