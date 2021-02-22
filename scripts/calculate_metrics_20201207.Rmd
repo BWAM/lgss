@@ -1712,29 +1712,6 @@ metric.chem.corscore3 <- metric.chem.corscore2 %>%
 
 ```
 
-# Exploring IBI thresholds
-
-```{r chem boxplots, fig.width=10, fig.height=12}
-abiotic.chem.long <- abiotic.chem %>% 
-  filter(site_id %in% train.df$site_id) %>% 
-  left_join(cond_class) %>% 
-  pivot_longer(cols = c(-condition_class, -site_id),
-               names_to = "chem",
-               values_to = "value")  %>% 
-  filter(!(site_id %in% "17-SWML-1.4"))
-
-abiotic.chem.long %>% 
-  mutate(chem = factor(chem, levels = unique(chem)),
-         condition_class = factor(condition_class, levels = c("1", "2", "3"))) %>% 
-  arrange(condition_class) %>%
-  ggplot(aes(condition_class, value)) +
-  geom_boxplot() +
-  facet_wrap(~chem, ncol = 4, scales = "free")
-
-```
-
-
-
 
 # Traditional IBI method
 
@@ -1833,12 +1810,116 @@ metrics.scores.stress<-metrics.scores %>%
 
 # write_csv(train.df, file.path(root.dir, "data/ibi/reruns", "lg_ibi_training_seed80new_20210106.csv"))
 ```
+# Rescaling final IBI
+```{r}
+
+#Determine percentiles for classes 1 and 3
+metrics.scores.c1train <- metrics.scores %>% 
+  filter(!(site_id %in% train.df.vec)) %>%
+  filter(condition_class %in% "1")
+quantile(metrics.scores.c1train$SITE_SCORE, probs = c(0, 0.25, 0.5, 0.75, 1))
+#       0%      25%      50%      75%     100% 
+# 41.57398 48.78793 62.55053 70.24540 80.41594 
+      
+metrics.scores.c3train <- metrics.scores %>% 
+  filter(!(site_id %in% train.df.vec)) %>%
+  filter(condition_class %in% "3")
+quantile(metrics.scores.c3train$SITE_SCORE, probs = c(0, 0.25, 0.5, 0.75, 1))
+ #       0%       25%       50%       75%      100% 
+ # 4.224555 17.464382 27.705338 38.694969 55.958934 
+
+# Rescale using 25th percentile of class 3 as floor and 75th percentile of class 1 as ceiling.
+metrics.scores.rescale <- metrics.scores %>% 
+  mutate(SITE_SCORE_FINAL = (((SITE_SCORE - 17.464382)/(70.24540-17.464382)) * 10)) %>% 
+  mutate(SITE_SCORE_FINAL = ifelse(SITE_SCORE_FINAL > 10, 10, SITE_SCORE_FINAL)) %>% 
+  mutate(SITE_SCORE_FINAL = ifelse(SITE_SCORE_FINAL < 0, 0, SITE_SCORE_FINAL)) 
+# Convert outer quartiles to 0 and 10 respectively
+  
+# Replot validation
+metrics.scores.rescale %>% 
+  filter(!(site_id %in% train.df.vec)) %>%
+  mutate(condition_class = factor(condition_class, c("1", "2", "3"))) %>% 
+  ggplot(aes(condition_class, SITE_SCORE_FINAL)) +
+  coord_cartesian(ylim=c(0, 10))+
+  geom_boxplot()
+
+```
+
+
+# Exploring thresholds vs chem
+
+```{r chem boxplots, fig.width=10, fig.height=12}
+abiotic.chem.long <- abiotic.chem %>% 
+  # filter(site_id %in% train.df$site_id) %>% 
+  left_join(condition) %>% 
+  pivot_longer(cols = c(-condition_class, -site_id),
+               names_to = "chem",
+               values_to = "value")  %>% 
+  filter(!(site_id %in% "17-SWML-1.4"))
+
+abiotic.chem.long %>% 
+  mutate(chem = factor(chem, levels = unique(chem)),
+         condition_class = factor(condition_class, levels = c("1", "2", "3"))) %>% 
+  arrange(condition_class) %>%
+  ggplot(aes(condition_class, value)) +
+  geom_boxplot() +
+  facet_wrap(~chem, ncol = 4, scales = "free")
+
+```
+
+```{r IBI scores vs stressor gradient variables}
+
+fielddata <- read_csv(file.path(root.dir, "data/compile_2015-2019/field_data/2015-2019_LG_field_landcover_condclasses_20201216.csv")) %>% 
+  left_join(metrics.scores, by = "site_id") %>% 
+  select(site_id, condition_class.x, habitat_total_score, landcover_nat_pct, spcond, SITE_SCORE, PC1)
+fielddata %>% 
+  ggplot(aes(x=SITE_SCORE, y=spcond)) + 
+  geom_point() +
+  geom_smooth(method=lm)
+ fielddata %>% 
+  ggplot(aes(x=SITE_SCORE, y=landcover_nat_pct)) + 
+  geom_point() +
+  geom_smooth(method=lm)
+ fielddata %>% 
+  ggplot(aes(x=SITE_SCORE, y=habitat_total_score)) + 
+  geom_point() +
+  geom_smooth(method=lm)
+fielddata %>% 
+  ggplot(aes(x=SITE_SCORE, y=PC1)) + 
+  geom_point() +
+  geom_smooth(method=lm)
+
+# Plotting with rescaled IBI scores (validation only)
+fielddata <- read_csv(file.path(root.dir, "data/compile_2015-2019/field_data/2015-2019_LG_field_landcover_condclasses_20201216.csv")) %>% 
+  left_join(metrics.scores.rescale, by = "site_id") %>% 
+  filter(!(site_id %in% train.df.vec)) %>%
+  select(site_id, condition_class.x, habitat_total_score, landcover_nat_pct, spcond, SITE_SCORE_FINAL, PC1)
+fielddata %>% 
+  ggplot(aes(x=SITE_SCORE_FINAL, y=spcond)) + 
+  geom_point() +
+  geom_smooth(method=lm)
+ fielddata %>% 
+  ggplot(aes(x=SITE_SCORE_FINAL, y=landcover_nat_pct)) + 
+  geom_point() +
+  geom_smooth(method=lm)
+ # fielddata %>% 
+ #  ggplot(aes(x=SITE_SCORE_FINAL, y=habitat_total_score)) + 
+ #  geom_point() +
+ #  geom_smooth(method=lm)
+fielddata %>% 
+  ggplot(aes(x=SITE_SCORE_FINAL, y=PC1)) + 
+  geom_point() +
+  geom_smooth(method=lm)
+```
 
 
 
 
 
-# END TRADITIONAL IBI SECTION
+
+##### END TRADITIONAL IBI SECTION #####
+
+
 
 
 #Training and Logistical Regression model
