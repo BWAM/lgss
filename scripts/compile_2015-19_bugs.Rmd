@@ -11,7 +11,7 @@ library(tidyverse)
 library(readxl)
 
 root.dir <- rprojroot::find_root("lgss.Rproj")
-datamod.dir <- file.path("C:/Users/gmlemley/New York State Office of Information Technology Services/SMAS - Streams Data Modernization/Cleaned Files/FINAL_RELOADS_SEPT2020")
+datamod.dir <- file.path("C:/Users/gmlemley/New York State Office of Information Technology Services/SMAS - Streams Data Modernization/Cleaned Files")
 
 ```
 
@@ -292,7 +292,7 @@ Check full bug list against master taxa table and reformat/update accordingly (a
 
 # master.taxa <- read.csv(file.path(datamod.dir, "Final_Macro_ITS", "20201019_S_MSTR_MACRO_SPECIES.csv"), stringsAsFactors = FALSE)
 
-master.taxa <- read.csv(file.path(datamod.dir, "Final_Macro_ITS", "20201019_S_MSTR_MACRO_SPECIES.csv"), stringsAsFactors = FALSE, na.strings = c("", "NA")) %>% 
+master.taxa <- read.csv(file.path(datamod.dir, "Final_Macro_ITS", "20210114_S_MSTR_MACRO_SPECIES.csv"), stringsAsFactors = FALSE, na.strings = c("", "NA")) %>% 
   rename_all(tolower) %>% 
   setNames(., sub("mms_", "", names(.))) %>% 
   mutate(tolerance_name = ifelse(tolerance > 7, "tolerant", NA),
@@ -403,6 +403,27 @@ bugs.unique.wide <- bugs.unique.long %>%
   summarise(count = sum(count)) %>% 
   spread(species, count, fill = 0)
 
+# Same as above but on genus
+bugs.unique.wide.genus <- bugs.unique.long %>% 
+  select(site_id, genus, count) %>% 
+  group_by(site_id, genus) %>% 
+  summarise(count = sum(count)) %>% 
+  spread(genus, count, fill = 0)
+
+# Same as above but on family
+bugs.unique.wide.family <- bugs.unique.long %>% 
+  select(site_id, family, count) %>% 
+  group_by(site_id, family) %>% 
+  summarise(count = sum(count)) %>% 
+  spread(family, count, fill = 0)
+
+# Same as above but on order
+bugs.unique.wide.order <- bugs.unique.long %>% 
+  select(site_id, order, count) %>% 
+  group_by(site_id, order) %>% 
+  summarise(count = sum(count)) %>% 
+  spread(order, count, fill = 0)
+
 ```
 
 # Export long and wide sample taxa tables
@@ -410,6 +431,10 @@ bugs.unique.wide <- bugs.unique.long %>%
 ```{r, eval = FALSE}
 write_csv(bugs.unique.long, file.path(root.dir, "data/compile_2015-2019/bugs", "2015-2019_lowgrad_taxa_unique_long_speciesfill_20210111.csv"))
 write_csv(bugs.unique.wide, file.path(root.dir, "data/compile_2015-2019/bugs", "2015-2019_lowgrad_taxa_unique_wide_speciesfill_20210105.csv"))
+
+write_csv(bugs.unique.wide.genus, file.path(root.dir, "data/compile_2015-2019/bugs", "2015-2019_lowgrad_taxa_unique_wide_speciesfill-genus_20210405.csv"))
+write_csv(bugs.unique.wide.family, file.path(root.dir, "data/compile_2015-2019/bugs", "2015-2019_lowgrad_taxa_unique_wide_speciesfill-family_20210405.csv"))
+write_csv(bugs.unique.wide.order, file.path(root.dir, "data/compile_2015-2019/bugs", "2015-2019_lowgrad_taxa_unique_wide_speciesfill-order_20210405.csv"))
 
 ```
 
