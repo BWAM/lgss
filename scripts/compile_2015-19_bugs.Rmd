@@ -424,6 +424,20 @@ bugs.unique.wide.order <- bugs.unique.long %>%
   summarise(count = sum(count)) %>% 
   spread(order, count, fill = 0)
 
+# Same as above but on ffg
+bugs.unique.wide.ffg <- bugs.unique.long %>% 
+  select(site_id, ffg, count) %>% 
+  group_by(site_id, ffg) %>% 
+  summarise(count = sum(count)) %>% 
+  spread(ffg, count, fill = 0)
+
+# Same as above but on tolerance
+bugs.unique.wide.tol <- bugs.unique.long %>% 
+  select(site_id, tol_char, count) %>% 
+  group_by(site_id, tol_char) %>% 
+  summarise(count = sum(count)) %>% 
+  spread(tol_char, count, fill = 0)
+
 ```
 
 # Export long and wide sample taxa tables
@@ -435,6 +449,8 @@ write_csv(bugs.unique.wide, file.path(root.dir, "data/compile_2015-2019/bugs", "
 write_csv(bugs.unique.wide.genus, file.path(root.dir, "data/compile_2015-2019/bugs", "2015-2019_lowgrad_taxa_unique_wide_speciesfill-genus_20210405.csv"))
 write_csv(bugs.unique.wide.family, file.path(root.dir, "data/compile_2015-2019/bugs", "2015-2019_lowgrad_taxa_unique_wide_speciesfill-family_20210405.csv"))
 write_csv(bugs.unique.wide.order, file.path(root.dir, "data/compile_2015-2019/bugs", "2015-2019_lowgrad_taxa_unique_wide_speciesfill-order_20210405.csv"))
+write_csv(bugs.unique.wide.ffg, file.path(root.dir, "data/compile_2015-2019/bugs", "2015-2019_lowgrad_taxa_unique_wide_speciesfill-ffg_20210405.csv"))
+write_csv(bugs.unique.wide.tol, file.path(root.dir, "data/compile_2015-2019/bugs", "2015-2019_lowgrad_taxa_unique_wide_speciesfill-tolerance_20210405.csv"))
 
 ```
 
