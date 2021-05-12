@@ -1063,7 +1063,52 @@ train.df.vec<-c(train.df$site_id)
 # test.class2.df <- metrics.df %>% 
 #   filter(condition_class %in% "2") 
 
+
+
+###################
+###################
+
+### Confirm set.seed(80) reproducibility when running this code. PMA metrics produced in the code chunk below (DF train.df.PMA) should match those entered in chunk above. 
+### In case set.seed(80) is no longer reproducible, the following test and training sites were randomly selected using set.seed(80) and used during development of this IBI:
+
+# > test.df.vec
+#  [1] "01-GILL-0.3"      "02-CASS-25.6"     "03-JEDO_T3-0.4"  
+#  [4] "04-BLAK_T7-3.0"   "04-BLCE-5.2"      "04-WDIT-0.1"     
+#  [7] "07-BLDY-0.1"      "07-LITR-0.2"      "07-ONON_W_T7-1.5"
+# [10] "07-POBK_T4-1.5"   "08-BLAC-2.5"      "09-CEDL-0.1"     
+# [13] "09-LSAL_T1-1.0"   "13-BASC_T17-2.4"  "14-HURL-2.8"     
+# [16] "14-TENR-3.7"      "14-WLAK-5.8"      "15-MAWA-3.7"     
+# [19] "17-OROW-0.6"      "17-SAMP-2.1"     
+# 
+# > train.df.vec
+#  [1] "01-FISN-2.4"      "01-GOTC-0.2"      "02-RAWS-0.8"     
+#  [4] "03-BEAG-1.8"      "03-EMIL_E_T6-0.4" "03-FOMI-5.5"     
+#  [7] "03-HRTB-2.2"      "03-JOHN-13.7"     "03-MIDL-2.4"     
+# [10] "03-SAND_T21-4.0"  "03-YANT_T1c-0.2"  "04-BLAK_T16-0.8" 
+# [13] "04-JCOX-4.6"      "04-JCOX_S-3.7"    "04-SPRG-10.1"    
+# [16] "04-WMRSG-0.2"     "05-CAMB-11.2"     "05-CBRO-1.8"     
+# [19] "06-NING-7.7"      "07-GEDD-1.4"      "07-HARB-0.5"     
+# [22] "07-HENC_T4-1.2"   "07-JACB-1.9"      "07-NINE-0.7"     
+# [25] "07-SNDR-1.5"      "07-WBOT-0.3"      "08-BARE_T5-0.5"  
+# [28] "08-BENE-0.2"      "08-MURM-3.4"      "09-BIBK-5.4"     
+# [31] "09-BLCH-0.2"      "09-ENGL-17.6"     "09-LSUK-11.3"    
+# [34] "09-MARA-4.5"      "09-PLMB-12.4"     "09-WSCK-3.4"     
+# [37] "10-BISH-0.6"      "10-COLW-0.7"      "10-LSAR_T10-0.3" 
+# [40] "10-MILC-6.3"      "10-NSAR_T7-0.8"   "10-PUTM_T5-0.3"  
+# [43] "10-TRAE-4.5"      "10-TWOB-3.6"      "11-GORN-6.0"     
+# [46] "11-SRUN-3.8"      "11-TEET-0.8"      "11-TOMH-12.2"    
+# [49] "13-EBCR-16.3"     "13-IDNK-0.5"      "13-WBLKK-8.9"    
+# [52] "16-BOGH-0.3"      "16-WEBA-23.3"     "17-EMED-0.4"     
+# [55] "17-GREN-0.8"      "17-MBUR-2.1"      "17-NISS_E-2.6"   
+# [58] "17-PECN-8.9"      "17-PENA-1.4"      "17-SANT-1.7"     
+# [61] "17-SWML-1.4"    
+
+
+#######################
+#######################
+
 ```
+
 # Calculating pct comp for PMA metric above
 ```{r, eval=FALSE}
 
