@@ -170,11 +170,14 @@ fielddata.pca.scale <- scale(fielddata.pca.input, center = TRUE, scale = TRUE)
 abiotic.pca <- prcomp(fielddata.pca.scale, cor = TRUE)
 
 # Plot PCA Biplot and quantiles of PC1 values
-pca_biplot <- autoplot(abiotic.pca, data = fielddata.pca.scale, label = FALSE, label.size = 2, loadings.label = TRUE, loadings.label.repel=T, loadings.label.size = 4, scale= 0)
+pca_biplot <- autoplot(abiotic.pca, data = fielddata.pca.scale, label = TRUE, label.size = 2, loadings.label = TRUE, loadings.label.repel=T, loadings.label.size = 4, scale= 0)
 
 # vline<- geom_vline(xintercept = c(-1.4769168,-0.4725721,0.9480725))
 # pca_biplot+vline
-pca_biplot
+pca_biplot +
+  ### Incorrect intercepts for quantiles commented out below... WHERE DID THESE COME FROM? ###
+  # geom_vline(xintercept = c(-1.4769168,-0.4725721,0.9480725)) +
+  geom_vline(xintercept = c(-0.8870725,0.0270505,1.1074533))
 
 
 ### 2nd plot:
@@ -328,12 +331,15 @@ p + facet_wrap(vars(parameter), ncol = 3, scales = "free", strip.position = "lef
 
 class.plot <- class.plot.df %>% 
   ggplot(aes(x=PC1, y=PC2))+
-  geom_vline(xintercept = c(-1.4769168,-0.4725721,0.9480725))+
-  geom_point(size=3, aes(shape = basin)) +
+  ### Incorrect intercepts commented out below... WHERE DID THESE COME FROM? ###
+  # geom_vline(xintercept = c(-1.4769168,-0.4725721,0.9480725))+
+  geom_vline(xintercept = c(-0.8870725,1.1074533))+
+  geom_vline(xintercept = 0.0270505, linetype="dotdash")+
+  geom_point(size=3, aes(shape = basin, label = site_id)) +
   scale_shape_manual(values=c(0:40))+
-  annotate("text", x = -4, y = -4, label = "Class 3 - Most\nDisturbed")+
-  annotate("text", x = -0.3, y = -4, label = "Class 2- Mod.\nDisturbed")+
-  annotate("text", x =  2.5, y = -4, label = "Class 1- Least\nDisturbed")
+  annotate("text", x = -2, y = -4, label = "Class 3\n(Most Disturbed)")+
+  annotate("text", x = 0, y = -4, label = "Class 2\n(Mod. Disturbed)")+
+  annotate("text", x =  2, y = -4, label = "Class 1\n(Least Disturbed)")
 class.plot
 
 # List unique basins in each category
