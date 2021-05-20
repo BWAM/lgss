@@ -653,6 +653,8 @@ div_subgr.df <- nest.df %>%
 #   knitr::kable()
 ```
 
+## Dominance Metrics
+
 ```{r Dominance}
 
 ### Not spot-checked
@@ -1798,7 +1800,7 @@ metrics.scores<-metrics.scores %>%
   group_by(site_id) %>%
   mutate(SITE_SCORE = sum(c(dom_5_ttaxa, pct_gatherer, rich_ttaxa, pct_rich_ttaxa_toe, rich_ttaxa_tol_0to7, shannon_ttaxa_toe))) %>%
   # mutate(SITE_SCORE = sum(c(dom_5_ttaxa, pct_gatherer, rich_ttaxa, pct_rich_ttaxa_toe, shannon_ttaxa_toe))) %>%
-  mutate(SITE_SCORE = SITE_SCORE/7) %>%
+  mutate(SITE_SCORE = SITE_SCORE/6) %>%
   ungroup() %>%
   select(site_id, SITE_SCORE, dom_5_ttaxa, pct_gatherer, rich_ttaxa, pct_rich_ttaxa_toe, rich_ttaxa_tol_0to7, shannon_ttaxa_toe)
   # select(site_id, SITE_SCORE, dom_5_ttaxa, pct_gatherer, rich_ttaxa, pct_rich_ttaxa_toe, shannon_ttaxa_toe)
@@ -1835,14 +1837,14 @@ metrics.scores %>%
 #   coord_cartesian(ylim=c(0, 100))+
 #   geom_boxplot()
 
-# Plot validation + class 2 (all data minus training)
+# Plot validation + class 2 (all data plotted minus training)
 metrics.scores %>% 
   filter(!(site_id %in% train.df.vec)) %>%
   mutate(condition_class = factor(condition_class, c("1", "2", "3"))) %>% 
   ggplot(aes(condition_class, SITE_SCORE)) +
   coord_cartesian(ylim=c(0, 100))+
   geom_boxplot()
-# ggsave(file.path(root.dir, "data/ibi/reruns", "lg_ibi_boxplot_set6_seed80new-val+class2.png"), dpi = "screen")
+# ggsave(file.path(root.dir, "data/ibi/reruns", "lg_ibi_boxplot_set6_seed80new-val+class2_2021-05-19.png"), dpi = "screen")
 
 metrics.scores.ref<-metrics.scores %>% 
   filter(site_id %in% c(train.df.vec)) %>% 
@@ -1853,9 +1855,9 @@ metrics.scores.stress<-metrics.scores %>%
   filter(condition_class =="3") %>% 
   mutate(quant = quantile(SITE_SCORE, probs = 0.75))
 
-# write_csv(train.df, file.path(root.dir, "data/ibi/reruns", "lg_ibi_training_seed80new_20210106.csv"))
+# write_csv(train.df, file.path(root.dir, "data/ibi/reruns", "lg_ibi_training_seed80new_2021-05-19.csv"))
 ```
-# Rescaling final IBI
+# Rescaling final IBI for LGBAP scoring
 ```{r}
 
 #Determine percentiles for classes 1 and 3
@@ -1864,23 +1866,23 @@ metrics.scores.c1train <- metrics.scores %>%
   filter(condition_class %in% "1")
 quantile(metrics.scores.c1train$SITE_SCORE, probs = c(0, 0.25, 0.5, 0.75, 1))
 #       0%      25%      50%      75%     100% 
-# 41.57398 48.78793 62.55053 70.24540 80.41594 
+# 48.50297 56.91925 72.97562 81.95297 93.81859 
       
 metrics.scores.c3train <- metrics.scores %>% 
   filter(!(site_id %in% train.df.vec)) %>%
   filter(condition_class %in% "3")
 quantile(metrics.scores.c3train$SITE_SCORE, probs = c(0, 0.25, 0.5, 0.75, 1))
  #       0%       25%       50%       75%      100% 
- # 4.224555 17.464382 27.705338 38.694969 55.958934 
+ # 4.928648 20.375112 32.322895 45.144131 65.285423 
 
 # Rescale using 25th percentile of class 3 as floor and 75th percentile of class 1 as ceiling.
 metrics.scores.rescale <- metrics.scores %>% 
-  mutate(SITE_SCORE_FINAL = (((SITE_SCORE - 17.464382)/(70.24540-17.464382)) * 10)) %>% 
+  mutate(SITE_SCORE_FINAL = (((SITE_SCORE - 20.375112)/(81.95297-20.375112)) * 10)) %>% 
   # Convert outer quartiles to 0 and 10 respectively
   mutate(SITE_SCORE_FINAL = ifelse(SITE_SCORE_FINAL > 10, 10, SITE_SCORE_FINAL)) %>% 
   mutate(SITE_SCORE_FINAL = ifelse(SITE_SCORE_FINAL < 0, 0, SITE_SCORE_FINAL)) 
 
-write_csv(metrics.scores.rescale, file.path(root.dir, "data/metrics/final_scores/metric_scores_all_lgbap_scaled_20210222.csv"))
+# write_csv(metrics.scores.rescale, file.path(root.dir, "data/metrics/final_scores/metric_scores_all_lgbap_scaled_2021-05-19.csv"))
 
 
 # Replot validation
