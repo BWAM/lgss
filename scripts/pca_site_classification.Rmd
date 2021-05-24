@@ -39,7 +39,8 @@ fielddata.lc <- fielddata %>%
   mutate(site_id_landcover = gsub("-", "_", site_id),
          site_id_landcover = gsub("\\.", "_", site_id_landcover)) %>% 
   left_join(landcover, by = "site_id_landcover") %>% 
-  select(-site_id_landcover) 
+  select(-site_id_landcover) %>% 
+  mutate(landcover_agdev_pct = landcover_dev_pct + landcover_ag_pct)
   # select(landcover_nat_pct, landcover_dev_pct, landcover_ag_pct, landcover_water_pct, everything())
   
 ```
@@ -115,7 +116,11 @@ fielddata.pca.disturb <- fielddata.pca.data.clean %>%
   select(-c(depth, width, cur_spd, canopy, do_conc, landcover_water_pct))
 fielddata.pca.disturb2 <- fielddata.pca.disturb %>% 
   # select(site_id, landcover_nat_pct, landcover_dev_pct, landcover_ag_pct, landcover_water_pct, spcond, ph, habitat_total_score)
-  select(-c(do_pct_sat, temp))
+  select(-c(do_pct_sat, temp, landcover_agdev_pct))
+fielddata.pca.disturb3 <- fielddata.pca.disturb %>% 
+  select(-c(do_pct_sat, temp, ph, landcover_dev_pct, landcover_ag_pct))
+fielddata.pca.disturb4 <- fielddata.pca.disturb %>% 
+  select(-c(do_pct_sat, temp, landcover_dev_pct, landcover_ag_pct))
 
 # write_csv(fielddata.pca.disturb2, file.path(root.dir, "data", "compile_2015-2019", "condition_classes", "LG_abiotic_pca_variables_20210112.csv"))
 
@@ -200,7 +205,7 @@ pca_biplot +
 ```
 
 Look at correlations between PCs and variables.
-```{r}
+```{r,  fig.width=10, fig.height=6}
 
 # Get eigenvalues and join to data
 eig.val <- get_eigenvalue(abiotic.pca)
