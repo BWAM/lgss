@@ -17,7 +17,10 @@ datamod.dir <- file.path("C:/Users/gmlemley/New York State Office of Information
 
 ```{r Load sample taxa and prep}
 
-taxa.df <- read_csv(file.path(root.dir, "data/compile_2015-2019/bugs", "2015-2019_lowgrad_taxa_unique_long_speciesfill_20210111.csv"))
+taxa.df <- read_csv(file.path(root.dir, "data/compile_2015-2019/bugs", "2015-2019_lowgrad_taxa_unique_long_speciesfill_20210111.csv")) 
+# %>% 
+#   rename(class_ = class,
+#          order_ = order)
 
 # Create nested dataframe
 nest.df <- taxa.df %>%
@@ -324,7 +327,7 @@ rich_pct.df <- nest.df %>%
 
 ## Diversity Metrics
 
-```{r Community Diversity}
+```{r Diversity}
 
 ### Not spot-checked
 
@@ -937,8 +940,10 @@ metrics.names.df <- as.data.frame(metrics.names, col.names = c("metrics", "x"))
 
 
 # Attach disturbance categories
-condition <- read.csv(file.path("C:/Data/LGSS_scripting/lgss/data/compile_2015-2019/condition_classes", "2015-2019_LG_condclasses_20201216.csv")) %>% 
-  select(-PC1)
+# condition <- read.csv(file.path("C:/Data/LGSS_scripting/lgss/data/compile_2015-2019/condition_classes", "2015-2019_LG_condclasses_20201216.csv")) %>%   select(-PC1)
+
+# 5/26/21 - New condition classes created due to erroneous pH value found. Had to regenerate PCA (11 sites changed classes)
+condition <- read.csv(file.path("C:/Data/LGSS_scripting/lgss/data/compile_2015-2019/condition_classes", "2015-2019_LG_condclasses_20210526_CARL-pHfixed.csv")) %>%   select(-PC1)
 
 metrics.df <- metrics.df %>%
   left_join(., condition) %>% 
@@ -1105,6 +1110,16 @@ train.df.vec<-c(train.df$site_id)
 # [58] "17-PECN-8.9"      "17-PENA-1.4"      "17-SANT-1.7"     
 # [61] "17-SWML-1.4"    
 
+# 1st rerun with corrected PCA, 5/26/21
+# > test.df.vec
+#  [1] "01-GILL-0.3"      "02-CASS-25.6"     "04-JCOX-4.6"      "04-WDIT-0.1"      "04-WMRSG-0.2"     "07-BLDY-0.1"      "07-ONON_W_T7-1.5"
+#  [8] "07-POBK_T4-1.5"   "08-BARE_T5-0.5"   "08-MURM-3.4"      "09-ENGL-17.6"     "09-LSAL_T1-1.0"   "13-EBCR-16.3"     "14-TENR-3.7"     
+# [15] "14-WLAK-5.8"      "15-MAWA-3.7"      "16-BOGH-0.3"      "17-EMED-0.4"      "17-OROW-0.6"      "17-SWML-1.4" 
+# > train.df.PMA
+# # A tibble: 1 x 8
+#   site_id pct_clitellata pct_ephemeroptera pct_plecoptera pct_coleoptera pct_trichoptera pct_chironomidae other
+#     <dbl>          <dbl>             <dbl>          <dbl>          <dbl>           <dbl>            <dbl> <dbl>
+# 1      NA           5.02              9.65          0.235           4.53            3.95             41.7  34.9
 
 #######################
 #######################
