@@ -229,7 +229,7 @@ rich_subgr.df <- nest.df %>%
                                     .key_col = site_id,
                                     .counts_col = count,
                                     .group_col = ttaxa,
-                                    .filter = tol_int <= 6,
+                                    .filter = tol_int <= 7,
                                     .unnest_col = data)
   ) %>% 
   select(-data)
@@ -1029,23 +1029,22 @@ rm(master.taxa.fill,
 
 Percent Model Affinity of Orders - (PMA-O) Is a measure of order level similarity to a model based
 on the reference streams Novak and Bode (1992).
-```{r, eval = TRUE}
+```{r, eval = FALSE}
 
-  ##    Calculate the numbers below PMA calculation chunk below
-#### Look at biomonitoring SOP to see which groups to use for Streams (change in both chunks)
+#### SKIP THIS CHUNK AND RUN TO PMA CALCULATION CHUNK THEN COME BACK TO THIS CHUNK AND RERUN FROM HERE DOWN ###
 
 ######
 ## WARNING: The constants below are from the training set produced used set.seed(80) prior to the Rstudio update that changed the outcome. They were changed before I realized that this issue had occurred. If rerunning using this original training set, use those constants entered in the Rmd prior to 1/5/21 (access previous github commit).
 ######
 metrics.df <- metrics.df %>% 
-    mutate(PMA_clitellata = 4.59,
-           PMA_ephemeroptera = 9.11,
-           PMA_plecoptera = 0.28,
-           PMA_coleoptera = 5.37,
-           PMA_trichoptera = 4.45,
-           PMA_chironomidae = 43.5,
-           PMA_other = 32.7
-    ) %>% 
+    mutate(PMA_clitellata = train.df.PMA$pct_clitellata,
+           PMA_ephemeroptera = train.df.PMA$pct_ephemeroptera,
+           PMA_plecoptera = train.df.PMA$pct_plecoptera,
+           PMA_coleoptera = train.df.PMA$pct_coleoptera,
+           PMA_trichoptera = train.df.PMA$pct_trichoptera,
+           PMA_chironomidae = train.df.PMA$pct_chironomidae,
+           PMA_other = train.df.PMA$other
+    ) %>%
   group_by(site_id) %>% 
   mutate(pct_other = sum(pct_clitellata, pct_ephemeroptera, pct_plecoptera, pct_coleoptera, pct_trichoptera, pct_chironomidae)) %>% 
   mutate(pct_other = 100 - pct_other) %>% 
@@ -1097,8 +1096,9 @@ library(tidymodels)
 # Keep the set.seed number the same to get the same subsampled traning dataset for each run. (Change this to create a new training dataset. Original is 80)
 
 ### RUN FURTHER SUBSAMPLES TO SEE WHICH METRICS COME OUT through filter. Then set final seed for training.
-set.seed(80)
-# set.seed(50)
+# set.seed(80)
+set.seed(70)
+# set.seed(90)
 
 train_test_split <- metrics.df %>% 
   # mutate(condition_class = factor(condition_class, levels = c("1","3","4","2"))) %>% 
@@ -1161,6 +1161,23 @@ train.df.vec <- c(train.df$site_id)
 # [58] "17-PECN-8.9"      "17-PENA-1.4"      "17-SANT-1.7"     
 # [61] "17-SWML-1.4"    
 
+# PMA values:
+#    PMA_clitellata = 4.59,
+#    PMA_ephemeroptera = 9.11,
+#    PMA_plecoptera = 0.28,
+#    PMA_coleoptera = 5.37,
+#    PMA_trichoptera = 4.45,
+#    PMA_chironomidae = 43.5,
+#    PMA_other = 32.7
+
+
+#########################################################################################################
+#########################################################################################################
+###### SUBSAMPLE GROUPS ABOVE ARE NO LONGER VALID AFTER RECLASSIFICATION WITH CORRECTED PCA, 5/26/21 ####
+#########################################################################################################
+#########################################################################################################
+
+
 # 1st rerun with corrected PCA, 5/26/21
 # > test.df.vec
 #  [1] "01-GILL-0.3"      "02-CASS-25.6"     "04-JCOX-4.6"      "04-WDIT-0.1"      "04-WMRSG-0.2"     "07-BLDY-0.1"      "07-ONON_W_T7-1.5"
@@ -1193,10 +1210,11 @@ train.df.vec <- c(train.df$site_id)
 
 ### Export final training/test site lists for import later on if not reproducible with set.seed().
 
-
-
-
-
+# write.csv(test.df.vec, file.path(root.dir, "data/metrics/june2021_rerun/test_subsample_setseed90_2021-06-01.csv"), row.names = F)
+# write.csv(train.df.vec, file.path(root.dir, "data/metrics/june2021_rerun/train_subsample_setseed90_2021-06-01.csv"), row.names = F)
+# 
+# write.csv(test.df, file.path(root.dir, "data/metrics/june2021_rerun/test_subsample_setseed70_allmetrics_2021-06-03.csv"), row.names = F)
+# write.csv(train.df, file.path(root.dir, "data/metrics/june2021_rerun/train_subsample_setseed70_allmetrics_2021-06-03.csv"), row.names = F)
 
 ##################
 
@@ -1286,20 +1304,24 @@ test_10cv.df <- test_sensitive.df %>%
 # Look at FFG metrics: "predator"  "gatherer"  "shredder"  "filterer"  "scraper"   "collector"
 sens.df.ffg <- sens.df %>% 
   filter(grepl("predator|gatherer|shredder|filterer|scraper|collector", metric))
+
+# write.csv(sens.df, file.path(root.dir, "data/metrics/june2021_rerun/metrics_sens_seed70_20210603.csv"))
+# write.csv(sens.df.ffg, file.path(root.dir, "data/metrics/june2021_rerun/metrics_sens_seed70-FFG_20210603.csv"))
+
 ```
 
 
 ```{r Range filtering}
 
-sens.df.subset<-train.df %>% 
+sens.df.subset <- train.df %>% 
   select(site_id, condition_class, all_of(sensitive_mets.vec))
 
 # Find mins and maxes
-sens.df.subset.range<-sens.df.subset %>%
+sens.df.subset.range <- sens.df.subset %>%
   select(-condition_class) %>% 
   summarise_at(vars(-site_id), range) %>%
   rownames_to_column() %>%
-  rename(summary_stat=rowname) %>% 
+  rename(summary_stat = rowname) %>% 
    mutate(summary_stat = case_when(
      summary_stat == 1 ~ "min",
      summary_stat == 2 ~ "max"))
@@ -1364,22 +1386,22 @@ rm(rangefail.pct, rangefail.rich, rangefail.div)
   # Different from filtering by range b/c could have high range but many similar output values (poor differentiation). 
 # Matt reference?
 
-sens.df.subset.long<-sens.df.subset %>% 
+sens.df.subset.long <- sens.df.subset %>% 
   select(-condition_class) %>% 
-  pivot_longer(!site_id, names_to = "metric", values_to="value")
+  pivot_longer(!site_id, names_to = "metric", values_to = "value")
 
-sens.df.rank<-sens.df %>% 
+sens.df.rank <- sens.df %>% 
   unite("rank",metric, barbour, de, disturbance, sep = "_", remove = FALSE) %>% 
   select(rank, metric)
 
-sens.df.subset.long<-left_join(sens.df.subset.long, sens.df.rank, by=c("metric"))
+sens.df.subset.long <- left_join(sens.df.subset.long, sens.df.rank, by = c("metric"))
 
 # sens.df.subset.wide<-sens.df.subset.long %>% 
 #   select(-metric) %>% 
 #   rename(metric=rank) %>% 
 #   pivot_wider(names_from = metric, values_from = value)
 
-sens.df.subset.long.round<-sens.df.subset.long %>% 
+sens.df.subset.long.round <- sens.df.subset.long %>% 
   mutate(value = case_when(
     str_detect(metric, "rich_") ~ round(value, digits = 0),
     str_detect(metric, "pct_") ~ ceiling(value),
@@ -1393,14 +1415,14 @@ sens.df.subset.long.round<-sens.df.subset.long %>%
     
   ))
 
-sens.df.subset.long.count <-sens.df.subset.long %>%
+sens.df.subset.long.count <- sens.df.subset.long %>%
   group_by(metric, value) %>% 
   count(value) %>%
   ungroup() %>% 
   mutate(n_samples = 40) %>% 
   mutate(percent_similar = ((n/n_samples)*100)) %>% 
   group_by(metric, percent_similar) %>% 
-  filter(percent_similar>=50)
+  filter(percent_similar >= 50)
 
 metrics.drop.sim <- sens.df.subset.long.count %>% 
   pull(metric)
@@ -1419,12 +1441,12 @@ Calculated as the ratio of the IQR of reference sites and the range of possible 
 
 # Take metrics that pass 1st screening, Filter to ref, combine metric name and predicted response (increase/decrease), take lower 25% for decrease, take top 75% for increase, take IQR
 
-reference_sites<-sens.df.subset %>% 
-  filter(condition_class =="1") %>% 
+reference_sites <- sens.df.subset %>% 
+  filter(condition_class == "1") %>% 
   select(site_id)
-reference.vec<-c(reference_sites$site_id)
+reference.vec <- c(reference_sites$site_id)
 
-SOI.df<-sens.df.subset.long %>%
+SOI.df <- sens.df.subset.long %>%
   filter(site_id %in% c(reference.vec)) %>% 
   group_by(metric) %>% 
   mutate(Q1 = case_when(
@@ -1441,8 +1463,8 @@ SOI.df<-sens.df.subset.long %>%
   ungroup() %>% 
   distinct(metric, Q1, Q2, IQR)
 
-SOI.df<-SOI.df %>% 
-  mutate(SOI = (IQR/(Q1-Q2)))
+SOI.df <- SOI.df %>% 
+  mutate(SOI = (IQR/(Q1 - Q2)))
 
 metrics.drop.SOI <- SOI.df %>% 
   filter(SOI > 1) %>% 
@@ -1481,7 +1503,7 @@ library(corrr)
 # Bowman (yr?; GLIMPSS): "While there is no consensus on “hard cutoffs” for detecting metric redundancy, several workers have chosen r-values in excess of 0.75 (Maxted et al. 2000, Blocksom and Johnson 2009), 0.85 (Butcher et al. 2003, Gerritsen et al. 2000a), and 0.90 (Barbour et al. 1996) to screen for metric redundancy. For GLIMPSS development, we chose Pearson r-values of 0.75 as the cutoff"
 
 
-corr.sens<-train.df.sens %>% 
+corr.sens <- train.df.sens %>% 
   select(-condition_class, -site_id) %>% 
   correlate(use = "pairwise.complete.obs", method = "spearman") %>% 
   rearrange() %>% 
@@ -1489,7 +1511,7 @@ corr.sens<-train.df.sens %>%
 corr.sens_rownames <- corr.sens %>%
   # mutate_all(~replace(., is.na(.), 1)) %>% 
   remove_rownames %>% 
-  column_to_rownames(var="term")  
+  column_to_rownames(var = "term")  
 corr.sens_highcorr <- corr.sens_rownames %>%
   abs() %>% 
   round(digits = 3) %>% 
@@ -1503,7 +1525,7 @@ corr.sens_highcorr <- corr.sens_rownames %>%
 ggcorrplot::ggcorrplot(corr.sens_rownames)
 
 # Same as above for only cond class 1  (as per Shull et al. 2019)
-corr.sens.cc1 <-train.df.sens %>% 
+corr.sens.cc1 <- train.df.sens %>% 
   filter(condition_class %in% "1") %>% 
   select(-condition_class, -site_id) %>% 
   correlate(use = "pairwise.complete.obs", method = "spearman") %>% 
@@ -1512,7 +1534,7 @@ corr.sens.cc1 <-train.df.sens %>%
 corr.sens_rownames.cc1 <- corr.sens.cc1 %>%
   # mutate_all(~replace(., is.na(.), 1)) %>% 
   remove_rownames %>% 
-  column_to_rownames(var="term")  
+  column_to_rownames(var = "term")  
 corr.sens_highcorr.cc1 <- corr.sens_rownames.cc1 %>%
   abs() %>% 
   round(digits = 3) %>% 
@@ -1596,7 +1618,7 @@ sens.filt <- sens.df %>%
 
 DT::datatable(head(sens.filt, 500), options = list(scrollX = TRUE))
 
-# write.csv(sens.filt, file.path(root.dir, "data/metrics/sens.filt_seed80new_20210114.csv"))
+write.csv(sens.filt, file.path(root.dir, "data/metrics/june2021_rerun/sens.filt_seed70_20210603.csv"))
 ```
 
 
@@ -1629,10 +1651,13 @@ DT::datatable(head(sens.filt, 500), options = list(scrollX = TRUE))
 # metrics.final <- c("dom_5_ttaxa", "pct_gatherer", "rich_ttaxa", "rich_ttaxa_toe", "rich_ttaxa_tol_0to7", "shannon_ttaxa_toe", "pct_rich_ttaxa_cte")
 
 # Final set #7 
-metrics.final <- c("dom_5_ttaxa", "pct_gatherer", "rich_ttaxa", "pct_rich_ttaxa_toe", "rich_ttaxa_tol_0to7", "shannon_ttaxa_toe")
+# metrics.final <- c("dom_5_ttaxa", "pct_gatherer", "rich_ttaxa", "pct_rich_ttaxa_toe", "rich_ttaxa_tol_0to7", "shannon_ttaxa_toe")
 
 # Final set #8 - rich_ttaxa_tol_0to7 removed (high corr w 3 others)
 # metrics.final <- c("dom_5_ttaxa", "pct_gatherer", "rich_ttaxa", "pct_rich_ttaxa_toe", "shannon_ttaxa_toe")
+
+# Final set #9 - rich_ttaxa_tol_0to7 removed (high corr w 3 others)
+metrics.final <- c("dom_5_ttaxa", "shannon_ttaxa_shredder", "rich_ttaxa_tol_0to7", "rich_ttaxa_toe", "rich_ttaxa", "shannon_ttaxa_toe")
 
 
 
@@ -1665,7 +1690,7 @@ train.df.final <- train.df.sens %>%
 
 ### CREATE PLOTS USING PSYCH PACKAGE ###
 
-corr.final.cc1 <-train.df.final %>% 
+corr.final.cc1 <- train.df.final %>% 
   filter(condition_class %in% "1") %>% 
   select(-condition_class, -site_id) %>% 
   correlate(use = "pairwise.complete.obs", method = "spearman") %>% 
@@ -1674,7 +1699,7 @@ corr.final.cc1 <-train.df.final %>%
 corr.final_rownames.cc1 <- corr.final.cc1 %>%
   # mutate_all(~replace(., is.na(.), 1)) %>% 
   remove_rownames %>% 
-  column_to_rownames(var="term")  
+  column_to_rownames(var = "term")  
 tryCatch({
   corr.final_highcorr.cc1 <- corr.final_rownames.cc1 %>%
     abs() %>% 
@@ -1686,7 +1711,7 @@ tryCatch({
     column_to_rownames() %>% 
     purrr::discard(~all(is.na(.))) %>% 
     filter_all(any_vars(!is.na(.)))},
-  error=function(e){cat("ERROR :",conditionMessage(e), "\n")}
+  error = function(e){cat("ERROR :",conditionMessage(e), "\n")}
 )
 
 ggcorrplot::ggcorrplot(corr.final_rownames.cc1)
@@ -1890,13 +1915,11 @@ metrics.scores<-metrics.df.standardized.long.percentiles %>%
 # Calculate final scores
 metrics.scores<-metrics.scores %>%
   group_by(site_id) %>%
-  mutate(SITE_SCORE = sum(c(dom_5_ttaxa, pct_gatherer, rich_ttaxa, pct_rich_ttaxa_toe, rich_ttaxa_tol_0to7, shannon_ttaxa_toe))) %>%
-  # mutate(SITE_SCORE = sum(c(dom_5_ttaxa, pct_gatherer, rich_ttaxa, pct_rich_ttaxa_toe, shannon_ttaxa_toe))) %>%
+  mutate(SITE_SCORE = sum(c(dom_5_ttaxa, shannon_ttaxa_shredder, rich_ttaxa_tol_0to7, rich_ttaxa_toe, rich_ttaxa, shannon_ttaxa_toe))) %>%
   mutate(SITE_SCORE = SITE_SCORE/6) %>%
   ungroup() %>%
-  select(site_id, SITE_SCORE, dom_5_ttaxa, pct_gatherer, rich_ttaxa, pct_rich_ttaxa_toe, rich_ttaxa_tol_0to7, shannon_ttaxa_toe)
-  # select(site_id, SITE_SCORE, dom_5_ttaxa, pct_gatherer, rich_ttaxa, pct_rich_ttaxa_toe, shannon_ttaxa_toe)
- 
+  select(site_id, SITE_SCORE, dom_5_ttaxa, shannon_ttaxa_shredder, rich_ttaxa_tol_0to7, rich_ttaxa_toe, rich_ttaxa, shannon_ttaxa_toe)
+
 cond_class<-metrics.df %>% 
   select(site_id, condition_class)
 
