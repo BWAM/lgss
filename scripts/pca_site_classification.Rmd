@@ -48,9 +48,15 @@ fielddata.lc <- fielddata %>%
          site_id_landcover = gsub("\\.", "_", site_id_landcover)) %>% 
   left_join(landcover, by = "site_id_landcover") %>% 
   select(-site_id_landcover) %>% 
-  mutate(landcover_agdev_pct = landcover_dev_pct + landcover_ag_pct)
-  # select(landcover_nat_pct, landcover_dev_pct, landcover_ag_pct, landcover_water_pct, everything())
-  
+  mutate(landcover_agdev_pct = landcover_dev_pct + landcover_ag_pct) %>% 
+  # Filter out sites with lots of missing data
+  filter(!(site_id %in% c(
+    "03-LSAM_N-7.9",
+    "01-BLKE-0.1"))) %>% 
+  # Filter out sites to be omitted (low sample counts or poor sample collected)
+  filter(!(site_id %in% c(
+    "17-PECN-12.4",
+    "13-WALK-35.6")))   
 ```
 
 Prepping data for input to PCA
@@ -60,7 +66,7 @@ fielddata.num <- fielddata.lc %>%
   select(site_id, which(sapply(.,is.numeric)), -c(basin))
 
 # Count number of non-NA records
-datacounts <- data.frame(colname = names(fielddata.num),colSums_fielddata=colSums(!is.na(fielddata.num)))
+datacounts <- data.frame(colname = names(fielddata.num),colSums_fielddata = colSums(!is.na(fielddata.num)))
 
 # List fields in order by lowest value count, then list in console formatted for copy/pasting
 # datacounts.vec <- colSums(!is.na(fielddata.num))
@@ -72,11 +78,6 @@ fielddata.num.sub <- fielddata.num %>%
   # Remove spotty params and those not present in 2015 data
   select(-c(hab_present, embeddedness, chl_a, biosample, habitat_total_score, clay, rubble, silt, rock, sand, gravel, salinity, algae_diaoms_presen, 
             thickness_diatoms_present, lgs_habitat_snag, lgs_habitat_bank, lgs_habitat_macrophyte, lgs_habitat_substrate, microtox)) %>% 
-  # Filter out sites with lots of missing data
-  filter(!(site_id %in% c(
-    "03-LSAM_N-7.9",
-    # "17-CARL-0.8",
-    "01-BLKE-0.1"))) %>% 
   # Replace -9999s with NA
   mutate_all(~replace(., . == -9999, NA))
  
@@ -186,7 +187,7 @@ fielddata.pca.scale <- scale(fielddata.pca.input, center = TRUE, scale = TRUE)
 abiotic.pca <- prcomp(fielddata.pca.scale, cor = TRUE)
 
 # Plot PCA Biplot and quantiles of PC1 values
-pca_biplot <- autoplot(abiotic.pca, data = fielddata.pca.scale, label = FALSE, label.size = 2, loadings.label = TRUE, loadings.label.repel=T, loadings.label.size = 4, scale= 0)
+pca_biplot <- autoplot(abiotic.pca, data = fielddata.pca.scale, label = F, label.size = 3, loadings.label = TRUE, loadings.label.repel=T, loadings.label.size = 4, scale= 0)
 
 # vline<- geom_vline(xintercept = c(-1.4769168,-0.4725721,0.9480725))
 # pca_biplot+vline
@@ -196,6 +197,7 @@ pca_biplot +
   # geom_vline(xintercept = c(-0.8870725,0.0270505,1.1074533))
   # geom_vline(xintercept = c(-0.8870725,1.1074533), linetype="dotdash") +
   # geom_vline(xintercept = 0.0270505, linetype="dotdash") +
+  # geom_vline(xintercept = c(-0.875372337,-0.003422851,1.124783475), linetype = "dotdash") +
   annotate("text", x = -4, y = -3.5, label = "Class 3\n(Most Disturbed)", fontface = "bold") +
   annotate("text", x = 0.1, y = -3.5, label = "Class 2\n(Mod. Disturbed)", fontface = "bold") +
   annotate("text", x =  3, y = -3.5, label = "Class 1\n(Least Disturbed)", fontface = "bold")
@@ -260,6 +262,8 @@ evplot = function(ev) {
   op = par(mfrow=c(2,1),omi=c(0.1,0.3,0.1,0.1), mar=c(2, 2, 2, 2))
   barplot(ev, main="Eigenvalues", col="white", las=1)
   abline(h=mean(ev), col="red")
+  return(ev)
+  return(mean(ev))
   legend("right", "Average eigenvalue", lwd=1, col=2, bty="n")
   barplot(t(cbind(100*ev/sum(ev), bsm$p[n:1])), beside=TRUE, 
           main="% variation", col=c("lightgray","black"), las=1)
@@ -317,7 +321,15 @@ Classify sites based on PC1 and plot
 ```{r, fig.width=14, fig.height=8}
 class.plot.df <- scores %>% 
   select(site_id, PC1, PC2) %>%  
-  mutate(basin = substr(site_id, 0, 2))
+  # Force 4 sites to degraded based on BPJ.
+  mutate(basin = substr(site_id, 0, 2),
+         PC1 = case_when(
+           site_id %in% "11-TOMH-12.2" ~ -5,
+           site_id %in% "09-LSUK-11.3" ~ -5,
+           site_id %in% "16-WEBA-23.3" ~ -5,
+           site_id %in% "13-IDNK-0.5" ~ -5,
+           TRUE ~ PC1
+         ))
 
 # Determine Thresholds based on PC1 qauntiles
 quantile(class.plot.df$PC1, probs = seq(0, 1, 0.25), na.rm = FALSE, names = TRUE, type = 7)
@@ -326,52 +338,24 @@ quantile(class.plot.df$PC1, probs = seq(0, 1, 0.25), na.rm = FALSE, names = TRUE
 #         0%        25%        50%        75%       100% 
 # -5.4314219 -0.8870725  0.0270505  1.1074533  3.2054342 
     
-# Same as initial but ran data with adjusted Long Island pH values
-# > quantile(class.plot.df$PC1, probs = seq(0, 1, 0.25), na.rm = FALSE, names = TRUE, type = 7)
-#         0%        25%        50%        75%       100% 
-# -5.2356121 -0.9447973 -0.1306958  1.1430231  4.2289229 
-
-
-# Initial run    
-# all.abiotic.classified<-left_join(fielddata.lc, class.plot.df, by=c("site_id")) %>% 
-#   filter(!(site_id %in% c("03-LSAM_N-7.9", "01-BLKE-0.1"))) %>% 
-#   rename(basin = basin.x) %>% 
-#   select(-basin.y) %>% 
-#   mutate(condition_class = case_when(PC1 <= -0.8870725 ~ "3", # Highly Disturbed
-#                                      PC1 <= 0.0270505 ~ "2", # Moderately Disturbed (Q3)
-#                                      PC1 <= 1.1074533 ~ "2", # Slightly Disturbed (Q2) (grouped with above becuase we're only testing 1 and 3)
-#                                      PC1 > 1.1074533 ~ "1", # Least Disturbed
-#                                      TRUE                 ~"NOT CLASSIFIED"
-#   )) %>% 
-#   select(site_id, condition_class, everything(), -PC2)
-
-## Same as initial but w/ 17-CARL-0.8 omitted (bad field data)
-##           0%          25%          50%          75%         100%
-## -5.277933445 -0.889305603 -0.008391001  1.127265263  3.620548435
-# all.abiotic.classified<-left_join(fielddata.lc, class.plot.df, by=c("site_id")) %>% 
-#   filter(!(site_id %in% c("03-LSAM_N-7.9", "01-BLKE-0.1", "17-CARL-0.8"))) %>% 
-#   rename(basin = basin.x) %>% 
-#   select(-basin.y) %>% 
-#   mutate(condition_class = case_when(PC1 <= -0.889305603 ~ "3", # Highly Disturbed
-#                                      PC1 <= -0.008391001 ~ "2", # Moderately Disturbed (Q3)
-#                                      PC1 <= 1.127265263 ~ "2", # Slightly Disturbed (Q2) (grouped with above becuase we're only testing 1 and 3)
-#                                      PC1 > 1.127265263 ~ "1", # Least Disturbed
-#                                      TRUE                 ~"NOT CLASSIFIED"
-#   )) %>% 
-#   select(site_id, condition_class, everything(), -PC2)
-
 # Same as initial but w/ bad pH value at 17-CARL-0.8 replaced with ave (6.7 instead of 2.2)
 #          0%         25%         50%         75%        100% 
 # -5.28126830 -0.88806864 -0.01500482  1.12320423  3.62374899 
+
+# Rerun with PECN-12.4 and WALK-35.6 omitted, and 4 sites forced to class 3.
+#           0%          25%          50%          75%         100% 
+# -10.00000000  -0.93280967  -0.06879499   0.98344902   3.62597427 
+
 all.abiotic.classified<-left_join(fielddata.lc, class.plot.df, by=c("site_id")) %>%
   filter(!(site_id %in% c("03-LSAM_N-7.9", "01-BLKE-0.1"))) %>%
   rename(basin = basin.x) %>%
   select(-basin.y) %>%
-  mutate(condition_class = case_when(PC1 <= -0.88806864 ~ "3", # Highly Disturbed
-                                     PC1 <= -0.01500482 ~ "2", # Moderately Disturbed (Q3)
-                                     PC1 <= 1.12320423 ~ "2", # Slightly Disturbed (Q2) (grouped with above becuase we're only testing 1 and 3)
-                                     PC1 > 1.12320423 ~ "1", # Least Disturbed
-                                     TRUE                 ~"NOT CLASSIFIED"
+  mutate(condition_class = case_when(
+    PC1 <= -0.93280967 ~ "3", # Highly Disturbed
+    PC1 <= -0.06879499 ~ "2", # Moderately Disturbed (Q3)
+    PC1 <= 0.98344902 ~ "2", # Slightly Disturbed (Q2) (grouped with above becuase we're only testing 1 and 3)
+    PC1 > 0.98344902 ~ "1", # Least Disturbed
+    TRUE                 ~"NOT CLASSIFIED"
   )) %>%
   select(site_id, condition_class, everything(), -PC2)
 
@@ -389,16 +373,11 @@ p <- all.abiotic.classified.long %>%
 p + facet_wrap(vars(parameter), ncol = 3, scales = "free", strip.position = "left", 
                 # labeller = as_labeller(c(AGRI = "AGRI (%)", ALK = "ALK (mg/L CaCO3)", CHLA = "CHLA (ug/L)", COND="COND (uS/cm)", DEV="DEV (%)", FOREST = "FOREST (%)", IMPERV= "IMERV (%)", NATURAL = "NATURAL (%)", NH3 = "NH3 (ug/L)", NOx = "NOx (ug/L)", PH = "PH", SECCHI ="SECCHI (m)", TKN = "TKN (ug/L)", TN = "TN (ug/L)", TP = "TP (ug/L)"))
                )
-
-
 # Plot PCA Scores and categories on biplot w/o loadings
 
 class.plot <- class.plot.df %>% 
-  ggplot(aes(x=PC1, y=PC2))+
-  ### Incorrect intercepts commented out below... WHERE DID THESE COME FROM? ###
-  # geom_vline(xintercept = c(-1.4769168,-0.4725721,0.9480725))+
-  # geom_vline(xintercept = c(-0.8870725,1.1074533))+
-  # geom_vline(xintercept = 0.0270505, linetype="dotdash")+
+  ggplot(aes(x=PC1, y=PC2)) +
+  geom_vline(xintercept = c(-0.93280967,-0.06879499,0.98344902), linetype = "dotdash") +
   geom_point(size=3, aes(shape = basin, label = site_id)) +
   scale_shape_manual(values=c(0:40))+
   annotate("text", x = -2, y = -4, label = "Class 3\n(Most Disturbed)")+
@@ -420,18 +399,42 @@ unique(class.HD.basins$basin)
 unique(class.MD.basins$basin)
 unique(class.LD.basins$basin)
 
+# # Reclassify sites based on BPJ
+# 
+# all.abiotic.classified.reclass <- all.abiotic.classified %>%
+#   mutate(condition_class = case_when(
+#     site_id %in% "11-TOMH-12.2" ~ "3",
+#     site_id %in% "09-LSUK-11.3" ~ "3",
+#     site_id %in% "16-WEBA-23.3" ~ "3",
+#     site_id %in% "13-IDNK-0.5" ~ "3",
+#     TRUE ~ condition_class
+#   ))
+# 
+# # Relist unique basins in each category
+# class.HD.basins <- all.abiotic.classified.reclass %>% 
+#   select(site_id, basin, condition_class) %>% 
+#   filter(condition_class == "3")
+# class.MD.basins <- all.abiotic.classified.reclass %>% 
+#   select(site_id, basin, condition_class) %>% 
+#   filter(condition_class == "2")
+# class.LD.basins <- all.abiotic.classified.reclass %>% 
+#   select(site_id, basin, condition_class) %>% 
+#   filter(condition_class == "1")
+# unique(class.HD.basins$basin)
+# unique(class.MD.basins$basin)
+# unique(class.LD.basins$basin)
 
 ```
 
 Exporting data
 ```{r, eval = FALSE}
 # Export joined data with classes
-write.table(all.abiotic.classified, file.path(root.dir, "data/compile_2015-2019/field_data/2015-2019_LG_field_landcover_condclasses_20210526_CARL-pHfixed.csv"),sep=",", row.names = FALSE)
+write.table(all.abiotic.classified, file.path(root.dir, "data/compile_2015-2019/field_data/2015-2019_LG_field_landcover_condclasses_20210608-reclass.csv"),sep=",", row.names = FALSE)
 
 # Export just the classes for joining elsewhere
 classes.export <- all.abiotic.classified %>%
   select(site_id, condition_class, PC1)
-write.table(classes.export, file.path(root.dir, "data/compile_2015-2019/condition_classes/2015-2019_LG_condclasses_20210526_CARL-pHfixed.csv"),sep=",", row.names = FALSE)
+write.table(classes.export, file.path(root.dir, "data/compile_2015-2019/condition_classes/2015-2019_LG_condclasses_20210608-reclass.csv"),sep=",", row.names = FALSE)
 
 ```
 
