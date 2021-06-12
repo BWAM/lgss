@@ -56,7 +56,8 @@ fielddata.lc <- fielddata %>%
   # Filter out sites to be omitted (low sample counts or poor sample collected)
   filter(!(site_id %in% c(
     "17-PECN-12.4",
-    "13-WALK-35.6")))   
+    "13-WALK-35.6",
+    "13-IDNK-0.5")))   
 ```
 
 Prepping data for input to PCA
@@ -321,13 +322,13 @@ Classify sites based on PC1 and plot
 ```{r, fig.width=14, fig.height=8}
 class.plot.df <- scores %>% 
   select(site_id, PC1, PC2) %>%  
-  # Force 4 sites to degraded based on BPJ.
+  # Reclassify sites based on BPJ.
   mutate(basin = substr(site_id, 0, 2),
          PC1 = case_when(
            site_id %in% "11-TOMH-12.2" ~ -5,
            site_id %in% "09-LSUK-11.3" ~ -5,
-           site_id %in% "16-WEBA-23.3" ~ -5,
-           site_id %in% "13-IDNK-0.5" ~ -5,
+           # site_id %in% "16-WEBA-23.3" ~ -5,    # Reverted to reference, 6/8/21
+           # site_id %in% "13-IDNK-0.5" ~ -5,       # Confirmed tidal; omitted from dataset altogether.
            TRUE ~ PC1
          ))
 
@@ -346,15 +347,19 @@ quantile(class.plot.df$PC1, probs = seq(0, 1, 0.25), na.rm = FALSE, names = TRUE
 #           0%          25%          50%          75%         100% 
 # -10.00000000  -0.93280967  -0.06879499   0.98344902   3.62597427 
 
+# Rerun with PECN-12.4, WALK-35.6, and INDK-0.5 omitted, and TOMH and LSUK forced to class 3.
+         # 0%         25%         50%         75%        100% 
+# -5.22359194 -0.87304171 -0.04705769  1.01738099  3.65456958 
+
 all.abiotic.classified<-left_join(fielddata.lc, class.plot.df, by=c("site_id")) %>%
   filter(!(site_id %in% c("03-LSAM_N-7.9", "01-BLKE-0.1"))) %>%
   rename(basin = basin.x) %>%
   select(-basin.y) %>%
   mutate(condition_class = case_when(
-    PC1 <= -0.93280967 ~ "3", # Highly Disturbed
-    PC1 <= -0.06879499 ~ "2", # Moderately Disturbed (Q3)
-    PC1 <= 0.98344902 ~ "2", # Slightly Disturbed (Q2) (grouped with above becuase we're only testing 1 and 3)
-    PC1 > 0.98344902 ~ "1", # Least Disturbed
+    PC1 <= -0.87304171 ~ "3", # Highly Disturbed
+    PC1 <= -0.04705769 ~ "2", # Moderately Disturbed (Q3)
+    PC1 <= 1.01738099 ~ "2", # Slightly Disturbed (Q2) (grouped with above becuase we're only testing 1 and 3)
+    PC1 > 1.01738099 ~ "1", # Least Disturbed
     TRUE                 ~"NOT CLASSIFIED"
   )) %>%
   select(site_id, condition_class, everything(), -PC2)
@@ -377,7 +382,7 @@ p + facet_wrap(vars(parameter), ncol = 3, scales = "free", strip.position = "lef
 
 class.plot <- class.plot.df %>% 
   ggplot(aes(x=PC1, y=PC2)) +
-  geom_vline(xintercept = c(-0.93280967,-0.06879499,0.98344902), linetype = "dotdash") +
+  geom_vline(xintercept = c(-0.87304171,-0.04705769,1.01738099), linetype = "dotdash") +
   geom_point(size=3, aes(shape = basin, label = site_id)) +
   scale_shape_manual(values=c(0:40))+
   annotate("text", x = -2, y = -4, label = "Class 3\n(Most Disturbed)")+
@@ -429,12 +434,12 @@ unique(class.LD.basins$basin)
 Exporting data
 ```{r, eval = FALSE}
 # Export joined data with classes
-write.table(all.abiotic.classified, file.path(root.dir, "data/compile_2015-2019/field_data/2015-2019_LG_field_landcover_condclasses_20210608-reclass.csv"),sep=",", row.names = FALSE)
+write.table(all.abiotic.classified, file.path(root.dir, "data/compile_2015-2019/field_data/2015-2019_LG_field_landcover_condclasses_20210611-reclass.csv"),sep=",", row.names = FALSE)
 
 # Export just the classes for joining elsewhere
 classes.export <- all.abiotic.classified %>%
   select(site_id, condition_class, PC1)
-write.table(classes.export, file.path(root.dir, "data/compile_2015-2019/condition_classes/2015-2019_LG_condclasses_20210608-reclass.csv"),sep=",", row.names = FALSE)
+write.table(classes.export, file.path(root.dir, "data/compile_2015-2019/condition_classes/2015-2019_LG_condclasses_20210611-reclass.csv"),sep=",", row.names = FALSE)
 
 ```
 
