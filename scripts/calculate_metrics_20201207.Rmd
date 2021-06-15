@@ -1215,9 +1215,11 @@ library(tidymodels)
 # Keep the set.seed number the same to get the same subsampled traning dataset for each run. (Change this to create a new training dataset. Original is 80)
 
 ### RUN FURTHER SUBSAMPLES TO SEE WHICH METRICS COME OUT through filter. Then set final seed for training.
+set.seed(60)
+# set.seed(70)
 # set.seed(80)
-set.seed(70)
 # set.seed(90)
+# set.seed(5122)
 
 train_test_split <- metrics.df %>% 
   # mutate(condition_class = factor(condition_class, levels = c("1","3","4","2"))) %>% 
@@ -1332,8 +1334,8 @@ train.df.vec <- c(train.df$site_id)
 # write.csv(test.df.vec, file.path(root.dir, "data/metrics/june2021_rerun/test_subsample_setseed90_2021-06-01.csv"), row.names = F)
 # write.csv(train.df.vec, file.path(root.dir, "data/metrics/june2021_rerun/train_subsample_setseed90_2021-06-01.csv"), row.names = F)
 # 
-# write.csv(test.df, file.path(root.dir, "data/metrics/june2021_rerun/test_subsample_setseed70_allmetrics_2021-06-03.csv"), row.names = F)
-# write.csv(train.df, file.path(root.dir, "data/metrics/june2021_rerun/train_subsample_setseed70_allmetrics_2021-06-03.csv"), row.names = F)
+# write.csv(test.df, file.path(root.dir, "data/metrics/june2021_rerun/test_subsample_setseed70_allmetrics_2021-06-14.csv"), row.names = F)
+# write.csv(train.df, file.path(root.dir, "data/metrics/june2021_rerun/train_subsample_setseed70_allmetrics_2021-06-14.csv"), row.names = F)
 
 ##################
 
@@ -1737,7 +1739,7 @@ sens.filt <- sens.df %>%
 
 DT::datatable(head(sens.filt, 500), options = list(scrollX = TRUE))
 
-# write.csv(sens.filt, file.path(root.dir, "data/metrics/june2021_rerun/sens.filt_seed70_2021-06-11b.csv"))
+# write.csv(sens.filt, file.path(root.dir, "data/metrics/june2021_rerun/sens.filt_seed60_2021-06-14.csv"))
 ```
 
 
@@ -1787,13 +1789,23 @@ DT::datatable(head(sens.filt, 500), options = list(scrollX = TRUE))
 # Final set #12 - 3 sites omitted, and 2 reclasses
 # set.seed 70
 # metrics.final <- c("rich_ttaxa_tol_0to7", "pct_rich_ttaxa_coe", "rich_ttaxa_toe", "shannon_ttaxa_shredder", "dom_4_ttaxa", "shannon_ttaxa_toe")
-
 # metrics.final <- c("rich_ttaxa_tol_0to7",	"pct_rich_ttaxa_coe",	"rich_ttaxa_pote",	"shannon_ttaxa_shredder",	"dom_4_ttaxa",	"shannon_ttaxa_cte",	"shannon_ttaxa_pote")
-
-metrics.final <- c("rich_ttaxa_tol_0to7",	"pct_rich_ttaxa_coe",	"shannon_ttaxa_shredder",	"dom_4_ttaxa",	"shannon_ttaxa_pote")
-
+# metrics.final <- c("rich_ttaxa_tol_0to7",	"pct_rich_ttaxa_coe",	"shannon_ttaxa_shredder",	"dom_4_ttaxa",	"shannon_ttaxa_pote")
 # metrics.final <- c("rich_ttaxa_tol_0to7",	"rich_ttaxa_pote",	"shannon_ttaxa_shredder",	"dom_4_ttaxa",	"shannon_ttaxa_pote")
 
+# set 13 - set.seed(80), 6/14/21
+# metrics.final <- c("rich_ttaxa_tol_0to7", "pct_rich_ttaxa_insecta", "rich_ttaxa_cote", "pct_gatherer", "dom_4_ttaxa", "shannon_ttaxa_pote")
+# metrics.final <- c("pct_rich_ttaxa_insecta", "pct_gatherer", "dom_4_ttaxa", "shannon_ttaxa_pote")
+
+# set 14 - seed 5122, 6/14/21
+# metrics.final <- c("rich_ttaxa_tol_0to7", "rich_ttaxa_insecta", "pct_rich_ttaxa_non_insecta", "menhinick_ttaxa", "shannon_ttaxa_coe", "pct_gatherer")
+# metrics.final <- c("rich_ttaxa_tol_0to7", "rich_ttaxa_insecta", "menhinick_ttaxa", "shannon_ttaxa_coe", "pct_gatherer")
+
+# set 15 - seed 60, 6/14/21
+# metrics.final <- c("rich_ttaxa_tol_0to7", "rich_ttaxa_insecta", "pct_rich_ttaxa_non_insecta", "menhinick_ttaxa", "shannon_ttaxa_coe", "pct_gatherer")
+# metrics.final <- c("rich_ttaxa_tol_0to7", "rich_ttaxa_coe", "rich_ttaxa_insecta", "shannon_ttaxa_shredder", "shannon_ttaxa_cte", "shannon_ttaxa_toe")
+# metrics.final <- c("rich_ttaxa_tol_0to7", "rich_ttaxa_coe", "rich_ttaxa_insecta", "shannon_ttaxa_shredder", "shannon_ttaxa_cte")
+metrics.final <- c("rich_ttaxa_coe", "rich_ttaxa_insecta", "shannon_ttaxa_shredder", "shannon_ttaxa_cte")
 
 sens.df %>% 
   filter(metric %in% metrics.final) %>%
@@ -1888,7 +1900,11 @@ abiotic.chem <- read_csv(file.path(root.dir, "data/chemistry/2017-2019_chem_lowg
   filter(uniqueid %in% abiotic$uniqueid) %>% 
   select(-c(sample_date, uniqueid, "temperature of ph analysis_deg c", "conductivity at 25 degrees celsius_umhos/cm", "ph_pH units", "chlorophyll a_ug/l", "silver_ug/l"
             #  "nitrogen, kjeldahl, total", "nitrogen"
-            ))
+            )) %>% 
+  filter(!(site_id %in% c(
+    "17-PECN-12.4",
+    "13-WALK-35.6",
+    "13-IDNK-0.5")))
 
 abiotic <- abiotic %>% 
   select(-sample_date, -uniqueid)
@@ -2006,7 +2022,7 @@ metric.chem.corscore2 <- metric.param.corr.chem %>%
   t() %>% 
   as.data.frame() %>% 
   rownames_to_column(var = "metric") %>%
-  mutate(corrscore = abs(rowSums(.[2:20]))) %>% 
+  mutate(corrscore = abs(rowSums(.[2:16]))) %>% 
   select(metric, corrscore, everything())
 
 metric.chem.corscore3 <- metric.chem.corscore2 %>% 
@@ -2059,10 +2075,10 @@ metrics.scores<-metrics.df.standardized.long.percentiles %>%
 # Calculate final scores
 metrics.scores<-metrics.scores %>%
   group_by(site_id) %>%
-  mutate(SITE_SCORE = sum(c(rich_ttaxa_tol_0to7, pct_rich_ttaxa_coe, shannon_ttaxa_shredder, dom_4_ttaxa, shannon_ttaxa_pote))) %>%
-  mutate(SITE_SCORE = SITE_SCORE/5) %>%
+  mutate(SITE_SCORE = sum(c(rich_ttaxa_coe, rich_ttaxa_insecta, shannon_ttaxa_shredder, shannon_ttaxa_cte))) %>%
+  mutate(SITE_SCORE = SITE_SCORE/4) %>%
   ungroup() %>%
-  select(site_id, SITE_SCORE, rich_ttaxa_tol_0to7, pct_rich_ttaxa_coe, shannon_ttaxa_shredder, dom_4_ttaxa, shannon_ttaxa_pote)
+  select(site_id, SITE_SCORE, rich_ttaxa_coe, rich_ttaxa_insecta, shannon_ttaxa_shredder, shannon_ttaxa_cte)
 
 cond_class <- metrics.df %>% 
   select(site_id, condition_class)
@@ -2109,6 +2125,14 @@ metrics.scores %>%
   geom_boxplot()
 # ggsave(file.path(root.dir, "data/ibi/reruns", "lg_ibi_boxplot_set6_seed80new-val+class2_2021-05-19.png"), dpi = "screen")
   
+# metrics.scores %>%
+#   filter(!(site_id %in% train.df.vec)) %>%
+#   mutate(condition_class = factor(condition_class, c("1", "2", "3"))) %>%
+#   ggplot(aes(condition_class, pct_gatherer)) +
+#   coord_cartesian(ylim = c(0, 100)) +
+#   geom_boxplot()
+
+
 # plot all
 # metrics.scores %>% 
 #   mutate(condition_class = factor(condition_class, c("1", "2", "3"))) %>% 
@@ -2148,7 +2172,7 @@ quantile(metrics.scores.c3train$SITE_SCORE, probs = c(0, 0.25, 0.5, 0.75, 1))
 
 # Rescale using 25th percentile of class 3 as floor and 75th percentile of class 1 as ceiling.
 metrics.scores.rescale <- metrics.scores %>% 
-  mutate(SITE_SCORE_FINAL = (((SITE_SCORE - 21.40051)/(85.97268 - 21.40051)) * 10)) %>% 
+  mutate(SITE_SCORE_FINAL = (((SITE_SCORE - 6.002589  )/(91.73102   - 6.002589  )) * 10)) %>% 
   # Convert outer quartiles to 0 and 10 respectively
   mutate(SITE_SCORE_FINAL = ifelse(SITE_SCORE_FINAL > 10, 10, SITE_SCORE_FINAL)) %>% 
   mutate(SITE_SCORE_FINAL = ifelse(SITE_SCORE_FINAL < 0, 0, SITE_SCORE_FINAL)) 
