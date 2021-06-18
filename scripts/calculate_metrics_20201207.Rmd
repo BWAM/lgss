@@ -1334,8 +1334,8 @@ train.df.vec <- c(train.df$site_id)
 # write.csv(test.df.vec, file.path(root.dir, "data/metrics/june2021_rerun/test_subsample_setseed90_2021-06-01.csv"), row.names = F)
 # write.csv(train.df.vec, file.path(root.dir, "data/metrics/june2021_rerun/train_subsample_setseed90_2021-06-01.csv"), row.names = F)
 # 
-# write.csv(test.df, file.path(root.dir, "data/metrics/june2021_rerun/test_subsample_setseed70_allmetrics_2021-06-14.csv"), row.names = F)
-# write.csv(train.df, file.path(root.dir, "data/metrics/june2021_rerun/train_subsample_setseed70_allmetrics_2021-06-14.csv"), row.names = F)
+write.csv(test.df, file.path(root.dir, "data/metrics/june2021_rerun/test_subsample_setseed60_allmetrics_2021-06-14.csv"), row.names = F)
+write.csv(train.df, file.path(root.dir, "data/metrics/june2021_rerun/train_subsample_setseed60_allmetrics_2021-06-14.csv"), row.names = F)
 
 ##################
 
@@ -1805,11 +1805,12 @@ DT::datatable(head(sens.filt, 500), options = list(scrollX = TRUE))
 # metrics.final <- c("rich_ttaxa_tol_0to7", "rich_ttaxa_insecta", "pct_rich_ttaxa_non_insecta", "menhinick_ttaxa", "shannon_ttaxa_coe", "pct_gatherer")
 # metrics.final <- c("rich_ttaxa_tol_0to7", "rich_ttaxa_coe", "rich_ttaxa_insecta", "shannon_ttaxa_shredder", "shannon_ttaxa_cte", "shannon_ttaxa_toe")
 # metrics.final <- c("rich_ttaxa_tol_0to7", "rich_ttaxa_coe", "rich_ttaxa_insecta", "shannon_ttaxa_shredder", "shannon_ttaxa_cte")
+# metrics.final <- c("rich_ttaxa_coe", "rich_ttaxa_insecta", "shannon_ttaxa_shredder", "shannon_ttaxa_cte", "shannon_ttaxa_toe",	"shannon_ttaxa_pote",	"shannon_ttaxa_et",	"shannon_ttaxa_ept", "shannon_ttaxa_coe", "shannon_ttaxa_cote", "shannon_ttaxa_potec")
 metrics.final <- c("rich_ttaxa_coe", "rich_ttaxa_insecta", "shannon_ttaxa_shredder", "shannon_ttaxa_cte")
 
+#plot final chosen metrics
 sens.df %>% 
   filter(metric %in% metrics.final) %>%
-  # filter(barbour == 3) %>% 
   arrange(metric) %>% 
   inner_join(long.df, by = "metric") %>% 
   mutate(metric = factor(metric, levels = unique(metric)),
@@ -1817,6 +1818,18 @@ sens.df %>%
   ggplot(aes(condition_class, value)) +
   geom_boxplot() +
   facet_wrap(~metric, ncol = 4, scales = "free")
+
+# plot specific metrics
+sens.df %>% 
+  filter(metric %in% c("shannon_ttaxa_cte", "shannon_ttaxa_toe",	"shannon_ttaxa_pote",	"shannon_ttaxa_et",	"shannon_ttaxa_ept")) %>%
+  arrange(metric) %>% 
+  inner_join(long.df, by = "metric") %>% 
+  mutate(metric = factor(metric, levels = unique(metric)),
+         condition_class = factor(condition_class, levels = unique(condition_class))) %>% 
+  ggplot(aes(condition_class, value)) +
+  geom_boxplot() +
+  facet_wrap(~metric, ncol = 5, scales = "free")
+
 
 # sens.df %>% 
 #   filter(metric %in% c("pct_plecoptera", "rich_ttaxa_plecoptera", "pct_rich_ttaxa_plecoptera", "shannon_ttaxa_plecoptera", "simpson_ttaxa_plecoptera")) %>%
@@ -1833,7 +1846,7 @@ sens.final <- sens.df %>%
   filter(metric %in% metrics.final)
 
 # Export boxplots and sensitivites of the final metrics for the current run
-# ggsave(file.path(root.dir, "data/ibi/reruns", "metrics_boxplots_set6_seed80new_20210106.png"), dpi = "screen")
+# ggsave(file.path(root.dir, "data/ibi/reruns", "metrics_boxplots_seed60_20210616.png"), dpi = "screen")
 # write_csv(sens.final, file.path(root.dir, "data/ibi/reruns/sens_final_seed80new_20210106.csv"))
 
 
@@ -2161,14 +2174,14 @@ metrics.scores.c1train <- metrics.scores %>%
   filter(condition_class %in% "1")
 quantile(metrics.scores.c1train$SITE_SCORE, probs = c(0, 0.25, 0.5, 0.75, 1))
 #       0%      25%      50%      75%     100% 
-# 22.53083 64.23811 76.35478 85.97268 98.35651 
+ # 24.98964  57.09333  68.58106  91.73102 100.00000 
 
 metrics.scores.c3train <- metrics.scores %>% 
   filter(!(site_id %in% train.df.vec)) %>%
   filter(condition_class %in% "3")
 quantile(metrics.scores.c3train$SITE_SCORE, probs = c(0, 0.25, 0.5, 0.75, 1))
  #      0%      25%      50%      75%     100% 
-# 16.81730 21.40051 31.93981 45.01168 85.62857 
+# 0.000000  6.002589 26.287092 34.825307 76.200409 
 
 # Rescale using 25th percentile of class 3 as floor and 75th percentile of class 1 as ceiling.
 metrics.scores.rescale <- metrics.scores %>% 
@@ -2183,6 +2196,15 @@ metrics.scores.rescale <- metrics.scores %>%
 # Replot validation
 metrics.scores.rescale %>% 
   filter(!(site_id %in% train.df.vec)) %>%
+  mutate(condition_class = factor(condition_class, c("1", "2", "3"))) %>% 
+  ggplot(aes(condition_class, SITE_SCORE_FINAL)) +
+  coord_cartesian(ylim=c(0, 10))+
+  geom_boxplot()
+
+
+# Plot all
+metrics.scores.rescale %>% 
+  # filter(!(site_id %in% train.df.vec)) %>%
   mutate(condition_class = factor(condition_class, c("1", "2", "3"))) %>% 
   ggplot(aes(condition_class, SITE_SCORE_FINAL)) +
   coord_cartesian(ylim=c(0, 10))+
