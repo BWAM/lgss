@@ -1809,10 +1809,20 @@ DT::datatable(head(sens.filt, 500), options = list(scrollX = TRUE))
 metrics.final <- c("rich_ttaxa_coe", "rich_ttaxa_insecta", "shannon_ttaxa_shredder", "shannon_ttaxa_cte")
 
 #plot final chosen metrics
-sens.df %>% 
+# sens.df %>% 
+#   filter(metric %in% metrics.final) %>%
+#   arrange(metric) %>% 
+#   inner_join(long.df, by = "metric") %>% 
+#   mutate(metric = factor(metric, levels = unique(metric)),
+#          condition_class = factor(condition_class, levels = unique(condition_class))) %>% 
+#   ggplot(aes(condition_class, value)) +
+#   geom_boxplot() +
+#   facet_wrap(~metric, ncol = 4, scales = "free")
+
+#plot final chosen metrics (same plot as above, didn't need sens.df)
+long.df %>% 
   filter(metric %in% metrics.final) %>%
   arrange(metric) %>% 
-  inner_join(long.df, by = "metric") %>% 
   mutate(metric = factor(metric, levels = unique(metric)),
          condition_class = factor(condition_class, levels = unique(condition_class))) %>% 
   ggplot(aes(condition_class, value)) +
@@ -1829,7 +1839,6 @@ sens.df %>%
   ggplot(aes(condition_class, value)) +
   geom_boxplot() +
   facet_wrap(~metric, ncol = 5, scales = "free")
-
 
 # sens.df %>% 
 #   filter(metric %in% c("pct_plecoptera", "rich_ttaxa_plecoptera", "pct_rich_ttaxa_plecoptera", "shannon_ttaxa_plecoptera", "simpson_ttaxa_plecoptera")) %>%
@@ -2058,10 +2067,23 @@ metrics.df.standardized<-metrics.df %>%
    select(site_id, condition_class, all_of(metrics.final)) 
 
 metrics.df.standardized.long<-metrics.df.standardized %>% 
-  select(-condition_class) %>% 
+  select(-condition_class) %>%
   pivot_longer(!site_id, names_to = "metric", values_to="value")
 
-metrics.df.standardized.long<-left_join(metrics.df.standardized.long, sens.df, by=c("metric"))
+metrics.df.standardized.long <- left_join(metrics.df.standardized.long, sens.df, by=c("metric")) %>% 
+  left_join(condition) 
+
+#plot metrics before rescaling
+metrics.df.standardized.long %>% 
+  # left_join(condition) %>% 
+  filter(metric %in% metrics.final) %>%
+  arrange(metric) %>% 
+  arrange(condition_class) %>% 
+  mutate(metric = factor(metric, levels = unique(metric)),
+         condition_class = factor(condition_class, levels = unique(condition_class))) %>% 
+  ggplot(aes(condition_class, value)) +
+  geom_boxplot() +
+  facet_wrap(~metric, ncol = 4, scales = "free")
 
 metrics.df.standardized.long.percentiles <-metrics.df.standardized.long %>%
   group_by(metric) %>% 
@@ -2072,12 +2094,24 @@ metrics.df.standardized.long.percentiles <-metrics.df.standardized.long %>%
     disturbance == "decrease" ~ ((value - Q_5th)/(Q_95th-Q_5th)),
     disturbance == "increase" ~ ((Q_95th - value)/(Q_95th-Q_5th)),
   )) %>% 
-  mutate(SCORE = SCORE*100) %>% 
+  mutate(SCORE = SCORE*10) %>% 
   select(site_id, metric, SCORE)
 
-# Truncate Scores >100 to 100 and <0 to 0
-metrics.df.standardized.long.percentiles$SCORE<-ifelse(metrics.df.standardized.long.percentiles$SCORE > 100, 100, metrics.df.standardized.long.percentiles$SCORE)
+# Truncate Scores >10 to 10 and <0 to 0
+metrics.df.standardized.long.percentiles$SCORE<-ifelse(metrics.df.standardized.long.percentiles$SCORE > 10, 10, metrics.df.standardized.long.percentiles$SCORE)
 metrics.df.standardized.long.percentiles$SCORE<-ifelse(metrics.df.standardized.long.percentiles$SCORE <0, 0, metrics.df.standardized.long.percentiles$SCORE)
+
+#plot rescaled metrics
+metrics.df.standardized.long.percentiles %>% 
+  left_join(condition) %>% 
+  filter(metric %in% metrics.final) %>%
+  arrange(metric) %>% 
+  arrange(condition_class) %>% 
+  mutate(metric = factor(metric, levels = unique(metric)),
+         condition_class = factor(condition_class, levels = unique(condition_class))) %>% 
+  ggplot(aes(condition_class, SCORE)) +
+  geom_boxplot() +
+  facet_wrap(~metric, ncol = 4, scales = "free")
 
 metrics.scores<-metrics.df.standardized.long.percentiles %>% 
   pivot_wider(names_from = metric, values_from = SCORE)
@@ -2104,7 +2138,7 @@ metrics.scores %>%
   filter(site_id %in% c(train.df.vec)) %>% 
   mutate(condition_class = factor(condition_class, c("1", "2", "3"))) %>% 
   ggplot(aes(condition_class, SITE_SCORE)) +
-  coord_cartesian(ylim = c(0, 100)) +
+  coord_cartesian(ylim = c(0, 10)) +
   geom_boxplot()
 # ggsave(file.path(root.dir, "data/ibi/reruns", "lg_ibi_boxplot_set3_seed50-training.png"), dpi = "screen")
 
@@ -2113,7 +2147,7 @@ metrics.scores %>%
   filter(site_id %in% c(test.df.vec)) %>% 
   mutate(condition_class = factor(condition_class, c("1", "2", "3"))) %>% 
   ggplot(aes(condition_class, SITE_SCORE)) +
-  coord_cartesian(ylim = c(0, 100)) +
+  coord_cartesian(ylim = c(0, 10)) +
   geom_boxplot()
 # ggsave(file.path(root.dir, "data/ibi/reruns", "lg_ibi_boxplot_set3_seed50-val.png"), dpi = "screen")
 
@@ -2134,9 +2168,9 @@ metrics.scores %>%
   filter(!(site_id %in% train.df.vec)) %>%
   mutate(condition_class = factor(condition_class, c("1", "2", "3"))) %>% 
   ggplot(aes(condition_class, SITE_SCORE)) +
-  coord_cartesian(ylim = c(0, 100)) +
+  coord_cartesian(ylim = c(0, 10)) +
   geom_boxplot()
-# ggsave(file.path(root.dir, "data/ibi/reruns", "lg_ibi_boxplot_set6_seed80new-val+class2_2021-05-19.png"), dpi = "screen")
+ggsave(file.path(root.dir, "data/ibi/reruns/rescaling", "IBI_4met_seed60_2020-06-22_90-10_scaling_VAL.png"), dpi = "screen")
   
 # metrics.scores %>%
 #   filter(!(site_id %in% train.df.vec)) %>%
@@ -2147,12 +2181,12 @@ metrics.scores %>%
 
 
 # plot all
-# metrics.scores %>% 
-#   mutate(condition_class = factor(condition_class, c("1", "2", "3"))) %>% 
-#   ggplot(aes(condition_class, SITE_SCORE)) +
-#   coord_cartesian(ylim=c(0, 100))+
-#   geom_boxplot()
-# # ggsave(file.path(root.dir, "data/ibi/reruns", "lg_ibi_boxplot_set6_seed80new-val+class2_2021-05-19.png"), dpi = "screen")
+metrics.scores %>%
+  mutate(condition_class = factor(condition_class, c("1", "2", "3"))) %>%
+  ggplot(aes(condition_class, SITE_SCORE)) +
+  coord_cartesian(ylim = c(0, 10)) +
+  geom_boxplot()
+ggsave(file.path(root.dir, "data/ibi/reruns/rescaling", "IBI_4met_seed60_2020-06-22_90-10_scaling_ALL.png"), dpi = "screen")
 
 metrics.scores.ref <- metrics.scores %>% 
   filter(site_id %in% c(train.df.vec)) %>% 
@@ -2166,7 +2200,7 @@ metrics.scores.stress <- metrics.scores %>%
 # write_csv(train.df, file.path(root.dir, "data/ibi/reruns", "lg_ibi_training_seed80new_2021-05-19.csv"))
 ```
 # Rescaling final IBI for LGBAP scoring
-```{r}
+```{r,eval=FALSE}
 
 #Determine percentiles for classes 1 and 3
 metrics.scores.c1train <- metrics.scores %>% 
@@ -2200,6 +2234,7 @@ metrics.scores.rescale %>%
   ggplot(aes(condition_class, SITE_SCORE_FINAL)) +
   coord_cartesian(ylim=c(0, 10))+
   geom_boxplot()
+ggsave(file.path(root.dir, "data/ibi/reruns/rescaling", "IBI_4met_seed60_2020-06-22_VAL+cl2_double_scaling.png"), dpi = "screen")
 
 
 # Plot all
@@ -2209,6 +2244,7 @@ metrics.scores.rescale %>%
   ggplot(aes(condition_class, SITE_SCORE_FINAL)) +
   coord_cartesian(ylim=c(0, 10))+
   geom_boxplot()
+ggsave(file.path(root.dir, "data/ibi/reruns/rescaling", "IBI_4met_seed60_2020-06-22_ALLDATA_double_scaling.png"), dpi = "screen")
 
 ```
 
@@ -2216,12 +2252,18 @@ metrics.scores.rescale %>%
 # Exploring thresholds vs chem
 
 ```{r chem boxplots, fig.width=10, fig.height=12}
+
+abiotic.chem.class <- abiotic.chem %>% 
+  left_join(condition) %>% 
+  select(site_id, condition_class, everything())
+
 abiotic.chem.long <- abiotic.chem %>% 
   # filter(site_id %in% train.df$site_id) %>% 
   left_join(condition) %>% 
   pivot_longer(cols = c(-condition_class, -site_id),
                names_to = "chem",
                values_to = "value")  %>% 
+  #Filter out 17-SWML-1.4 which has extremely high values for better visualization
   filter(!(site_id %in% "17-SWML-1.4"))
 
 abiotic.chem.long %>% 
