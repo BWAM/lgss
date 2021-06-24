@@ -2072,7 +2072,7 @@ metrics.df.standardized.long <- metrics.df.final %>%
   left_join(sens.df, by = "metric") %>% 
   left_join(condition) 
 
-#plot metrics before rescaling
+#plot individual metrics before rescaling
 metrics.df.standardized.long %>% 
   filter(metric %in% metrics.final,
          (!(condition_class %in% 2))) %>%
@@ -2082,31 +2082,50 @@ metrics.df.standardized.long %>%
          condition_class = factor(condition_class, levels = unique(condition_class))) %>% 
   ggplot(aes(condition_class, value)) +
   geom_boxplot() +
-  facet_wrap(~metric, ncol = 4, scales = "free")
+  facet_wrap(~metric, ncol = 4, scales = "free") +
+  ggtitle("Final metrics (train+val)")
 
-#plot metrics before rescaling - TRAINING ONLY
-metrics.df.standardized.long %>% 
+#plot individual metrics before rescaling - TRAINING ONLY
+metrics.df.standardized.long %>%
   filter(site_id %in% train.df.vec) %>%
   filter(metric %in% metrics.final) %>%
-  arrange(metric) %>% 
-  arrange(condition_class) %>% 
+  arrange(metric) %>%
+  arrange(condition_class) %>%
   mutate(metric = factor(metric, levels = unique(metric)),
-         condition_class = factor(condition_class, levels = unique(condition_class))) %>% 
+         condition_class = factor(condition_class, levels = unique(condition_class))) %>%
   ggplot(aes(condition_class, value)) +
   geom_boxplot() +
-  facet_wrap(~metric, ncol = 4, scales = "free")
+  facet_wrap(~metric, ncol = 4, scales = "free") +
+  ggtitle("Final metrics (train)")
 
 # Determine floor and ceiling thresholds using training only
-metrics.thresholds <- metrics.df.standardized.long %>% 
-  filter(site_id %in% train.df.vec) %>%
-  group_by(metric) %>% 
-  mutate(floor = quantile(value, probs = 0.05)) %>% 
-  mutate(ceiling =  quantile(value, probs = 0.95)) %>% 
-  ungroup() %>% 
-  select(metric, disturbance, floor, ceiling) %>% 
-  distinct()
+# THIS BLOCK USES the 95th/5th for ceiling/floor of all training data
+# metrics.thresholds <- metrics.df.standardized.long %>%
+#   filter(site_id %in% train.df.vec) %>%
+#   group_by(metric) %>%
+#   mutate(floor = quantile(value, probs = 0.05)) %>%
+#   mutate(ceiling =  quantile(value, probs = 0.95)) %>%
+#   ungroup() %>%
+#   select(metric, disturbance, floor, ceiling) %>%
+#   distinct()
+
+# Determine floor and ceiling thresholds using training only, using class 1 and class 3, respectively
+# THIS BLOCK USES the 75th of class 1 for ceiling and 25th of class 3 for floor
+metrics.thresholds <- metrics.df.standardized.long %>%
+  filter(site_id %in% train.df.vec,
+         condition_class != 2) %>%
+  group_by(metric, condition_class) %>%
+  mutate(floor = quantile(value, probs = 0.25)) %>%
+  mutate(ceiling =  quantile(value, probs = 0.75)) %>%
+  ungroup() %>%
+  select(metric, disturbance, floor, ceiling, condition_class) %>%
+  distinct() %>%
+  pivot_wider(names_from = condition_class, values_from = c("floor", "ceiling")) %>%
+  select(metric, disturbance,
+         floor = floor_3,
+         ceiling = ceiling_1)
   
-# Standardize using floor and ceiling thresholds and truncate scores >10 to 10 and <0 to 0
+# Standardize using thresholds determined above and truncate scores >10 to 10 and <0 to 0
 metrics.df.standardized.long.percentiles <- metrics.df.standardized.long %>%
   left_join(metrics.thresholds, by = c("metric", "disturbance")) %>% 
   mutate(SCORE = case_when(
@@ -2116,9 +2135,8 @@ metrics.df.standardized.long.percentiles <- metrics.df.standardized.long %>%
   mutate(SCORE = SCORE * 10,
          SCORE = if_else(SCORE > 10, 10, SCORE),
          SCORE = if_else(SCORE < 0, 0, SCORE)) 
-  # select(site_id, metric, SCORE)
 
-#plot rescaled metrics
+#plot rescaled individual metrics
 metrics.df.standardized.long.percentiles %>% 
   left_join(condition) %>% 
   filter(metric %in% metrics.final) %>%
@@ -2128,9 +2146,13 @@ metrics.df.standardized.long.percentiles %>%
          condition_class = factor(condition_class, levels = unique(condition_class))) %>% 
   ggplot(aes(condition_class, SCORE)) +
   geom_boxplot() +
-  facet_wrap(~metric, ncol = 4, scales = "free")
+  facet_wrap(~metric, ncol = 4, scales = "free") +
+  ggtitle("Final metrics (rescaled, all sites)")
 
+
+# Calculate final IBI scores for all data
 metrics.scores <- metrics.df.standardized.long.percentiles %>% 
+  select(site_id, metric, SCORE) %>% 
   pivot_wider(names_from = metric, values_from = SCORE) %>% 
   group_by(site_id) %>%
   mutate(SITE_SCORE = sum(c(rich_ttaxa_coe, rich_ttaxa_insecta, shannon_ttaxa_shredder, shannon_ttaxa_cte))) %>%
@@ -2139,43 +2161,49 @@ metrics.scores <- metrics.df.standardized.long.percentiles %>%
   select(site_id, SITE_SCORE, rich_ttaxa_coe, rich_ttaxa_insecta, shannon_ttaxa_shredder, shannon_ttaxa_cte) %>% 
   left_join(condition)
 
-# Plot training
+# Plot training final scores
 metrics.scores %>% 
   filter(site_id %in% c(train.df.vec)) %>% 
   mutate(condition_class = factor(condition_class, c("1", "2", "3"))) %>% 
   ggplot(aes(condition_class, SITE_SCORE)) +
   coord_cartesian(ylim = c(0, 10)) +
-  geom_boxplot()
+  geom_boxplot() +
+  ggtitle("Final scores (training)")
 # ggsave(file.path(root.dir, "data/ibi/reruns", "lg_ibi_boxplot_set3_seed50-training.png"), dpi = "screen")
 
-# Plot validation
+# Plot validation final scores
 metrics.scores %>% 
   filter(site_id %in% c(test.df.vec)) %>% 
   mutate(condition_class = factor(condition_class, c("1", "2", "3"))) %>% 
   ggplot(aes(condition_class, SITE_SCORE)) +
   coord_cartesian(ylim = c(0, 10)) +
-  geom_boxplot()
+  geom_boxplot() +
+  ggtitle("Final scores (val)")
 # ggsave(file.path(root.dir, "data/ibi/reruns", "lg_ibi_boxplot_set3_seed50-val.png"), dpi = "screen")
 
 metrics.scores.val <- metrics.scores %>% 
   filter(site_id %in% test.df.vec) 
 
-# Plot validation + class 2 (all data plotted minus training)
+# Plot validation + class 2 (all data plotted minus training) final scores
 metrics.scores %>% 
   filter(!(site_id %in% train.df.vec)) %>%
   mutate(condition_class = factor(condition_class, c("1", "2", "3"))) %>% 
   ggplot(aes(condition_class, SITE_SCORE)) +
   coord_cartesian(ylim = c(0, 10)) +
-  geom_boxplot()
-ggsave(file.path(root.dir, "data/ibi/reruns/rescaling", "IBI_4met_seed60_2020-06-22_90-10_scaling_VAL.png"), dpi = "screen")
+  geom_boxplot() +
+  ggtitle("Final scores (val + class 2)")
+# ggsave(file.path(root.dir, "data/ibi/reruns/rescaling", "IBI_4met_seed60_2020-06-24_75cl1-25cl3_scaling_VAL.png"), dpi = "screen")
+# ggsave(file.path(root.dir, "data/ibi/reruns/rescaling", "IBI_4met_seed60_2020-06-24_95-5_scaling_VAL.png"), dpi = "screen")
   
-# plot all
+# plot all final scores
 metrics.scores %>%
   mutate(condition_class = factor(condition_class, c("1", "2", "3"))) %>%
   ggplot(aes(condition_class, SITE_SCORE)) +
   coord_cartesian(ylim = c(0, 10)) +
-  geom_boxplot()
-ggsave(file.path(root.dir, "data/ibi/reruns/rescaling", "IBI_4met_seed60_2020-06-22_90-10_scaling_ALL.png"), dpi = "screen")
+  geom_boxplot() +
+  ggtitle("LG-BAP Final Scores (all sites)")
+# ggsave(file.path(root.dir, "data/ibi/reruns/rescaling", "IBI_4met_seed60_2020-06-24_75cl1-25cl3_scaling_ALL.png"), dpi = "screen")
+# ggsave(file.path(root.dir, "data/ibi/reruns/rescaling", "IBI_4met_seed60_2020-06-24_95-5_scaling_ALL.png"), dpi = "screen")
 
 # metrics.scores.ref <- metrics.scores %>% 
 #   filter(site_id %in% c(train.df.vec)) %>% 
@@ -2188,55 +2216,6 @@ ggsave(file.path(root.dir, "data/ibi/reruns/rescaling", "IBI_4met_seed60_2020-06
 
 # write_csv(train.df, file.path(root.dir, "data/ibi/reruns", "lg_ibi_training_seed80new_2021-05-19.csv"))
 ```
-# Rescaling final IBI for LGBAP scoring
-```{r,eval=FALSE}
-
-#Determine percentiles for classes 1 and 3
-metrics.scores.c1train <- metrics.scores %>% 
-  filter(!(site_id %in% train.df.vec)) %>%
-  filter(condition_class %in% "1")
-quantile(metrics.scores.c1train$SITE_SCORE, probs = c(0, 0.25, 0.5, 0.75, 1))
-#       0%      25%      50%      75%     100% 
- # 24.98964  57.09333  68.58106  91.73102 100.00000 
-
-metrics.scores.c3train <- metrics.scores %>% 
-  filter(!(site_id %in% train.df.vec)) %>%
-  filter(condition_class %in% "3")
-quantile(metrics.scores.c3train$SITE_SCORE, probs = c(0, 0.25, 0.5, 0.75, 1))
- #      0%      25%      50%      75%     100% 
-# 0.000000  6.002589 26.287092 34.825307 76.200409 
-
-# Rescale using 25th percentile of class 3 as floor and 75th percentile of class 1 as ceiling.
-metrics.scores.rescale <- metrics.scores %>% 
-  mutate(SITE_SCORE_FINAL = (((SITE_SCORE - 6.002589  )/(91.73102   - 6.002589  )) * 10)) %>% 
-  # Convert outer quartiles to 0 and 10 respectively
-  mutate(SITE_SCORE_FINAL = ifelse(SITE_SCORE_FINAL > 10, 10, SITE_SCORE_FINAL)) %>% 
-  mutate(SITE_SCORE_FINAL = ifelse(SITE_SCORE_FINAL < 0, 0, SITE_SCORE_FINAL)) 
-
-# write_csv(metrics.scores.rescale, file.path(root.dir, "data/metrics/final_scores/metric_scores_all_lgbap_scaled_2021-05-19.csv"))
-
-
-# Replot validation
-metrics.scores.rescale %>% 
-  filter(!(site_id %in% train.df.vec)) %>%
-  mutate(condition_class = factor(condition_class, c("1", "2", "3"))) %>% 
-  ggplot(aes(condition_class, SITE_SCORE_FINAL)) +
-  coord_cartesian(ylim=c(0, 10))+
-  geom_boxplot()
-ggsave(file.path(root.dir, "data/ibi/reruns/rescaling", "IBI_4met_seed60_2020-06-22_VAL+cl2_double_scaling.png"), dpi = "screen")
-
-
-# Plot all
-metrics.scores.rescale %>% 
-  # filter(!(site_id %in% train.df.vec)) %>%
-  mutate(condition_class = factor(condition_class, c("1", "2", "3"))) %>% 
-  ggplot(aes(condition_class, SITE_SCORE_FINAL)) +
-  coord_cartesian(ylim=c(0, 10))+
-  geom_boxplot()
-ggsave(file.path(root.dir, "data/ibi/reruns/rescaling", "IBI_4met_seed60_2020-06-22_ALLDATA_double_scaling.png"), dpi = "screen")
-
-```
-
 
 # Exploring thresholds vs chem
 
