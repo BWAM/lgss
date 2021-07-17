@@ -1201,6 +1201,13 @@ metrics.df <- metrics.df %>%
   ungroup() %>% 
   select(-c(PMA_value_clitellata, PMA_value_ephemeroptera, PMA_value_plecoptera, PMA_value_coleoptera, PMA_value_trichoptera, PMA_value_chironomidae, PMA_value_other))
 
+
+# Should come out as the following for current setup (as of 7/16/21)
+# # A tibble: 1 x 8
+#   site_id pct_clitellata pct_ephemeroptera pct_plecoptera pct_coleoptera pct_trichoptera pct_chironomidae other
+#     <dbl>          <dbl>             <dbl>          <dbl>          <dbl>           <dbl>            <dbl> <dbl>
+# 1      NA           5.34              10.2          0.222           6.42            3.96             35.3  38.5
+
 ```
 
 
@@ -1214,7 +1221,7 @@ library(tidymodels)
 
 # Keep the set.seed number the same to get the same subsampled traning dataset for each run. (Change this to create a new training dataset. Original is 80)
 
-### RUN FURTHER SUBSAMPLES TO SEE WHICH METRICS COME OUT through filter. Then set final seed for training.
+### Run multiple subsamples then set final seed for training.
 set.seed(60)
 # set.seed(70)
 # set.seed(80)
@@ -1334,8 +1341,8 @@ train.df.vec <- c(train.df$site_id)
 # write.csv(test.df.vec, file.path(root.dir, "data/metrics/june2021_rerun/test_subsample_setseed90_2021-06-01.csv"), row.names = F)
 # write.csv(train.df.vec, file.path(root.dir, "data/metrics/june2021_rerun/train_subsample_setseed90_2021-06-01.csv"), row.names = F)
 # 
-write.csv(test.df, file.path(root.dir, "data/metrics/june2021_rerun/test_subsample_setseed60_allmetrics_2021-06-14.csv"), row.names = F)
-write.csv(train.df, file.path(root.dir, "data/metrics/june2021_rerun/train_subsample_setseed60_allmetrics_2021-06-14.csv"), row.names = F)
+# write.csv(test.df, file.path(root.dir, "data/metrics/june2021_rerun/test_subsample_setseed60_allmetrics_2021-06-14.csv"), row.names = F)
+# write.csv(train.df, file.path(root.dir, "data/metrics/june2021_rerun/train_subsample_setseed60_allmetrics_2021-06-14.csv"), row.names = F)
 
 ##################
 
@@ -2096,7 +2103,7 @@ metrics.df.standardized.long %>%
   ggplot(aes(condition_class, value)) +
   geom_boxplot() +
   facet_wrap(~metric, ncol = 4, scales = "free") +
-  ggtitle("Final metrics (train)")
+  ggtitle("Final metrics (training)")
 
 # Determine floor and ceiling thresholds using training only
 # THIS BLOCK USES the 95th/5th for ceiling/floor of all training data
@@ -2178,7 +2185,7 @@ metrics.scores %>%
   ggplot(aes(condition_class, SITE_SCORE)) +
   coord_cartesian(ylim = c(0, 10)) +
   geom_boxplot() +
-  ggtitle("Final scores (val)")
+  ggtitle("Final scores (validation)")
 # ggsave(file.path(root.dir, "data/ibi/reruns", "lg_ibi_boxplot_set3_seed50-val.png"), dpi = "screen")
 
 metrics.scores.val <- metrics.scores %>% 
@@ -2246,6 +2253,10 @@ abiotic.chem.long %>%
 
 ```{r IBI scores vs stressor gradient variables}
 
+####
+# need to replace below with updated file if using those code
+####
+
 fielddata <- read_csv(file.path(root.dir, "data/compile_2015-2019/field_data/2015-2019_LG_field_landcover_condclasses_20201216.csv")) %>% 
   left_join(metrics.scores, by = "site_id") %>% 
   select(site_id, condition_class.x, habitat_total_score, landcover_nat_pct, spcond, SITE_SCORE, PC1)
@@ -2266,27 +2277,6 @@ fielddata %>%
   geom_point() +
   geom_smooth(method=lm)
 
-# Plotting with rescaled IBI scores (validation only)
-fielddata <- read_csv(file.path(root.dir, "data/compile_2015-2019/field_data/2015-2019_LG_field_landcover_condclasses_20201216.csv")) %>% 
-  left_join(metrics.scores.rescale, by = "site_id") %>% 
-  filter(!(site_id %in% train.df.vec)) %>%
-  select(site_id, condition_class.x, habitat_total_score, landcover_nat_pct, spcond, SITE_SCORE_FINAL, PC1)
-fielddata %>% 
-  ggplot(aes(x=SITE_SCORE_FINAL, y=spcond)) + 
-  geom_point() +
-  geom_smooth(method=lm)
- fielddata %>% 
-  ggplot(aes(x=SITE_SCORE_FINAL, y=landcover_nat_pct)) + 
-  geom_point() +
-  geom_smooth(method=lm)
- # fielddata %>% 
- #  ggplot(aes(x=SITE_SCORE_FINAL, y=habitat_total_score)) + 
- #  geom_point() +
- #  geom_smooth(method=lm)
-fielddata %>% 
-  ggplot(aes(x=SITE_SCORE_FINAL, y=PC1)) + 
-  geom_point() +
-  geom_smooth(method=lm)
 ```
 
 
