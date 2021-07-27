@@ -1,0 +1,5 @@
+metric,disturbance,floor,ceiling
+rich_ttaxa_coe,decrease,2,10.75
+rich_ttaxa_insecta,decrease,10,32
+shannon_ttaxa_shredder,decrease,0,1.9178558367229133
+shannon_ttaxa_cte,decrease,0.10987424673037835,2.8134842219061205

@@ -2131,7 +2131,9 @@ metrics.thresholds <- metrics.df.standardized.long %>%
   select(metric, disturbance,
          floor = floor_3,
          ceiling = ceiling_1)
-  
+
+# write_csv(metrics.thresholds, file.path(root.dir, "data/ibi/reruns", "metrics_thresholds_2021-07-27.csv"))
+
 # Standardize using thresholds determined above and truncate scores >10 to 10 and <0 to 0
 metrics.df.standardized.long.percentiles <- metrics.df.standardized.long %>%
   left_join(metrics.thresholds, by = c("metric", "disturbance")) %>% 
@@ -2168,15 +2170,20 @@ metrics.scores <- metrics.df.standardized.long.percentiles %>%
   select(site_id, SITE_SCORE, rich_ttaxa_coe, rich_ttaxa_insecta, shannon_ttaxa_shredder, shannon_ttaxa_cte) %>% 
   left_join(condition)
 
+```
+```{r Final IBI plots, fig.width=3, fig.height=5}
 # Plot training final scores
+
 metrics.scores %>% 
   filter(site_id %in% c(train.df.vec)) %>% 
   mutate(condition_class = factor(condition_class, c("1", "2", "3"))) %>% 
   ggplot(aes(condition_class, SITE_SCORE)) +
   coord_cartesian(ylim = c(0, 10)) +
   geom_boxplot() +
-  ggtitle("Final scores (training)")
-# ggsave(file.path(root.dir, "data/ibi/reruns", "lg_ibi_boxplot_set3_seed50-training.png"), dpi = "screen")
+  ggtitle("Training") +
+  xlab("Condition Class") +
+  ylab("LG-BAP Score")
+ggsave(file.path(root.dir, "data/ibi/plots_for_pub", "ibi_training_final_2021-07-27.png"), dpi = "print")
 
 # Plot validation final scores
 metrics.scores %>% 
@@ -2185,44 +2192,38 @@ metrics.scores %>%
   ggplot(aes(condition_class, SITE_SCORE)) +
   coord_cartesian(ylim = c(0, 10)) +
   geom_boxplot() +
-  ggtitle("Final scores (validation)")
-# ggsave(file.path(root.dir, "data/ibi/reruns", "lg_ibi_boxplot_set3_seed50-val.png"), dpi = "screen")
+  ggtitle("Validation") +
+  xlab("Condition Class") +
+  ylab("LG-BAP Score") +
+  ggsave(file.path(root.dir, "data/ibi/plots_for_pub", "ibi_val_final_2021-07-27.png"), dpi = "print")
 
 metrics.scores.val <- metrics.scores %>% 
   filter(site_id %in% test.df.vec) 
 
 # Plot validation + class 2 (all data plotted minus training) final scores
-metrics.scores %>% 
-  filter(!(site_id %in% train.df.vec)) %>%
-  mutate(condition_class = factor(condition_class, c("1", "2", "3"))) %>% 
-  ggplot(aes(condition_class, SITE_SCORE)) +
-  coord_cartesian(ylim = c(0, 10)) +
-  geom_boxplot() +
-  ggtitle("Final scores (val + class 2)")
-# ggsave(file.path(root.dir, "data/ibi/reruns/rescaling", "IBI_4met_seed60_2020-06-24_75cl1-25cl3_scaling_VAL.png"), dpi = "screen")
-# ggsave(file.path(root.dir, "data/ibi/reruns/rescaling", "IBI_4met_seed60_2020-06-24_95-5_scaling_VAL.png"), dpi = "screen")
-  
+# metrics.scores %>% 
+#   filter(!(site_id %in% train.df.vec)) %>%
+#   mutate(condition_class = factor(condition_class, c("1", "2", "3"))) %>% 
+#   ggplot(aes(condition_class, SITE_SCORE)) +
+#   coord_cartesian(ylim = c(0, 10)) +
+#   geom_boxplot() +
+#   ggtitle("Final scores (val + class 2)") +
+#   xlab("Condition Class") +
+#   ylab("LG-BAP Score")
+
 # plot all final scores
 metrics.scores %>%
   mutate(condition_class = factor(condition_class, c("1", "2", "3"))) %>%
   ggplot(aes(condition_class, SITE_SCORE)) +
   coord_cartesian(ylim = c(0, 10)) +
   geom_boxplot() +
-  ggtitle("LG-BAP Final Scores (all sites)")
-# ggsave(file.path(root.dir, "data/ibi/reruns/rescaling", "IBI_4met_seed60_2020-06-24_75cl1-25cl3_scaling_ALL.png"), dpi = "screen")
-# ggsave(file.path(root.dir, "data/ibi/reruns/rescaling", "IBI_4met_seed60_2020-06-24_95-5_scaling_ALL.png"), dpi = "screen")
+  ggtitle("All Sites") +
+  xlab("Condition Class") +
+  ylab("LG-BAP Score") +
+  ggsave(file.path(root.dir, "data/ibi/plots_for_pub", "ibi_allsites_final_2021-07-27.png"), dpi = "print")
 
-# metrics.scores.ref <- metrics.scores %>% 
-#   filter(site_id %in% c(train.df.vec)) %>% 
-#   filter(condition_class == "1") %>% 
-#   mutate(quant = quantile(SITE_SCORE, probs = 0.25))
-# metrics.scores.stress <- metrics.scores %>%
-#   filter(site_id %in% c(train.df.vec)) %>% 
-#   filter(condition_class == "3") %>% 
-#   mutate(quant = quantile(SITE_SCORE, probs = 0.75))
-
-# write_csv(train.df, file.path(root.dir, "data/ibi/reruns", "lg_ibi_training_seed80new_2021-05-19.csv"))
 ```
+
 
 # Exploring thresholds vs chem
 
