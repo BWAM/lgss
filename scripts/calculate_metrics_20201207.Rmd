@@ -2171,7 +2171,7 @@ metrics.scores <- metrics.df.standardized.long.percentiles %>%
   left_join(condition)
 
 ```
-```{r Final IBI plots, fig.width=3, fig.height=5}
+```{r Final IBI plots, fig.width=3, fig.height=5, eval=FALSE}
 # Plot training final scores
 
 metrics.scores %>% 
@@ -2181,9 +2181,10 @@ metrics.scores %>%
   coord_cartesian(ylim = c(0, 10)) +
   geom_boxplot() +
   ggtitle("Training") +
+  # xlab(NULL) +
   xlab("Condition Class") +
-  ylab("LG-BAP Score")
-ggsave(file.path(root.dir, "data/ibi/plots_for_pub", "ibi_training_final_2021-07-27.png"), dpi = "print")
+  ylab("LG-BAP Score") 
+  # ggsave(file.path(root.dir, "data/ibi/plots_for_pub", "ibi_training_final_2021-07-27.png"), dpi = "print")
 
 # Plot validation final scores
 metrics.scores %>% 
@@ -2194,11 +2195,15 @@ metrics.scores %>%
   geom_boxplot() +
   ggtitle("Validation") +
   xlab("Condition Class") +
-  ylab("LG-BAP Score") +
-  ggsave(file.path(root.dir, "data/ibi/plots_for_pub", "ibi_val_final_2021-07-27.png"), dpi = "print")
+  ylab("LG-BAP Score") 
+  # xlab(NULL) +
+  # ylab(NULL) +
+  # theme(axis.text.y = element_blank(),
+        # axis.ticks.y = element_blank()) +
+  # ggsave(file.path(root.dir, "data/ibi/plots_for_pub", "ibi_val_final_2021-07-27.png"), dpi = "print")
 
-metrics.scores.val <- metrics.scores %>% 
-  filter(site_id %in% test.df.vec) 
+# metrics.scores.val <- metrics.scores %>% 
+  # filter(site_id %in% test.df.vec) 
 
 # Plot validation + class 2 (all data plotted minus training) final scores
 # metrics.scores %>% 
@@ -2218,10 +2223,119 @@ metrics.scores %>%
   coord_cartesian(ylim = c(0, 10)) +
   geom_boxplot() +
   ggtitle("All Sites") +
+  # theme(axis.text.y = element_blank(),
+  #       axis.ticks.y = element_blank()) +
+  # ylab(NULL) +
+  # xlab(NULL) +
   xlab("Condition Class") +
-  ylab("LG-BAP Score") +
-  ggsave(file.path(root.dir, "data/ibi/plots_for_pub", "ibi_allsites_final_2021-07-27.png"), dpi = "print")
+  ylab("LG-BAP Score") 
+  # ggsave(file.path(root.dir, "data/ibi/plots_for_pub", "ibi_allsites_final_2021-07-27.png"), dpi = "print")
 
+```
+
+```{r Model testing}
+
+# Test training
+
+metrics.scores.train <- metrics.scores %>% 
+  filter(site_id %in% c(train.df.vec)) %>% 
+  mutate(prediction = case_when(
+    SITE_SCORE > 5 ~ "1",
+    SITE_SCORE < 5 ~ "3",
+  )) %>% 
+  rename(truth = condition_class) %>% 
+  select(truth, prediction) %>% 
+  mutate(prediction = factor(prediction, c("1","3"))) %>% 
+  mutate(truth = factor(truth, c("1","3")))
+
+metrics.scores.train %>%
+  conf_mat(truth, prediction) %>%
+  summary() %>%
+  filter(.metric %in%
+    c("accuracy", "precision", "recall", "f_meas")) %>%
+  as_tibble()
+
+
+# Test validation
+
+metrics.scores.validation <- metrics.scores %>% 
+  filter(site_id %in% c(test.df.vec)) %>% 
+  mutate(prediction = case_when(
+    SITE_SCORE > 5 ~ "1",
+    SITE_SCORE < 5 ~ "3",
+  )) %>% 
+  rename(truth = condition_class) %>% 
+  select(truth, prediction) %>% 
+  mutate(prediction = factor(prediction, c("1","3"))) %>% 
+  mutate(truth = factor(truth, c("1","3")))
+
+metrics.scores.validation %>%
+  conf_mat(truth, prediction) %>%
+  summary() %>%
+  filter(.metric %in%
+    c("accuracy", "precision", "recall", "f_meas")) %>%
+  as_tibble()
+
+```
+
+```{r PC1 corelations, eval = FALSE}
+
+
+
+
+
+
+
+
+
+# Matt's code (adapt from this):
+
+all_abiotic_classified <- read_csv(file.path(here::here(),
+                                             "data",
+                                             "all.abiotic.classified.chem.watershed.csv"))
+all_abiotic_classified<-all_abiotic_classified %>% 
+  rename(uniqueid = uniqueID)
+
+metric.scores.abiotic<-left_join(metrics.scores, all_abiotic_classified, by=c("uniqueid"))
+
+
+metric.scores.train<-metric.scores.abiotic %>% 
+  filter(uniqueid %in% c(train.df.vec))
+
+metric.scores.validation<-metric.scores.abiotic %>% 
+  filter(uniqueid %in% c(test.df.vec))
+  
+# Training Sites
+cor.test(metric.scores.train$SITE_SCORE, metric.scores.train$PC1, method = "pearson")
+#Test Sites
+cor.test(metric.scores.validation$SITE_SCORE, metric.scores.validation$PC1, method = "pearson")
+#All Sites
+cor.test(metric.scores.abiotic$SITE_SCORE, metric.scores.abiotic$PC1, method = "pearson")
+# Only trainig and test sites
+metric.scores.abiotic.subset<-metric.scores.abiotic %>% 
+  filter(uniqueid %in% c(train.test.vec))
+cor.test(metric.scores.abiotic.subset$SITE_SCORE, metric.scores.abiotic.subset$PC1, method = "pearson")
+
+summary(lm(metric.scores.abiotic$SITE_SCORE~metric.scores.abiotic$PC1))
+
+metric.scores.abiotic %>% 
+  #filter(uniqueid %in% c(train.test.vec)) %>% 
+  ggplot(aes(COND, SITE_SCORE)) + 
+  geom_point()+
+  geom_smooth(method=lm)
+
+metric.scores.abiotic %>%
+  #filter(uniqueid %in% c(train.test.vec)) %>%
+  mutate(class = case_when(
+    condition_class == "1" ~ "least disturbed",
+    condition_class == "2" ~ "other",
+    condition_class == "3" ~ "most disturbed",
+  )) %>% 
+  ggplot(aes(PC1, SITE_SCORE, shape = class))+
+  scale_shape_manual(values=c(3, 4, 8))+
+  coord_cartesian(ylim=c(0, 10))+
+  geom_point()+
+  geom_smooth(method=lm)
 ```
 
 
@@ -2254,9 +2368,15 @@ abiotic.chem.long %>%
 
 ```{r IBI scores vs stressor gradient variables}
 
-####
-# need to replace below with updated file if using those code
-####
+
+
+#########
+#########
+# need to replace below with updated data (new PC1, complete habitat scores)
+#########
+#########
+
+
 
 fielddata <- read_csv(file.path(root.dir, "data/compile_2015-2019/field_data/2015-2019_LG_field_landcover_condclasses_20201216.csv")) %>% 
   left_join(metrics.scores, by = "site_id") %>% 
