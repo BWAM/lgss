@@ -2278,7 +2278,7 @@ metrics.scores.validation %>%
 
 ```
 
-```{r PC1 corelations, eval = FALSE}
+```{r PC1 correlations, eval = FALSE}
 
 
 
@@ -2339,7 +2339,7 @@ metric.scores.abiotic %>%
 ```
 
 
-# Exploring thresholds vs chem
+# Exploring chem vs classes
 
 ```{r chem boxplots, fig.width=10, fig.height=12}
 
