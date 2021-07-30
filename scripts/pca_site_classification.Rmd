@@ -189,19 +189,14 @@ abiotic.pca <- prcomp(fielddata.pca.scale, cor = TRUE)
 
 # Plot PCA Biplot and quantiles of PC1 values
 pca_biplot <- autoplot(abiotic.pca, data = fielddata.pca.scale, label = F, label.size = 3, loadings.label = TRUE, loadings.label.repel=T, loadings.label.size = 4, scale= 0)
-
-# vline<- geom_vline(xintercept = c(-1.4769168,-0.4725721,0.9480725))
-# pca_biplot+vline
 pca_biplot +
-  ### Incorrect intercepts for quantiles commented out below... WHERE DID THESE COME FROM? ###
-  # geom_vline(xintercept = c(-1.4769168,-0.4725721,0.9480725)) +
-  # geom_vline(xintercept = c(-0.8870725,0.0270505,1.1074533))
-  # geom_vline(xintercept = c(-0.8870725,1.1074533), linetype="dotdash") +
-  # geom_vline(xintercept = 0.0270505, linetype="dotdash") +
-  # geom_vline(xintercept = c(-0.875372337,-0.003422851,1.124783475), linetype = "dotdash") +
-  annotate("text", x = -4, y = -3.5, label = "Class 3\n(Most Disturbed)", fontface = "bold") +
-  annotate("text", x = 0.1, y = -3.5, label = "Class 2\n(Mod. Disturbed)", fontface = "bold") +
-  annotate("text", x =  3, y = -3.5, label = "Class 1\n(Least Disturbed)", fontface = "bold")
+  geom_vline(xintercept = c(-0.87304171, 1.01738099), linetype = "dotdash") +
+  annotate("text", x = -3.75, y = -2.75, label = "Most Disturbed", fontface = "bold", size = 4.5) +
+  annotate("text", x = 0.1, y = -2.75, label = "Slightly-Moderately\nDisturbed", fontface = "bold", size = 4.5) +
+  annotate("text", x =  2.5, y = -2.75, label = "Least Disturbed", fontface = "bold", size = 4.5)
+  
+  # ggsave(file.path(root.dir, "data/ibi/plots_for_pub", "pca_2021-07-30.png"), dpi = "print")
+
 
 
 ### 2nd plot:
@@ -283,13 +278,13 @@ joined_num<-select_if(joined, is.numeric) %>%
 # Generate and export basic stats of variables
 var.stats <- pastecs::stat.desc(joined_num) %>% 
   select(-c(PC1, PC2, PC3))
-# write.table(var.stats, file.path(root.dir, "data/pca/pca_variable_stats_2021-05-25.csv"),sep=",", row.names = TRUE)
+# write.table(var.stats, file.path(root.dir, "data/pca/pca_variable_stats_2021-07-30.csv"),sep=",", row.names = TRUE)
 
 PC1_corr <- joined_num %>%
   select(-PC2, -PC3) %>%
   correlate(use = "pairwise.complete.obs", method = "spearman") %>%
   focus(PC1)
-# write.table(PC1_corr, file.path(root.dir, "data/pca/pc1_corr_2021-05-25.csv"),sep=",", row.names = FALSE)
+# write.table(PC1_corr, file.path(root.dir, "data/pca/pc1_corr_2021-07-30.csv"),sep=",", row.names = FALSE)
 
 PC2_corr <- joined_num %>%
   select(-PC1, -PC3) %>%

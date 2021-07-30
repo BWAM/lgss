@@ -2174,9 +2174,17 @@ metrics.scores <- metrics.df.standardized.long.percentiles %>%
 ```{r Final IBI plots, fig.width=3, fig.height=5, eval=FALSE}
 # Plot training final scores
 
-metrics.scores %>% 
+metrics.scores.plot <- metrics.scores %>% 
+  mutate(class = case_when(
+    condition_class == "1" ~ "LD",
+    condition_class == "2" ~ "SMD",
+    condition_class == "3" ~ "MD",
+  )) 
+
+  
+metrics.scores.plot %>% 
   filter(site_id %in% c(train.df.vec)) %>% 
-  mutate(condition_class = factor(condition_class, c("1", "2", "3"))) %>% 
+  mutate(condition_class = factor(class, c("LD", "SMD", "MD"))) %>% 
   ggplot(aes(condition_class, SITE_SCORE)) +
   coord_cartesian(ylim = c(0, 10)) +
   geom_boxplot() +
@@ -2184,12 +2192,12 @@ metrics.scores %>%
   # xlab(NULL) +
   xlab("Condition Class") +
   ylab("LG-BAP Score") 
-  # ggsave(file.path(root.dir, "data/ibi/plots_for_pub", "ibi_training_final_2021-07-27.png"), dpi = "print")
+  ggsave(file.path(root.dir, "data/ibi/plots_for_pub", "ibi_training_final_2021-07-30.png"), dpi = "print")
 
 # Plot validation final scores
-metrics.scores %>% 
+metrics.scores.plot %>% 
   filter(site_id %in% c(test.df.vec)) %>% 
-  mutate(condition_class = factor(condition_class, c("1", "2", "3"))) %>% 
+  mutate(condition_class = factor(class, c("LD", "SMD", "MD"))) %>% 
   ggplot(aes(condition_class, SITE_SCORE)) +
   coord_cartesian(ylim = c(0, 10)) +
   geom_boxplot() +
@@ -2200,13 +2208,13 @@ metrics.scores %>%
   # ylab(NULL) +
   # theme(axis.text.y = element_blank(),
         # axis.ticks.y = element_blank()) +
-  # ggsave(file.path(root.dir, "data/ibi/plots_for_pub", "ibi_val_final_2021-07-27.png"), dpi = "print")
+  ggsave(file.path(root.dir, "data/ibi/plots_for_pub", "ibi_val_final_2021-07-30.png"), dpi = "print")
 
-# metrics.scores.val <- metrics.scores %>% 
+# metrics.scores.val <- metrics.scores.plot %>% 
   # filter(site_id %in% test.df.vec) 
 
 # Plot validation + class 2 (all data plotted minus training) final scores
-# metrics.scores %>% 
+# metrics.scores.plot %>% 
 #   filter(!(site_id %in% train.df.vec)) %>%
 #   mutate(condition_class = factor(condition_class, c("1", "2", "3"))) %>% 
 #   ggplot(aes(condition_class, SITE_SCORE)) +
@@ -2217,8 +2225,8 @@ metrics.scores %>%
 #   ylab("LG-BAP Score")
 
 # plot all final scores
-metrics.scores %>%
-  mutate(condition_class = factor(condition_class, c("1", "2", "3"))) %>%
+metrics.scores.plot %>%
+  mutate(condition_class = factor(class, c("LD", "SMD", "MD"))) %>% 
   ggplot(aes(condition_class, SITE_SCORE)) +
   coord_cartesian(ylim = c(0, 10)) +
   geom_boxplot() +
@@ -2229,7 +2237,22 @@ metrics.scores %>%
   # xlab(NULL) +
   xlab("Condition Class") +
   ylab("LG-BAP Score") 
-  # ggsave(file.path(root.dir, "data/ibi/plots_for_pub", "ibi_allsites_final_2021-07-27.png"), dpi = "print")
+  ggsave(file.path(root.dir, "data/ibi/plots_for_pub", "ibi_allsites_final_2021-07-30.png"), dpi = "print")
+
+
+# Plot all scores, single box and whisker to visualize distribution against scale
+metrics.scores.plot %>%
+  # mutate(condition_class = factor(condition_class, c("1", "2", "3"))) %>%
+  ggplot(aes(condition_class, SITE_SCORE)) +
+  coord_cartesian(ylim = c(0, 10)) +
+  geom_boxplot() +
+  ggtitle("All Sites") +
+  # theme(axis.text.y = element_blank(),
+  #       axis.ticks.y = element_blank()) +
+  # ylab(NULL) +
+  # xlab(NULL) +
+  xlab("Condition Class") +
+  ylab("LG-BAP Score") 
 
 ```
 
