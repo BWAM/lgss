@@ -1,0 +1,44 @@
+---
+title: "lowgrad_misc_analyses"
+author: "glemley"
+date: "11/2/2021"
+output: html_document
+---
+
+
+```{r}
+library(tidyverse)
+# library(readxl)
+
+root.dir <- rprojroot::find_root("lgss.Rproj")
+
+sites.events <- read_csv(file.path(root.dir, "data", "compile_2015-2019", "field_data", "final_cleaned", "sites_events_final_2021-11-02.csv"))
+
+field <- read_csv(file.path(root.dir, "data", "compile_2015-2019", "field_data", "final_cleaned", "2015-2019_lowgrad_fielddata_20210526.csv")) %>% 
+  mutate(event_id_date = as.Date(sample_date, format = "%m/%d/%Y"),
+         event_id_date = format(event_id_date, "%Y%m%d"),
+         event_id = paste0(site_id,"_",event_id_date)) %>%   
+  filter(event_id %in% sites.events$event_id) %>% 
+  mutate(lgs_habitat_bank = ifelse(is.na(lgs_habitat_bank), -9999, lgs_habitat_bank),
+         lgs_habitat_macrophyte = ifelse(is.na(lgs_habitat_macrophyte), -9999, lgs_habitat_macrophyte),
+         lgs_habitat_snag = ifelse(is.na(lgs_habitat_snag), -9999, lgs_habitat_snag),
+         lgs_habitat_substrate = ifelse(is.na(lgs_habitat_substrate), -9999, lgs_habitat_substrate),
+  )
+
+
+```
+
+```{r}
+# Determine percentage of sites where woody snag habitats were present
+field.snag <- field %>%
+  #Clean up snag field
+  mutate(lgs_habitat_snag = ifelse(lgs_habitat_snag == -9999 & lgs_habitat_macrophyte != -9999, 0, lgs_habitat_snag)) %>% 
+  filter(!lgs_habitat_snag %in% "-9999")
+
+snag.present <- field.snag %>% 
+  filter(lgs_habitat_snag %in% c(1,2))
+
+# Snags only present at 76% of sites!
+
+```
+

@@ -58,6 +58,13 @@ fielddata.lc <- fielddata %>%
     "17-PECN-12.4",
     "13-WALK-35.6",
     "13-IDNK-0.5")))   
+
+# Export final sites list
+fielddata.lc %>%
+  mutate(event_id_date = format(sample_date, "%Y%m%d"),
+         event_id = paste0(site_id,"_",event_id_date))  %>% 
+  select(site_id, sample_date, event_id) %>%
+  write.csv(., file.path(root.dir, "data", "compile_2015-2019", "field_data", "final_cleaned", "sites_events_final_2021-11-02.csv"), row.names = FALSE)
 ```
 
 Prepping data for input to PCA
