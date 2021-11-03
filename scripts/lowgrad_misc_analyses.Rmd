@@ -30,13 +30,21 @@ field <- read_csv(file.path(root.dir, "data", "compile_2015-2019", "field_data",
 
 ```{r}
 # Determine percentage of sites where woody snag habitats were present
-field.snag <- field %>%
-  #Clean up snag field
-  mutate(lgs_habitat_snag = ifelse(lgs_habitat_snag == -9999 & lgs_habitat_macrophyte != -9999, 0, lgs_habitat_snag)) %>% 
-  filter(!lgs_habitat_snag %in% "-9999")
+field.habitat <- field %>%
+#   ##Clean up snag field
+#   mutate(lgs_habitat_snag = ifelse(lgs_habitat_snag == -9999 & lgs_habitat_macrophyte != -9999, 0, lgs_habitat_snag),
+#          lgs_habitat_bank = ifelse(lgs_habitat_bank == -9999 & lgs_habitat_macrophyte != -9999, 0, lgs_habitat_bank)) %>% 
+  # Filter out records where all habitat fields are blank (substrate is blank for all of these)
+  filter(!lgs_habitat_substrate %in% "-9999")
 
-snag.present <- field.snag %>% 
+h.snag.present <- field.habitat %>% 
   filter(lgs_habitat_snag %in% c(1,2))
+h.bank.present <- field.habitat %>% 
+  filter(lgs_habitat_bank %in% c(1,2))
+h.substr.present <- field.habitat %>% 
+  filter(lgs_habitat_substrate %in% c(1,2))
+h.macroph.present <- field.habitat %>% 
+  filter(lgs_habitat_macrophyte %in% c(1,2))
 
 # Snags only present at 76% of sites!
 
