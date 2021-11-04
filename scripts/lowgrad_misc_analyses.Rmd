@@ -46,6 +46,11 @@ h.substr.present <- field.habitat %>%
 h.macroph.present <- field.habitat %>% 
   filter(lgs_habitat_macrophyte %in% c(1,2))
 
+nrow(h.snag.present)/nrow(field.habitat)
+nrow(h.bank.present)/nrow(field.habitat)
+nrow(h.substr.present)/nrow(field.habitat)
+nrow(h.macroph.present)/nrow(field.habitat)
+
 # Snags only present at 76% of sites!
 
 ```
