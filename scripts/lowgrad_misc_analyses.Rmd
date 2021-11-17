@@ -19,11 +19,16 @@ field <- read_csv(file.path(root.dir, "data", "compile_2015-2019", "field_data",
          event_id_date = format(event_id_date, "%Y%m%d"),
          event_id = paste0(site_id,"_",event_id_date)) %>%   
   filter(event_id %in% sites.events$event_id) %>% 
+  # Convert habitat sampled fields to -9999 if NA
   mutate(lgs_habitat_bank = ifelse(is.na(lgs_habitat_bank), -9999, lgs_habitat_bank),
          lgs_habitat_macrophyte = ifelse(is.na(lgs_habitat_macrophyte), -9999, lgs_habitat_macrophyte),
          lgs_habitat_snag = ifelse(is.na(lgs_habitat_snag), -9999, lgs_habitat_snag),
          lgs_habitat_substrate = ifelse(is.na(lgs_habitat_substrate), -9999, lgs_habitat_substrate),
-  )
+  ) %>% 
+  # Fill incomplete habitat sample entries (-9999) to 0 where substrate samples were collected
+  mutate(lgs_habitat_snag = ifelse(lgs_habitat_snag == -9999 & lgs_habitat_substrate != -9999, 0, lgs_habitat_snag),
+         lgs_habitat_macrophyte = ifelse(lgs_habitat_macrophyte == -9999 & lgs_habitat_substrate != -9999, 0, lgs_habitat_macrophyte),
+         lgs_habitat_bank = ifelse(lgs_habitat_bank == -9999 & lgs_habitat_substrate != -9999, 0, lgs_habitat_bank))
 
 
 ```

@@ -292,7 +292,7 @@ Check full bug list against master taxa table and reformat/update accordingly (a
 
 # master.taxa <- read.csv(file.path(datamod.dir, "Final_Macro_ITS", "20201019_S_MSTR_MACRO_SPECIES.csv"), stringsAsFactors = FALSE)
 
-master.taxa <- read.csv(file.path(datamod.dir, "Final_Macro_ITS", "20210114_S_MSTR_MACRO_SPECIES.csv"), stringsAsFactors = FALSE, na.strings = c("", "NA")) %>% 
+master.taxa <- read.csv(file.path(datamod.dir, "Final_Macro_ITS", "prev_versions", "20210114_S_MSTR_MACRO_SPECIES.csv"), stringsAsFactors = FALSE, na.strings = c("", "NA")) %>% 
   rename_all(tolower) %>% 
   setNames(., sub("mms_", "", names(.))) %>% 
   mutate(tolerance_name = ifelse(tolerance > 7, "tolerant", NA),
