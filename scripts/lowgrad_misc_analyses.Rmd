@@ -28,9 +28,12 @@ field <- read_csv(file.path(root.dir, "data", "compile_2015-2019", "field_data",
   # Fill incomplete habitat sample entries (-9999) to 0 where substrate samples were collected
   mutate(lgs_habitat_snag = ifelse(lgs_habitat_snag == -9999 & lgs_habitat_substrate != -9999, 0, lgs_habitat_snag),
          lgs_habitat_macrophyte = ifelse(lgs_habitat_macrophyte == -9999 & lgs_habitat_substrate != -9999, 0, lgs_habitat_macrophyte),
-         lgs_habitat_bank = ifelse(lgs_habitat_bank == -9999 & lgs_habitat_substrate != -9999, 0, lgs_habitat_bank))
+         lgs_habitat_bank = ifelse(lgs_habitat_bank == -9999 & lgs_habitat_substrate != -9999, 0, lgs_habitat_bank)) %>% 
+  mutate(snag_present = ifelse(lgs_habitat_snag == 0, "N", "Y"),
+         snag_present = ifelse(lgs_habitat_snag == -9999, NA, snag_present)) 
+  # select(lgs_habitat_snag, snag_present, everything())
 
-
+write.csv(field, file.path(root.dir, "data", "compile_2015-2019", "field_data", "final_cleaned", "2015-2019_lowgrad_fielddata_2021-11-18.csv"), row.names = FALSE)
 ```
 
 ```{r}

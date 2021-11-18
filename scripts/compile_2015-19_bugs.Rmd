@@ -374,7 +374,12 @@ write.table(bugmatrix.15to19.unique, file.path(teams.datadir, "bugs", "2015-2019
 bugs.unique.long <- bugmatrix.15to19.unique %>% 
   gather(final_id, count, -site_id) %>% 
   filter(!is.na(count),
-         count > 0)  
+         count > 0)  %>% 
+  # Filter out sites to be omitted (low sample counts or poor sample collected)
+  filter(!(site_id %in% c(
+    "17-PECN-12.4",
+    "13-WALK-35.6",
+    "13-IDNK-0.5")))
 
 # Identify taxa missing from master table
 # missing.df <- bugs.unique.long %>% 
@@ -443,14 +448,21 @@ bugs.unique.wide.tol <- bugs.unique.long %>%
 # Export long and wide sample taxa tables
 
 ```{r, eval = FALSE}
-write_csv(bugs.unique.long, file.path(root.dir, "data/compile_2015-2019/bugs", "2015-2019_lowgrad_taxa_unique_long_speciesfill_20210111.csv"))
-write_csv(bugs.unique.wide, file.path(root.dir, "data/compile_2015-2019/bugs", "2015-2019_lowgrad_taxa_unique_wide_speciesfill_20210105.csv"))
+write_csv(bugs.unique.long, file.path(root.dir, "data/compile_2015-2019/bugs", "2015-2019_lowgrad_taxa_unique_long_speciesfill_2021-11-18.csv"))
+write_csv(bugs.unique.wide, file.path(root.dir, "data/compile_2015-2019/bugs", "2015-2019_lowgrad_taxa_unique_wide_speciesfill_2021-11-18.csv"))
 
-write_csv(bugs.unique.wide.genus, file.path(root.dir, "data/compile_2015-2019/bugs", "2015-2019_lowgrad_taxa_unique_wide_speciesfill-genus_20210405.csv"))
-write_csv(bugs.unique.wide.family, file.path(root.dir, "data/compile_2015-2019/bugs", "2015-2019_lowgrad_taxa_unique_wide_speciesfill-family_20210405.csv"))
-write_csv(bugs.unique.wide.order, file.path(root.dir, "data/compile_2015-2019/bugs", "2015-2019_lowgrad_taxa_unique_wide_speciesfill-order_20210405.csv"))
-write_csv(bugs.unique.wide.ffg, file.path(root.dir, "data/compile_2015-2019/bugs", "2015-2019_lowgrad_taxa_unique_wide_speciesfill-ffg_20210405.csv"))
-write_csv(bugs.unique.wide.tol, file.path(root.dir, "data/compile_2015-2019/bugs", "2015-2019_lowgrad_taxa_unique_wide_speciesfill-tolerance_20210405.csv"))
+write_csv(bugs.unique.wide.genus, file.path(root.dir, "data/compile_2015-2019/bugs", "2015-2019_lowgrad_taxa_unique_wide_speciesfill-genus_2021-11-18.csv"))
+write_csv(bugs.unique.wide.family, file.path(root.dir, "data/compile_2015-2019/bugs", "2015-2019_lowgrad_taxa_unique_wide_speciesfill-family_2021-11-18.csv"))
+write_csv(bugs.unique.wide.order, file.path(root.dir, "data/compile_2015-2019/bugs", "2015-2019_lowgrad_taxa_unique_wide_speciesfill-order_2021-11-18.csv"))
+write_csv(bugs.unique.wide.ffg, file.path(root.dir, "data/compile_2015-2019/bugs", "2015-2019_lowgrad_taxa_unique_wide_speciesfill-ffg_2021-11-18.csv"))
+write_csv(bugs.unique.wide.tol, file.path(root.dir, "data/compile_2015-2019/bugs", "2015-2019_lowgrad_taxa_unique_wide_speciesfill-tolerance_2021-11-18.csv"))
 
+```
+
+```{r Add quotes to file for use in PRIMER}
+
+file <- read.csv(file.path(root.dir, "data/compile_2015-2019/bugs/for_primer_ord", "2015-2019_LG_bugs_order+abiotic-field+LC+condition-TRIMMED_2021-11-18.csv"))
+
+write.csv(file, file.path(root.dir, "data/compile_2015-2019/bugs/for_primer_ord", "2015-2019_LG_bugs_order+abiotic-field+LC+condition-TRIMMED2_2021-11-18.csv"), quote = TRUE, row.names = FALSE)
 ```
 
