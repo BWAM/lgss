@@ -31,7 +31,7 @@ landcover.path <- file.path(root.dir, "data", "compile_2015-2019", "landcover", 
 fielddata <- read.csv(fielddata.path, stringsAsFactors = FALSE) %>% 
   mutate(sample_date = as.Date(sample_date)) %>% 
   # mutate(unique_id = paste0(site_id, "_", format(sample_date, "%Y"))) %>% 
-  select(site_id, everything(), -event_id) %>% 
+  select(site_id, everything(), -event_id, -event_id_date) %>% 
   arrange(site_id, sample_date) %>% 
   distinct(site_id, .keep_all = TRUE)
 
