@@ -17,13 +17,8 @@ datamod.dir <- file.path("C:/Users/gmlemley/New York State Office of Information
 
 ```{r Load sample taxa and prep}
 
-taxa.df <- read_csv(file.path(root.dir, "data/compile_2015-2019/bugs", "2015-2019_lowgrad_taxa_unique_long_speciesfill_20210111.csv")) %>% 
-  # Filter out sites to be omitted (low sample counts or poor sample collected)
-  filter(!(site_id %in% c(
-    "17-PECN-12.4",
-    "13-WALK-35.6",
-    "13-IDNK-0.5")))
-  
+taxa.df <- read_csv(file.path(root.dir, "data/compile_2015-2019/bugs", "2015-2019_lowgrad_taxa_unique_long_speciesfill_2021-11-18.csv"))
+
 # Create nested dataframe
 nest.df <- taxa.df %>%
   group_nest(site_id, .key = "data")
