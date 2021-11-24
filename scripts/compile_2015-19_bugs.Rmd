@@ -350,36 +350,78 @@ matchlist <- bugmatrix.15to19 %>%
 Export matrices for use elsewhere
 ```{r, eval = FALSE}
 
-teams.datadir <- "C:/Users/gmlemley/New York State Office of Information Technology Services/SMAS - Low Gradient IBI/data"
-
-# All bugs
-write.table(bugmatrix.15to19, file.path(root.dir, "data/compile_2015-2019/bugs/2015-2019_lowgrad_bugs_matrix_20201207.csv"),sep=",", row.names = FALSE)
-write.table(bugmatrix.15to19, file.path(teams.datadir, "bugs/2015-2019_lowgrad_bugs_matrix_20201207.csv"),sep=",", row.names = FALSE)
-
-# Only unique bugs
-write.table(bugmatrix.15to19.unique, file.path(root.dir, "data/compile_2015-2019/bugs/2015-2019_lowgrad_bugs_matrix_UNIQUE_20201210.csv"),sep=",", row.names = FALSE)
-write.table(bugmatrix.15to19.unique, file.path(teams.datadir, "bugs", "2015-2019_lowgrad_bugs_matrix_UNIQUE_20201210.csv"),sep=",", row.names = FALSE)
+# teams.datadir <- "C:/Users/gmlemley/New York State Office of Information Technology Services/SMAS - Low Gradient IBI/data"
+# 
+# # All bugs
+# write.table(bugmatrix.15to19, file.path(root.dir, "data/compile_2015-2019/bugs/2015-2019_lowgrad_bugs_matrix_20201207.csv"),sep=",", row.names = FALSE)
+# write.table(bugmatrix.15to19, file.path(teams.datadir, "bugs/2015-2019_lowgrad_bugs_matrix_20201207.csv"),sep=",", row.names = FALSE)
+# 
+# # Only unique bugs
+# write.table(bugmatrix.15to19.unique, file.path(root.dir, "data/compile_2015-2019/bugs/2015-2019_lowgrad_bugs_matrix_UNIQUE_20201210.csv"),sep=",", row.names = FALSE)
+# write.table(bugmatrix.15to19.unique, file.path(teams.datadir, "bugs", "2015-2019_lowgrad_bugs_matrix_UNIQUE_20201210.csv"),sep=",", row.names = FALSE)
 
 ```
 
 
-```{r}
-# Add total indiv count fields, flag those <200???
-```
+```{r Subsampling and site omitting}
 
-
-```{r Perform taxa_fill function}
-
-# Convert from wide to long
+# Convert from wide to long and filter out sites to be omitted (low sample counts or poor sample collected)
 bugs.unique.long <- bugmatrix.15to19.unique %>% 
   gather(final_id, count, -site_id) %>% 
   filter(!is.na(count),
-         count > 0)  %>% 
-  # Filter out sites to be omitted (low sample counts or poor sample collected)
+         count > 0)  %>%
   filter(!(site_id %in% c(
     "17-PECN-12.4",
     "13-WALK-35.6",
     "13-IDNK-0.5")))
+
+# Summarize total counts
+totcounts <- bugs.unique.long %>% 
+  select(-final_id) %>% 
+  group_by(site_id) %>% 
+  summarise(tot = sum(count)) %>% 
+  mutate(target = 200,
+         missed = tot-target,
+         over = ifelse(missed <0, 0, missed),
+         under = ifelse(missed >0, 0, missed)
+  )
+
+#  Subsample those with indiv counts >200 down to 200
+library(splitstackshape)
+resample <- bugs.unique.long %>%
+     group_by(site_id, final_id, count) %>%
+     mutate(n = n()) %>%
+     expandRows(., "count") %>% 
+  ungroup()
+
+set.seed(52)
+bugs.unique.long <- resample %>%
+  group_by(site_id) %>% 
+  slice_sample(n = 200, replace = FALSE) %>% 
+  rename(count = n) %>% 
+  group_by(site_id, final_id) %>% 
+  summarise(count = sum(count))
+
+# Summarize total counts again
+totcounts_new <- bugs.unique.long %>% 
+  select(-final_id) %>% 
+  group_by(site_id) %>% 
+  summarise(tot = sum(count)) %>% 
+  mutate(target = 200,
+         missed = tot-target,
+         over = ifelse(missed <0, 0, missed),
+         under = ifelse(missed >0, 0, missed)
+  )
+
+# List sites with <132 count - for possible disqualifying as reference
+totcount_noref <- totcounts_new %>% 
+  filter(tot <132)
+# cat(unique(totcount_noref$site_id), sep = "', '")
+
+```
+
+
+```{r Perform taxa_fill function}
 
 # Identify taxa missing from master table
 # missing.df <- bugs.unique.long %>% 
@@ -448,14 +490,14 @@ bugs.unique.wide.tol <- bugs.unique.long %>%
 # Export long and wide sample taxa tables
 
 ```{r, eval = FALSE}
-write_csv(bugs.unique.long, file.path(root.dir, "data/compile_2015-2019/bugs", "2015-2019_lowgrad_taxa_unique_long_speciesfill_2021-11-18.csv"))
-write_csv(bugs.unique.wide, file.path(root.dir, "data/compile_2015-2019/bugs", "2015-2019_lowgrad_taxa_unique_wide_speciesfill_2021-11-18.csv"))
+write_csv(bugs.unique.long, file.path(root.dir, "data/compile_2015-2019/bugs", "2015-2019_lowgrad_taxa_unique_long_speciesfill_2021-11-24.csv"))
+write_csv(bugs.unique.wide, file.path(root.dir, "data/compile_2015-2019/bugs", "2015-2019_lowgrad_taxa_unique_wide_speciesfill_2021-11-24.csv"))
 
-write_csv(bugs.unique.wide.genus, file.path(root.dir, "data/compile_2015-2019/bugs", "2015-2019_lowgrad_taxa_unique_wide_speciesfill-genus_2021-11-18.csv"))
-write_csv(bugs.unique.wide.family, file.path(root.dir, "data/compile_2015-2019/bugs", "2015-2019_lowgrad_taxa_unique_wide_speciesfill-family_2021-11-18.csv"))
-write_csv(bugs.unique.wide.order, file.path(root.dir, "data/compile_2015-2019/bugs", "2015-2019_lowgrad_taxa_unique_wide_speciesfill-order_2021-11-18.csv"))
-write_csv(bugs.unique.wide.ffg, file.path(root.dir, "data/compile_2015-2019/bugs", "2015-2019_lowgrad_taxa_unique_wide_speciesfill-ffg_2021-11-18.csv"))
-write_csv(bugs.unique.wide.tol, file.path(root.dir, "data/compile_2015-2019/bugs", "2015-2019_lowgrad_taxa_unique_wide_speciesfill-tolerance_2021-11-18.csv"))
+write_csv(bugs.unique.wide.genus, file.path(root.dir, "data/compile_2015-2019/bugs", "2015-2019_lowgrad_taxa_unique_wide_speciesfill-genus_2021-11-24.csv"))
+write_csv(bugs.unique.wide.family, file.path(root.dir, "data/compile_2015-2019/bugs", "2015-2019_lowgrad_taxa_unique_wide_speciesfill-family_2021-11-24.csv"))
+write_csv(bugs.unique.wide.order, file.path(root.dir, "data/compile_2015-2019/bugs", "2015-2019_lowgrad_taxa_unique_wide_speciesfill-order_2021-11-24.csv"))
+write_csv(bugs.unique.wide.ffg, file.path(root.dir, "data/compile_2015-2019/bugs", "2015-2019_lowgrad_taxa_unique_wide_speciesfill-ffg_2021-11-24.csv"))
+write_csv(bugs.unique.wide.tol, file.path(root.dir, "data/compile_2015-2019/bugs", "2015-2019_lowgrad_taxa_unique_wide_speciesfill-tolerance_2021-11-24.csv"))
 
 ```
 

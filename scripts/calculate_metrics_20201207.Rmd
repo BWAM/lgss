@@ -17,7 +17,7 @@ datamod.dir <- file.path("C:/Users/gmlemley/New York State Office of Information
 
 ```{r Load sample taxa and prep}
 
-taxa.df <- read_csv(file.path(root.dir, "data/compile_2015-2019/bugs", "2015-2019_lowgrad_taxa_unique_long_speciesfill_2021-11-18.csv"))
+taxa.df <- read_csv(file.path(root.dir, "data/compile_2015-2019/bugs", "2015-2019_lowgrad_taxa_unique_long_speciesfill_2021-11-24.csv"))
 
 # Create nested dataframe
 nest.df <- taxa.df %>%
@@ -1101,7 +1101,7 @@ metrics.names.df <- as.data.frame(metrics.names, col.names = c("metrics", "x")) 
 # condition <- read.csv(file.path("C:/Data/LGSS_scripting/lgss/data/compile_2015-2019/condition_classes", "2015-2019_LG_condclasses_20210526_CARL-pHfixed.csv")) %>%   select(-PC1)
 
 # 6/8/21 - New condition classes after omitting and reclassifying sites (see PCA script)
-condition <- read.csv(file.path("C:/Data/LGSS_scripting/lgss/data/compile_2015-2019/condition_classes", "2015-2019_LG_condclasses_20210611-reclass.csv")) %>%   
+condition <- read.csv(file.path("C:/Data/LGSS_scripting/lgss/data/compile_2015-2019/condition_classes", "2015-2019_LG_condclasses_2021-11-24-reclass.csv")) %>%   
   select(-PC1)
 
 metrics.df <- metrics.df %>%
@@ -1217,8 +1217,8 @@ library(tidymodels)
 # Keep the set.seed number the same to get the same subsampled traning dataset for each run. (Change this to create a new training dataset. Original is 80)
 
 ### Run multiple subsamples then set final seed for training.
-set.seed(60)
-# set.seed(70)
+# set.seed(60)
+set.seed(70)
 # set.seed(80)
 # set.seed(90)
 # set.seed(5122)
@@ -1899,6 +1899,11 @@ ggcorrplot::ggcorrplot(corr.final_rownames.cc1)
 # Metric corr w abiotic variables
 
 ```{r Metric corr w abiotic variables}
+
+
+#### MUST UPDATE ABIOTIC TABLE BELOW WITH NEW VERSION BEFORE USING THIS FOR FIGS ####
+
+
 # Import sample dates for rejoining
 sample.dates <- read_csv(file.path(root.dir, "data", "compile_2015-2019", "bugs", "2015-2019_lowgrad_bugs_UNIQUEdates_20210111.csv"))
 

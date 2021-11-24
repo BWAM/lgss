@@ -205,7 +205,7 @@ abiotic.pca <- prcomp(fielddata.pca.scale, cor = TRUE)
 # Plot PCA Biplot and quantiles of PC1 values
 pca_biplot <- autoplot(abiotic.pca, data = fielddata.pca.scale, label = F, label.size = 3, loadings.label = TRUE, loadings.label.repel=T, loadings.label.size = 4, scale= 0)
 pca_biplot +
-  geom_vline(xintercept = c(-0.87304171, 1.01738099), linetype = "dotdash") +
+  geom_vline(xintercept = c(-0.87304171, 0.98497815), linetype = "dotdash") +
   annotate("text", x = -3.75, y = -2.75, label = "Most Disturbed", fontface = "bold", size = 4.5) +
   annotate("text", x = 0.1, y = -2.75, label = "Slightly-Moderately\nDisturbed", fontface = "bold", size = 4.5) +
   annotate("text", x =  2.5, y = -2.75, label = "Least Disturbed", fontface = "bold", size = 4.5)
@@ -335,10 +335,11 @@ class.plot.df <- scores %>%
   # Reclassify sites based on BPJ.
   mutate(basin = substr(site_id, 0, 2),
          PC1 = case_when(
-           site_id %in% "11-TOMH-12.2" ~ -5,
-           site_id %in% "09-LSUK-11.3" ~ -5,
+           site_id %in% "11-TOMH-12.2" ~ -5,   # Field notes and follow-up sample indicate degraded
+           site_id %in% "09-LSUK-11.3" ~ -5,   # Field notes confirm very poor quality site
            # site_id %in% "16-WEBA-23.3" ~ -5,    # Reverted to reference, 6/8/21
            # site_id %in% "13-IDNK-0.5" ~ -5,       # Confirmed tidal; omitted from dataset altogether.
+           site_id %in% "10-COLW-0.7" ~ 0,     # Classed as ref, but total indiv count was 121. Change from ref to mod. deg. site.
            TRUE ~ PC1
          ))
 
@@ -361,6 +362,10 @@ quantile(class.plot.df$PC1, probs = seq(0, 1, 0.25), na.rm = FALSE, names = TRUE
          # 0%         25%         50%         75%        100% 
 # -5.22359194 -0.87304171 -0.04705769  1.01738099  3.65456958 
 
+# Rerun with 10-COLW-0.7 forced from class 1 to class 2.
+#          0%         25%         50%         75%        100% 
+# -5.22359194 -0.87304171 -0.04705769  0.98497815  3.65456958 
+
 all.abiotic.classified<-left_join(fielddata.lc, class.plot.df, by=c("site_id")) %>%
   filter(!(site_id %in% c("03-LSAM_N-7.9", "01-BLKE-0.1"))) %>%
   rename(basin = basin.x) %>%
@@ -368,12 +373,16 @@ all.abiotic.classified<-left_join(fielddata.lc, class.plot.df, by=c("site_id")) 
   mutate(condition_class = case_when(
     PC1 <= -0.87304171 ~ "3", # Highly Disturbed
     PC1 <= -0.04705769 ~ "2", # Moderately Disturbed (Q3)
-    PC1 <= 1.01738099 ~ "2", # Slightly Disturbed (Q2) (grouped with above becuase we're only testing 1 and 3)
-    PC1 > 1.01738099 ~ "1", # Least Disturbed
+    PC1 <= 0.98497815 ~ "2", # Slightly Disturbed (Q2) (grouped with above becuase we're only testing 1 and 3)
+    PC1 > 0.98497815 ~ "1", # Least Disturbed
     TRUE                 ~"NOT CLASSIFIED"
   )) %>%
   select(site_id, condition_class, everything(), -PC2)
 
+# List sites with total indiv counts <150 to see how they were classified
+all.abiotic.classified.lowct <- all.abiotic.classified %>% 
+  filter(site_id %in% c('03-BEEK-4.5', '09-SOAP-0.8', '10-CMIL-3.3', '10-COLW-0.7', '13-FISH-16.3', '13-WKLEI-0.6', '17-EMED-0.4', '17-SWML-1.4'))
+# Conclusion: 1 sites class'd as reference had count <66% of target (200).  10-COLW-0.7 had only 121 so changed to moderately degraded site in class.plot.df above.
 
 all.abiotic.classified.long<-all.abiotic.classified %>% 
   select(condition_class, macrophyte_pct, spcond, ph, landcover_nat_pct, landcover_dev_pct, landcover_ag_pct, habitat_total_score) %>% 
@@ -392,7 +401,7 @@ p + facet_wrap(vars(parameter), ncol = 3, scales = "free", strip.position = "lef
 
 class.plot <- class.plot.df %>% 
   ggplot(aes(x=PC1, y=PC2)) +
-  geom_vline(xintercept = c(-0.87304171,-0.04705769,1.01738099), linetype = "dotdash") +
+  geom_vline(xintercept = c(-0.87304171,-0.04705769,0.98497815), linetype = "dotdash") +
   geom_point(size=3, aes(shape = basin, label = site_id)) +
   scale_shape_manual(values=c(0:40))+
   annotate("text", x = -2, y = -4, label = "Class 3\n(Most Disturbed)")+
@@ -444,12 +453,12 @@ unique(class.LD.basins$basin)
 Exporting data
 ```{r, eval = FALSE}
 # Export joined data with classes
-write.table(all.abiotic.classified, file.path(root.dir, "data/compile_2015-2019/field_data/2015-2019_LG_field_landcover_condclasses_20210611-reclass.csv"),sep=",", row.names = FALSE)
+write.table(all.abiotic.classified, file.path(root.dir, "data/compile_2015-2019/field_data/2015-2019_LG_field_landcover_condclasses_2021-11-24-reclass.csv"),sep=",", row.names = FALSE)
 
 # Export just the classes for joining elsewhere
 classes.export <- all.abiotic.classified %>%
   select(site_id, condition_class, PC1)
-write.table(classes.export, file.path(root.dir, "data/compile_2015-2019/condition_classes/2015-2019_LG_condclasses_20210611-reclass.csv"),sep=",", row.names = FALSE)
+write.table(classes.export, file.path(root.dir, "data/compile_2015-2019/condition_classes/2015-2019_LG_condclasses_2021-11-24-reclass.csv"),sep=",", row.names = FALSE)
 
 ```
 
