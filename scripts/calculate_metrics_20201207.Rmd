@@ -1101,7 +1101,7 @@ metrics.names.df <- as.data.frame(metrics.names, col.names = c("metrics", "x")) 
 # condition <- read.csv(file.path("C:/Data/LGSS_scripting/lgss/data/compile_2015-2019/condition_classes", "2015-2019_LG_condclasses_20210526_CARL-pHfixed.csv")) %>%   select(-PC1)
 
 # 6/8/21 - New condition classes after omitting and reclassifying sites (see PCA script)
-condition <- read.csv(file.path("C:/Data/LGSS_scripting/lgss/data/compile_2015-2019/condition_classes", "2015-2019_LG_condclasses_2021-11-24-reclass.csv")) %>%   
+condition <- read.csv(file.path("C:/Data/LGSS_scripting/lgss/data/compile_2015-2019/condition_classes", "2015-2019_LG_condclasses_20210611-reclass.csv")) %>%   
   select(-PC1)
 
 metrics.df <- metrics.df %>%
@@ -1134,8 +1134,7 @@ rm(master.taxa.fill,
    rich_subgr.df,
    taxa_tol.df,
    seq.df,
-   seq.names,
-   condition)
+   seq.names)
 ```
 
 
@@ -1217,11 +1216,11 @@ library(tidymodels)
 # Keep the set.seed number the same to get the same subsampled traning dataset for each run. (Change this to create a new training dataset. Original is 80)
 
 ### Run multiple subsamples then set final seed for training.
-# set.seed(60)
+set.seed(60)
 # set.seed(70)
 # set.seed(80)
 # set.seed(90)
-set.seed(5122)
+# set.seed(5122)
 
 train_test_split <- metrics.df %>% 
   # mutate(condition_class = factor(condition_class, levels = c("1","3","4","2"))) %>% 
@@ -1368,8 +1367,8 @@ train.df.PMA <- train.df %>%
 ### Could also calculate PMA for FFG Composition (PMA-FFG)
 
 ```
-# Calculating sensitivies and initial filtering 
 
+# Calculating sensitivies and initial filtering 
 ```{r Calculate Sensitivity and filter}
 
 # For full dataset
@@ -1808,7 +1807,12 @@ DT::datatable(head(sens.filt, 500), options = list(scrollX = TRUE))
 # metrics.final <- c("rich_ttaxa_tol_0to7", "rich_ttaxa_coe", "rich_ttaxa_insecta", "shannon_ttaxa_shredder", "shannon_ttaxa_cte", "shannon_ttaxa_toe")
 # metrics.final <- c("rich_ttaxa_tol_0to7", "rich_ttaxa_coe", "rich_ttaxa_insecta", "shannon_ttaxa_shredder", "shannon_ttaxa_cte")
 # metrics.final <- c("rich_ttaxa_coe", "rich_ttaxa_insecta", "shannon_ttaxa_shredder", "shannon_ttaxa_cte", "shannon_ttaxa_toe",	"shannon_ttaxa_pote",	"shannon_ttaxa_et",	"shannon_ttaxa_ept", "shannon_ttaxa_coe", "shannon_ttaxa_cote", "shannon_ttaxa_potec")
-metrics.final <- c("rich_ttaxa_coe", "rich_ttaxa_insecta", "shannon_ttaxa_shredder", "shannon_ttaxa_cte")
+# metrics.final <- c("rich_ttaxa_coe", "rich_ttaxa_insecta", "", "shannon_ttaxa_cte")
+
+# Post-subsampling updates, 11/28/21
+# metrics.final <- c("rich_ttaxa_coe", "rich_ttaxa_insecta", "pct_gatherer", "shannon_ttaxa_coe", "rich_genus", "shannon_ttaxa_shredder")
+metrics.final <- c("rich_ttaxa_coe", "rich_ttaxa_insecta", "pct_gatherer", "rich_genus", "shannon_ttaxa_shredder")
+
 
 #plot final chosen metrics
 # sens.df %>% 
@@ -2051,11 +2055,11 @@ metric.chem.corscore2 <- metric.param.corr.chem %>%
   t() %>% 
   as.data.frame() %>% 
   rownames_to_column(var = "metric") %>%
-  mutate(corrscore = abs(rowSums(.[2:16]))) %>% 
+  mutate(corrscore = abs(rowSums(.[2:13]))) %>% 
   select(metric, corrscore, everything())
 
 metric.chem.corscore3 <- metric.chem.corscore2 %>% 
-  filter(metric %in% metrics.filt)
+  filter(metric %in% metrics.final)
 
 # colSums(metric.chem.corscore) %>% 
 #    knitr::kable()
@@ -2117,20 +2121,28 @@ metrics.df.standardized.long %>%
 #   distinct()
 
 # Determine floor and ceiling thresholds using training only, using class 1 and class 3, respectively
-# THIS BLOCK USES the 75th of class 1 for ceiling and 25th of class 3 for floor
+# THIS BLOCK USES the 75th of class 1 for ceiling and 25th of class 3 for floor (for metrics that decrease with disturbance), or the inverse for metrics that increase with disturbance 
 metrics.thresholds <- metrics.df.standardized.long %>%
   filter(site_id %in% train.df.vec,
          condition_class != 2) %>%
   group_by(metric, condition_class) %>%
   mutate(floor = quantile(value, probs = 0.25)) %>%
   mutate(ceiling =  quantile(value, probs = 0.75)) %>%
+  # mutate(floor = case_when(
+  #   disturbance == "decrease" ~ quantile(value, probs = 0.25),
+  #   disturbance == "increase" ~ quantile(value, probs = 0.75)
+  # )) %>%
+  # mutate(ceiling = case_when(
+  #   disturbance == "decrease" ~ quantile(value, probs = 0.75),
+  #   disturbance == "increase" ~ quantile(value, probs = 0.25)
+  # )) %>%
   ungroup() %>%
   select(metric, disturbance, floor, ceiling, condition_class) %>%
   distinct() %>%
-  pivot_wider(names_from = condition_class, values_from = c("floor", "ceiling")) %>%
-  select(metric, disturbance,
-         floor = floor_3,
-         ceiling = ceiling_1)
+  pivot_wider(names_from = condition_class, values_from = c("floor", "ceiling"))
+  # select(metric, disturbance,
+         # floor = floor_3,
+         # ceiling = ceiling_1)
 
 # write_csv(metrics.thresholds, file.path(root.dir, "data/ibi/reruns", "metrics_thresholds_2021-07-27.csv"))
 
@@ -2138,8 +2150,8 @@ metrics.thresholds <- metrics.df.standardized.long %>%
 metrics.df.standardized.long.percentiles <- metrics.df.standardized.long %>%
   left_join(metrics.thresholds, by = c("metric", "disturbance")) %>% 
   mutate(SCORE = case_when(
-    disturbance == "decrease" ~ ((value - floor)/(ceiling - floor)),
-    disturbance == "increase" ~ ((ceiling - value)/(ceiling - floor)),
+    disturbance == "decrease" ~ ((value - floor_3)/(ceiling_1 - floor_3)),
+    disturbance == "increase" ~ ((ceiling_3 - value)/(ceiling_3 - floor_1)),
   )) %>% 
   mutate(SCORE = SCORE * 10,
          SCORE = if_else(SCORE > 10, 10, SCORE),
@@ -2164,10 +2176,10 @@ metrics.scores <- metrics.df.standardized.long.percentiles %>%
   select(site_id, metric, SCORE) %>% 
   pivot_wider(names_from = metric, values_from = SCORE) %>% 
   group_by(site_id) %>%
-  mutate(SITE_SCORE = sum(c(rich_ttaxa_coe, rich_ttaxa_insecta, shannon_ttaxa_shredder, shannon_ttaxa_cte))) %>%
-  mutate(SITE_SCORE = SITE_SCORE/4) %>%
+  mutate(SITE_SCORE = sum(c(rich_ttaxa_coe, rich_ttaxa_insecta, pct_gatherer, rich_genus, shannon_ttaxa_shredder))) %>%
+  mutate(SITE_SCORE = SITE_SCORE/5) %>%
   ungroup() %>%
-  select(site_id, SITE_SCORE, rich_ttaxa_coe, rich_ttaxa_insecta, shannon_ttaxa_shredder, shannon_ttaxa_cte) %>% 
+  select(site_id, SITE_SCORE, rich_ttaxa_coe, rich_ttaxa_insecta, pct_gatherer, rich_genus, shannon_ttaxa_shredder) %>% 
   left_join(condition)
 
 ```
@@ -2192,7 +2204,7 @@ metrics.scores.plot %>%
   # xlab(NULL) +
   xlab("Condition Class") +
   ylab("LG-BAP Score") 
-  ggsave(file.path(root.dir, "data/ibi/plots_for_pub", "ibi_training_final_2021-07-30.png"), dpi = "print")
+  # ggsave(file.path(root.dir, "data/ibi/plots_for_pub", "ibi_training_final_2021-07-30.png"), dpi = "print")
 
 # Plot validation final scores
 metrics.scores.plot %>% 
@@ -2208,7 +2220,7 @@ metrics.scores.plot %>%
   # ylab(NULL) +
   # theme(axis.text.y = element_blank(),
         # axis.ticks.y = element_blank()) +
-  ggsave(file.path(root.dir, "data/ibi/plots_for_pub", "ibi_val_final_2021-07-30.png"), dpi = "print")
+  # ggsave(file.path(root.dir, "data/ibi/plots_for_pub", "ibi_val_final_2021-07-30.png"), dpi = "print")
 
 # metrics.scores.val <- metrics.scores.plot %>% 
   # filter(site_id %in% test.df.vec) 
@@ -2237,7 +2249,7 @@ metrics.scores.plot %>%
   # xlab(NULL) +
   xlab("Condition Class") +
   ylab("LG-BAP Score") 
-  ggsave(file.path(root.dir, "data/ibi/plots_for_pub", "ibi_allsites_final_2021-07-30.png"), dpi = "print")
+  # ggsave(file.path(root.dir, "data/ibi/plots_for_pub", "ibi_allsites_final_2021-07-30.png"), dpi = "print")
 
 
 # Plot all scores, single box and whisker to visualize distribution against scale
