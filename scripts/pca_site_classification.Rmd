@@ -205,7 +205,7 @@ abiotic.pca <- prcomp(fielddata.pca.scale, cor = TRUE)
 # Plot PCA Biplot and quantiles of PC1 values
 pca_biplot <- autoplot(abiotic.pca, data = fielddata.pca.scale, label = F, label.size = 3, loadings.label = TRUE, loadings.label.repel=T, loadings.label.size = 4, scale= 0)
 pca_biplot +
-  geom_vline(xintercept = c(-0.87304171, 0.98497815), linetype = "dotdash") +
+  geom_vline(xintercept = c(-0.87304171, 1.01738099), linetype = "dotdash") +
   annotate("text", x = -3.75, y = -2.75, label = "Most Disturbed", fontface = "bold", size = 4.5) +
   annotate("text", x = 0.1, y = -2.75, label = "Slightly-Moderately\nDisturbed", fontface = "bold", size = 4.5) +
   annotate("text", x =  2.5, y = -2.75, label = "Least Disturbed", fontface = "bold", size = 4.5)
@@ -339,7 +339,7 @@ class.plot.df <- scores %>%
            site_id %in% "09-LSUK-11.3" ~ -5,   # Field notes confirm very poor quality site
            # site_id %in% "16-WEBA-23.3" ~ -5,    # Reverted to reference, 6/8/21
            # site_id %in% "13-IDNK-0.5" ~ -5,       # Confirmed tidal; omitted from dataset altogether.
-           site_id %in% "10-COLW-0.7" ~ 0,     # Classed as ref, but total indiv count was 121. Change from ref to mod. deg. site.
+           # site_id %in% "10-COLW-0.7" ~ 0,     # Classed as ref, but total indiv count was 121. Change from ref to mod. deg. site.
            TRUE ~ PC1
          ))
 
@@ -373,16 +373,23 @@ all.abiotic.classified<-left_join(fielddata.lc, class.plot.df, by=c("site_id")) 
   mutate(condition_class = case_when(
     PC1 <= -0.87304171 ~ "3", # Highly Disturbed
     PC1 <= -0.04705769 ~ "2", # Moderately Disturbed (Q3)
-    PC1 <= 0.98497815 ~ "2", # Slightly Disturbed (Q2) (grouped with above becuase we're only testing 1 and 3)
-    PC1 > 0.98497815 ~ "1", # Least Disturbed
+    PC1 <= 1.01738099 ~ "2", # Slightly Disturbed (Q2) (grouped with above becuase we're only testing 1 and 3)
+    PC1 > 1.01738099 ~ "1", # Least Disturbed
     TRUE                 ~"NOT CLASSIFIED"
   )) %>%
   select(site_id, condition_class, everything(), -PC2)
+
+# Join with table of individual counts ("totcounts" data frame must be loaded from compile_2015-19_bugs.Rmd)
+all.abiotic.classified.count <- all.abiotic.classified %>% 
+  left_join(., totcounts) %>% 
+  select(site_id, condition_class, tot, target, missed, over, under)
 
 # List sites with total indiv counts <150 to see how they were classified
 all.abiotic.classified.lowct <- all.abiotic.classified %>% 
   filter(site_id %in% c('03-BEEK-4.5', '09-SOAP-0.8', '10-CMIL-3.3', '10-COLW-0.7', '13-FISH-16.3', '13-WKLEI-0.6', '17-EMED-0.4', '17-SWML-1.4'))
 # Conclusion: 1 sites class'd as reference had count <66% of target (200).  10-COLW-0.7 had only 121 so changed to moderately degraded site in class.plot.df above.
+
+
 
 all.abiotic.classified.long<-all.abiotic.classified %>% 
   select(condition_class, macrophyte_pct, spcond, ph, landcover_nat_pct, landcover_dev_pct, landcover_ag_pct, habitat_total_score) %>% 
@@ -401,7 +408,7 @@ p + facet_wrap(vars(parameter), ncol = 3, scales = "free", strip.position = "lef
 
 class.plot <- class.plot.df %>% 
   ggplot(aes(x=PC1, y=PC2)) +
-  geom_vline(xintercept = c(-0.87304171,-0.04705769,0.98497815), linetype = "dotdash") +
+  geom_vline(xintercept = c(-0.87304171,-0.04705769,1.01738099), linetype = "dotdash") +
   geom_point(size=3, aes(shape = basin, label = site_id)) +
   scale_shape_manual(values=c(0:40))+
   annotate("text", x = -2, y = -4, label = "Class 3\n(Most Disturbed)")+

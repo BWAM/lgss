@@ -17,7 +17,7 @@ datamod.dir <- file.path("C:/Users/gmlemley/New York State Office of Information
 
 ```{r Load sample taxa and prep}
 
-taxa.df <- read_csv(file.path(root.dir, "data/compile_2015-2019/bugs", "2015-2019_lowgrad_taxa_unique_long_speciesfill_2021-11-24.csv"))
+taxa.df <- read_csv(file.path(root.dir, "data/compile_2015-2019/bugs", "2015-2019_lowgrad_taxa_unique_long_speciesfill_2021-11-30.csv"))
 
 # Create nested dataframe
 nest.df <- taxa.df %>%
@@ -25,10 +25,49 @@ nest.df <- taxa.df %>%
 
 ```
 
-```{r Exploring taxa, eval = FALSE}
+```{r Misc taxa exploration, eval = FALSE}
 taxa.df.coleop.fam <- taxa.df %>% 
   filter(order %in% "coleoptera") #%>% 
   # distinct(family)
+
+taxa.df.distinctsp <- taxa.df %>% 
+  distinct(macro_genspecies, .keep_all = "TRUE")
+
+# Seeing if insecta are mostly made up of interolerant/facultative. 
+taxa.df.insecta.tol <- taxa.df.distinctsp %>% 
+  filter(class %in% "insecta",
+         tol_char %in% "tolerant")
+taxa.df.insecta.intol <- taxa.df.distinctsp %>% 
+  filter(class %in% "insecta",
+         tol_char %in% "intolerant")
+taxa.df.insecta.fac <- taxa.df.distinctsp %>% 
+  filter(class %in% "insecta",
+         tol_char %in% "facultative")
+taxa.df.insecta.fac.na <- taxa.df.distinctsp %>% 
+  filter(is.na(tol_char))
+# Turns out they are mostly facultative and intolerant.
+
+# Looking at presence and spread of voltinism data
+taxa.df.volt.u <- taxa.df.distinctsp %>% 
+  filter(voltinism %in% "univoltine")
+taxa.df.volt.s <- taxa.df.distinctsp %>% 
+  filter(voltinism %in% "semivoltine")
+taxa.df.volt.mult <- taxa.df.distinctsp %>% 
+  filter(voltinism %in% "bi_multivoltine")
+taxa.df.volt.na <- taxa.df.distinctsp %>% 
+  filter(is.na(voltinism))
+# ~23% of taxa in this dataset do not have voltinism defined!
+
+# Looking at presence and spread of tolerance data
+taxa.df.tol.tol <- taxa.df.distinctsp %>% 
+  filter(tol_char %in% "tolerant")
+taxa.df.tol.int <- taxa.df.distinctsp %>% 
+  filter(tol_char %in% "intolerant")
+taxa.df.tol.fac <- taxa.df.distinctsp %>% 
+  filter(tol_char %in% "facultative")
+taxa.df.tol.na <- taxa.df.distinctsp %>% 
+  filter(is.na(tol_char))
+# ~7% of taxa in this dataset do not have voltinism defined.
 
 ```
 
@@ -975,7 +1014,9 @@ seq.df <- nest.df %>%
                                   "order",
                                   "family",
                                   "tol_char",
-                                  "ffg"),
+                                  "ffg",
+                                  "habit",
+                                  "voltinism"),
              .group_col = ttaxa,
              .job = "rich",
              .exclude_pattern = "undetermined",
@@ -989,7 +1030,9 @@ seq.df <- nest.df %>%
                                   "order",
                                   "family",
                                   "tol_char",
-                                  "ffg"),
+                                  "ffg",
+                                  "habit",
+                                  "voltinism"),
              .group_col = ttaxa,
              .job = "pct_rich",
              .exclude_pattern = "undetermined",
@@ -1003,7 +1046,9 @@ seq.df <- nest.df %>%
                                   "family",
                                   "genus",
                                   "tol_char",
-                                  "ffg"),
+                                  "ffg",
+                                  "habit",
+                                  "voltinism"),
              .job = "pct",
              .exclude_pattern = "undetermined",
              .unnest_col = data),
@@ -1015,7 +1060,9 @@ seq.df <- nest.df %>%
                                   "order", 
                                   "family",
                                   "tol_char",
-                                  "ffg"),
+                                  "ffg",
+                                  "habit",
+                                  "voltinism"),
              .group_col = ttaxa,
              .base_log = 2,
              .job = "shannon",
@@ -1028,7 +1075,9 @@ seq.df <- nest.df %>%
                                   "order", 
                                   "family",
                                   "tol_char",
-                                  "ffg"),
+                                  "ffg",
+                                  "habit",
+                                  "voltinism"),
              .group_col = ttaxa,
              .job = "simpson",
              .exclude_pattern = "undetermined",
@@ -1344,8 +1393,7 @@ train.df.vec <- c(train.df$site_id)
 ```
 
 # Calculating pct comp for PMA metric above
-```{r, eval=FALSE}
-
+```{r}
 ### Determining percent composition of each major group for PMA calculation above
 
 train.df.PMA <- train.df %>% 
@@ -1807,7 +1855,7 @@ DT::datatable(head(sens.filt, 500), options = list(scrollX = TRUE))
 # metrics.final <- c("rich_ttaxa_tol_0to7", "rich_ttaxa_coe", "rich_ttaxa_insecta", "shannon_ttaxa_shredder", "shannon_ttaxa_cte", "shannon_ttaxa_toe")
 # metrics.final <- c("rich_ttaxa_tol_0to7", "rich_ttaxa_coe", "rich_ttaxa_insecta", "shannon_ttaxa_shredder", "shannon_ttaxa_cte")
 # metrics.final <- c("rich_ttaxa_coe", "rich_ttaxa_insecta", "shannon_ttaxa_shredder", "shannon_ttaxa_cte", "shannon_ttaxa_toe",	"shannon_ttaxa_pote",	"shannon_ttaxa_et",	"shannon_ttaxa_ept", "shannon_ttaxa_coe", "shannon_ttaxa_cote", "shannon_ttaxa_potec")
-# metrics.final <- c("rich_ttaxa_coe", "rich_ttaxa_insecta", "", "shannon_ttaxa_cte")
+# metrics.final <- c("rich_ttaxa_coe", "rich_ttaxa_insecta", "shannon_ttaxa_shredder", "shannon_ttaxa_cte")
 
 # Post-subsampling updates, 11/28/21
 # metrics.final <- c("rich_ttaxa_coe", "rich_ttaxa_insecta", "pct_gatherer", "shannon_ttaxa_coe", "rich_genus", "shannon_ttaxa_shredder")
@@ -1837,7 +1885,7 @@ long.df %>%
 
 # plot specific metrics
 sens.df %>% 
-  filter(metric %in% c("shannon_ttaxa_cte", "shannon_ttaxa_toe",	"shannon_ttaxa_pote",	"shannon_ttaxa_et",	"shannon_ttaxa_ept")) %>%
+  filter(metric %in% c("simpson_ttaxa_univoltine", "pct_rich_ttaxa_gammaridae",	"shannon_ttaxa_univoltine")) %>%
   arrange(metric) %>% 
   inner_join(long.df, by = "metric") %>% 
   mutate(metric = factor(metric, levels = unique(metric)),
