@@ -17,7 +17,11 @@ datamod.dir <- file.path("C:/Users/gmlemley/New York State Office of Information
 
 ```{r Load sample taxa and prep}
 
-taxa.df <- read_csv(file.path(root.dir, "data/compile_2015-2019/bugs", "2015-2019_lowgrad_taxa_unique_long_speciesfill_2021-11-30.csv"))
+# High counts subsampled down to 200 
+taxa.df <- read_csv(file.path(root.dir, "data/compile_2015-2019/bugs", "2015-2019_LGtaxa_unique_long_subsamp_2021-11-30.csv"))
+
+# Not subsampled
+# taxa.df <- read_csv(file.path(root.dir, "data/compile_2015-2019/bugs", "2015-2019_lowgrad_taxa_unique_long_speciesfill_2021-11-18.csv"))
 
 # Create nested dataframe
 nest.df <- taxa.df %>%
@@ -56,7 +60,7 @@ taxa.df.volt.mult <- taxa.df.distinctsp %>%
   filter(voltinism %in% "bi_multivoltine")
 taxa.df.volt.na <- taxa.df.distinctsp %>% 
   filter(is.na(voltinism))
-# ~23% of taxa in this dataset do not have voltinism defined!
+# ~23% of unique taxa in this dataset do not have voltinism defined!
 
 # Looking at presence and spread of tolerance data
 taxa.df.tol.tol <- taxa.df.distinctsp %>% 
@@ -67,7 +71,22 @@ taxa.df.tol.fac <- taxa.df.distinctsp %>%
   filter(tol_char %in% "facultative")
 taxa.df.tol.na <- taxa.df.distinctsp %>% 
   filter(is.na(tol_char))
-# ~7% of taxa in this dataset do not have voltinism defined.
+# ~7% of unique taxa in this dataset do not have voltinism defined.
+
+# Looking at presence and spread of functional feeding group data
+taxa.df.ffg.gath <- taxa.df.distinctsp %>% 
+  filter(ffg %in% "gatherer")
+taxa.df.ffg.shred <- taxa.df.distinctsp %>% 
+  filter(ffg %in% "shredder")
+taxa.df.ffg.scrp <- taxa.df.distinctsp %>% 
+  filter(ffg %in% "scraper")
+taxa.df.ffg.pred <- taxa.df.distinctsp %>% 
+  filter(ffg %in% "predator")
+taxa.df.ffg.filt <- taxa.df.distinctsp %>% 
+  filter(ffg %in% "filterer")
+taxa.df.ffg.na <- taxa.df.distinctsp %>% 
+  filter(is.na(ffg))
+# ~9% of unique taxa in this dataset do not have FFG defined.
 
 ```
 
@@ -1253,11 +1272,7 @@ metrics.df <- metrics.df %>%
 
 ```
 
-
-
 # Subsampling
-
-
 ```{r Split into training and test (validation) datasets}
 
 library(tidymodels)
@@ -1288,93 +1303,6 @@ test.df <- testing(train_test_split) %>%
 test.df.vec <- c(test.df$site_id)
 train.df.vec <- c(train.df$site_id)
 
-# Create dataset with class 2 (set aside to help validate later)
-# test.class2.df <- metrics.df %>% 
-#   filter(condition_class %in% "2") 
-
-
-
-###################
-###################
-
-### Confirm set.seed(80) reproducibility when running this code. PMA metrics produced in the code chunk below (DF train.df.PMA) should match those entered in chunk above. 
-### In case set.seed(80) is no longer reproducible, the following test and training sites were randomly selected using set.seed(80) and used during development of this IBI:
-
-# > test.df.vec
-#  [1] "01-GILL-0.3"      "02-CASS-25.6"     "03-JEDO_T3-0.4"  
-#  [4] "04-BLAK_T7-3.0"   "04-BLCE-5.2"      "04-WDIT-0.1"     
-#  [7] "07-BLDY-0.1"      "07-LITR-0.2"      "07-ONON_W_T7-1.5"
-# [10] "07-POBK_T4-1.5"   "08-BLAC-2.5"      "09-CEDL-0.1"     
-# [13] "09-LSAL_T1-1.0"   "13-BASC_T17-2.4"  "14-HURL-2.8"     
-# [16] "14-TENR-3.7"      "14-WLAK-5.8"      "15-MAWA-3.7"     
-# [19] "17-OROW-0.6"      "17-SAMP-2.1"     
-# 
-# > train.df.vec
-#  [1] "01-FISN-2.4"      "01-GOTC-0.2"      "02-RAWS-0.8"     
-#  [4] "03-BEAG-1.8"      "03-EMIL_E_T6-0.4" "03-FOMI-5.5"     
-#  [7] "03-HRTB-2.2"      "03-JOHN-13.7"     "03-MIDL-2.4"     
-# [10] "03-SAND_T21-4.0"  "03-YANT_T1c-0.2"  "04-BLAK_T16-0.8" 
-# [13] "04-JCOX-4.6"      "04-JCOX_S-3.7"    "04-SPRG-10.1"    
-# [16] "04-WMRSG-0.2"     "05-CAMB-11.2"     "05-CBRO-1.8"     
-# [19] "06-NING-7.7"      "07-GEDD-1.4"      "07-HARB-0.5"     
-# [22] "07-HENC_T4-1.2"   "07-JACB-1.9"      "07-NINE-0.7"     
-# [25] "07-SNDR-1.5"      "07-WBOT-0.3"      "08-BARE_T5-0.5"  
-# [28] "08-BENE-0.2"      "08-MURM-3.4"      "09-BIBK-5.4"     
-# [31] "09-BLCH-0.2"      "09-ENGL-17.6"     "09-LSUK-11.3"    
-# [34] "09-MARA-4.5"      "09-PLMB-12.4"     "09-WSCK-3.4"     
-# [37] "10-BISH-0.6"      "10-COLW-0.7"      "10-LSAR_T10-0.3" 
-# [40] "10-MILC-6.3"      "10-NSAR_T7-0.8"   "10-PUTM_T5-0.3"  
-# [43] "10-TRAE-4.5"      "10-TWOB-3.6"      "11-GORN-6.0"     
-# [46] "11-SRUN-3.8"      "11-TEET-0.8"      "11-TOMH-12.2"    
-# [49] "13-EBCR-16.3"     "13-IDNK-0.5"      "13-WBLKK-8.9"    
-# [52] "16-BOGH-0.3"      "16-WEBA-23.3"     "17-EMED-0.4"     
-# [55] "17-GREN-0.8"      "17-MBUR-2.1"      "17-NISS_E-2.6"   
-# [58] "17-PECN-8.9"      "17-PENA-1.4"      "17-SANT-1.7"     
-# [61] "17-SWML-1.4"    
-
-# PMA values:
-#    PMA_clitellata = 4.59,
-#    PMA_ephemeroptera = 9.11,
-#    PMA_plecoptera = 0.28,
-#    PMA_coleoptera = 5.37,
-#    PMA_trichoptera = 4.45,
-#    PMA_chironomidae = 43.5,
-#    PMA_other = 32.7
-
-
-#########################################################################################################
-#########################################################################################################
-###### SUBSAMPLE GROUPS ABOVE ARE NO LONGER VALID AFTER RECLASSIFICATION WITH CORRECTED PCA, 5/26/21 ####
-#########################################################################################################
-#########################################################################################################
-
-
-# 1st rerun with corrected PCA, 5/26/21
-# > test.df.vec
-#  [1] "01-GILL-0.3"      "02-CASS-25.6"     "04-JCOX-4.6"      "04-WDIT-0.1"      "04-WMRSG-0.2"     "07-BLDY-0.1"      "07-ONON_W_T7-1.5"
-#  [8] "07-POBK_T4-1.5"   "08-BARE_T5-0.5"   "08-MURM-3.4"      "09-ENGL-17.6"     "09-LSAL_T1-1.0"   "13-EBCR-16.3"     "14-TENR-3.7"     
-# [15] "14-WLAK-5.8"      "15-MAWA-3.7"      "16-BOGH-0.3"      "17-EMED-0.4"      "17-OROW-0.6"      "17-SWML-1.4" 
-# > train.df.PMA
-# # A tibble: 1 x 8
-#   site_id pct_clitellata pct_ephemeroptera pct_plecoptera pct_coleoptera pct_trichoptera pct_chironomidae other
-#     <dbl>          <dbl>             <dbl>          <dbl>          <dbl>           <dbl>            <dbl> <dbl>
-# 1      NA           5.02              9.65          0.235           4.53            3.95             41.7  34.9
-
-
-
-# 2nd rerun, same input data and seed (set.seed(80)) after R package updates...
-
-# > test.df.vec
-#  [1] "01-FISN-2.4"      "03-EMIL_E_T6-0.4" "03-JOHN-13.7"     "03-YANT_T1c-0.2"  "04-JCOX-4.6"      "05-CAMB-11.2"     "07-GEDD-1.4"     
-#  [8] "07-ONON_W_T7-1.5" "07-SNDR-1.5"      "08-BLAC-2.5"      "09-CEDL-0.1"      "09-WSCK-3.4"      "10-BISH-0.6"      "10-COLW-0.7"     
-# [15] "10-LSAR_T10-0.3"  "10-PUTM_T5-0.3"   "10-TRAE-4.5"      "10-TWOB-3.6"      "11-TOMH-12.2"     "12-BARK-0.6"      "13-BASC_T17-2.4" 
-# [22] "17-SANT-1.7"     
-# > train.df.PMA
-# # A tibble: 1 x 8
-#   site_id pct_clitellata pct_ephemeroptera pct_plecoptera pct_coleoptera pct_trichoptera pct_chironomidae other
-#     <dbl>          <dbl>             <dbl>          <dbl>          <dbl>           <dbl>            <dbl> <dbl>
-# 1      NA           4.50              10.4          0.289           5.11            4.91             37.8  37.0
-  
   
 #######################
 #######################
@@ -1413,6 +1341,15 @@ train.df.PMA <- train.df %>%
 
 
 ### Could also calculate PMA for FFG Composition (PMA-FFG)
+
+
+# Should have the following output for current run:
+
+# > train.df.PMA
+# # A tibble: 1 x 8
+#   site_id pct_clitellata pct_ephemeroptera pct_plecoptera pct_coleoptera pct_trichoptera pct_chironomidae other
+#     <dbl>          <dbl>             <dbl>          <dbl>          <dbl>           <dbl>            <dbl> <dbl>
+# 1      NA           5.42              10.2          0.231           6.52            3.90             35.1  38.5
 
 ```
 
@@ -2231,6 +2168,24 @@ metrics.scores <- metrics.df.standardized.long.percentiles %>%
   left_join(condition)
 
 ```
+```{r Look at effect of subsampling on richness}
+# counts.subsamp <- read_csv(file.path(root.dir, "data/compile_2015-2019/bugs/counts", "indiv_counts_subsamp_2021-12-01.csv")) %>% 
+#   select(site_id, tot)
+counts <- read_csv(file.path(root.dir, "data/compile_2015-2019/bugs/counts", "indiv_counts_orig_2021-12-01.csv")) %>%
+  select(site_id, tot)
+
+rich.count <- metrics.df %>% 
+  select(site_id, rich_ttaxa, condition_class) %>% 
+  left_join(., counts)
+
+library(ggplot2)
+ggplot(rich.count, aes(x = tot, y = rich_ttaxa)) +
+    geom_point()
+
+# ggsave(file.path(root.dir, "data/compile_2015-2019/bugs/counts/count_vs_richness", "count_vs_sp_rich_not_subsampled_2021-12-01.png"), dpi = "print")
+# write_csv(rich.count, file.path(root.dir, "data/compile_2015-2019/bugs/counts/count_vs_richness", "count_vs_sp_rich_not_subsampled_2021-12-01.csv"))
+```
+
 ```{r Final IBI plots, fig.width=3, fig.height=5, eval=FALSE}
 # Plot training final scores
 

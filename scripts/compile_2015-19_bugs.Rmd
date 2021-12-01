@@ -551,7 +551,7 @@ bugs.unique.long <- resample %>%
   summarise(count = sum(count))
 
 # Summarize total counts again
-totcounts_new <- bugs.unique.long %>% 
+totcounts_subsamp <- bugs.unique.long %>% 
   select(-final_id) %>% 
   group_by(site_id) %>% 
   summarise(tot = sum(count)) %>% 
@@ -565,6 +565,9 @@ totcounts_new <- bugs.unique.long %>%
 totcount_noref <- totcounts_new %>% 
   filter(tot <132)
 # cat(unique(totcount_noref$site_id), sep = "', '")
+
+# write_csv(totcounts, file.path(root.dir, "data/compile_2015-2019/bugs/counts", "indiv_counts_orig_2021-12-01.csv"))
+# write_csv(totcounts_subsamp, file.path(root.dir, "data/compile_2015-2019/bugs/counts", "indiv_counts_subsamp_2021-12-01.csv"))
 
 ```
 
@@ -638,7 +641,7 @@ bugs.unique.wide.tol <- bugs.unique.long %>%
 # Export long and wide sample taxa tables
 
 ```{r, eval = FALSE}
-write_csv(bugs.unique.long, file.path(root.dir, "data/compile_2015-2019/bugs", "2015-2019_lowgrad_taxa_unique_long_speciesfill_2021-11-30.csv"))
+write_csv(bugs.unique.long, file.path(root.dir, "data/compile_2015-2019/bugs", "2015-2019_LGtaxa_unique_long_subsamp_2021-11-30.csv"))
 write_csv(bugs.unique.wide, file.path(root.dir, "data/compile_2015-2019/bugs", "2015-2019_lowgrad_taxa_unique_wide_speciesfill_2021-11-24.csv"))
 
 write_csv(bugs.unique.wide.genus, file.path(root.dir, "data/compile_2015-2019/bugs", "2015-2019_lowgrad_taxa_unique_wide_speciesfill-genus_2021-11-24.csv"))
@@ -649,7 +652,7 @@ write_csv(bugs.unique.wide.tol, file.path(root.dir, "data/compile_2015-2019/bugs
 
 ```
 
-```{r Add quotes to file for use in PRIMER}
+```{r Add quotes to file for use in PRIMER, eval = FALSE}
 
 file <- read.csv(file.path(root.dir, "data/compile_2015-2019/bugs/for_primer_ord", "2015-2019_LG_bugs_order+abiotic-field+LC+condition-TRIMMED_2021-11-18.csv"))
 
