@@ -1138,7 +1138,8 @@ metrics.df <- list(  div_subgr.df,
 
 metrics.names <- names(metrics.df)
 metrics.names.df <- as.data.frame(metrics.names, col.names = c("metrics", "x")) %>% 
-  filter(!(metrics.names %in% "site_id"))
+  filter(!metrics.names %in% "site_id",
+         !metrics.names %in% "condition_class")
 
 # Invesitage rich_ffg issues
 # metrics.df.rich_ffg <- metrics.df %>% 
@@ -1875,7 +1876,7 @@ tryCatch({
     round(digits = 3) %>% 
     rownames_to_column() %>%
     # Remove values < 0.9
-    mutate_all(funs(replace(., . <= 0.75, NA))) %>%
+    # mutate_all(funs(replace(., . <= 0.8, NA))) %>%
     # Remove columns and rows with all NAs
     column_to_rownames() %>% 
     purrr::discard(~all(is.na(.))) %>% 
@@ -1905,7 +1906,7 @@ rm(sample.dates)
 
 # Import chem data for 2017-2019 samples (does not exist for 2015 & 2016) and transform as needed
 abiotic.chem <- read_csv(file.path(root.dir, "data/chemistry/2017-2019_chem_lowgrad_assoc_20210111.csv")) %>% 
-  mutate(result_value = ifelse(lab_qualifiers %in% "U", 0, result_value),
+  mutate(result_value = ifelse(lab_qualifiers %in% "U", method_detection_limit/2, result_value),
          chemical_name = paste0(chemical_name, "_", result_unit)) %>% 
   filter(!is.na(result_value)) %>% 
   mutate(year = substr(sample_date, 3, 4),
@@ -1956,7 +1957,7 @@ metric.param.corr<-metrics.cor.abiotic %>%
   correlate(use = "pairwise.complete.obs", method = "spearman")
 metric.param.corr<-metric.param.corr %>% 
   select(term, all_of(metrics.final)) %>%
-  slice(8:14) %>% 
+  slice(6:99) %>%
   remove_rownames %>% 
   column_to_rownames(var="term")  
 ggcorrplot::ggcorrplot(metric.param.corr)
@@ -1974,12 +1975,12 @@ metric.param.corr.chem<-metrics.cor.chem %>%
   correlate(use = "pairwise.complete.obs", method = "spearman")
 metric.param.corr.chem<-metric.param.corr.chem %>% 
   select(term, all_of(metrics.final)) %>% 
-  slice(8:33) %>% 
+  slice(6:99) %>%
   remove_rownames %>% 
   column_to_rownames(var="term")  
 ggcorrplot::ggcorrplot(metric.param.corr.chem)
 
-# Chemistry (independent dataset) correlations w metrics (training only; 17 site matches)
+# Chemistry (independent dataset) correlations w metrics (training only; 12 site matches)
 train.df.final.2 <- train.df.final %>%
   select(-condition_class)
 
@@ -1989,19 +1990,19 @@ metric.param.corr.chem<-metrics.cor.chem %>%
   correlate(use = "pairwise.complete.obs", method = "spearman")
 metric.param.corr.chem<-metric.param.corr.chem %>% 
   select(term, all_of(metrics.final)) %>%
-  slice(8:33) %>% 
+  slice(6:99) %>%
   remove_rownames %>% 
   column_to_rownames(var="term")  
 ggcorrplot::ggcorrplot(metric.param.corr.chem)
 
-# Chemisty param correlations w metrics (validation only; 5 SITES ONLY)
+# Chemisty param correlations w metrics (validation only; 9 SITES ONLY)
 metrics.cor.chem<-left_join(test.df.cor, abiotic.chem, by=c("site_id"))
 metric.param.corr.chem<-metrics.cor.chem %>%
   select(-site_id) %>%
   correlate(use = "pairwise.complete.obs", method = "spearman")
 metric.param.corr.chem<-metric.param.corr.chem %>%
   select(term, all_of(metrics.final)) %>%
-  slice(8:33) %>%
+  slice(6:99) %>%
   remove_rownames %>%
   column_to_rownames(var="term")
 ggcorrplot::ggcorrplot(metric.param.corr.chem)
@@ -2018,7 +2019,7 @@ metric.param.corr.chem<-metrics.cor.chem %>%
   correlate(use = "pairwise.complete.obs", method = "spearman")
 metric.param.corr.chem<-metric.param.corr.chem %>% 
   select(term, all_of(metrics.filt)) %>% 
-  slice(35:53) %>% 
+  slice(28:99) %>%
   remove_rownames %>% 
   column_to_rownames(var="term")  
 ggcorrplot::ggcorrplot(metric.param.corr.chem)
@@ -2192,38 +2193,38 @@ ggplot(rich.count, aes(x = tot, y = rich_ttaxa)) +
 metrics.scores.plot <- metrics.scores %>% 
   mutate(class = case_when(
     condition_class == "1" ~ "LD",
-    condition_class == "2" ~ "SMD",
+    condition_class == "2" ~ "ID",
     condition_class == "3" ~ "MD",
   )) 
 
   
 metrics.scores.plot %>% 
   filter(site_id %in% c(train.df.vec)) %>% 
-  mutate(condition_class = factor(class, c("LD", "SMD", "MD"))) %>% 
+  mutate(condition_class = factor(class, c("LD", "ID", "MD"))) %>% 
   ggplot(aes(condition_class, SITE_SCORE)) +
   coord_cartesian(ylim = c(0, 10)) +
   geom_boxplot() +
   ggtitle("Training") +
   # xlab(NULL) +
   xlab("Condition Class") +
-  ylab("LG-BAP Score") 
-  # ggsave(file.path(root.dir, "data/ibi/plots_for_pub", "ibi_training_final_2021-07-30.png"), dpi = "print")
+  ylab("LGBAP Score") 
+  # ggsave(file.path(root.dir, "data/ibi/plots_for_pub", "ibi_training_final_2021-12-07.png"), dpi = "print")
 
 # Plot validation final scores
 metrics.scores.plot %>% 
   filter(site_id %in% c(test.df.vec)) %>% 
-  mutate(condition_class = factor(class, c("LD", "SMD", "MD"))) %>% 
+  mutate(condition_class = factor(class, c("LD", "ID", "MD"))) %>% 
   ggplot(aes(condition_class, SITE_SCORE)) +
   coord_cartesian(ylim = c(0, 10)) +
   geom_boxplot() +
   ggtitle("Validation") +
   xlab("Condition Class") +
-  ylab("LG-BAP Score") 
+  ylab("LGBAP Score") 
   # xlab(NULL) +
   # ylab(NULL) +
   # theme(axis.text.y = element_blank(),
         # axis.ticks.y = element_blank()) +
-  # ggsave(file.path(root.dir, "data/ibi/plots_for_pub", "ibi_val_final_2021-07-30.png"), dpi = "print")
+  # ggsave(file.path(root.dir, "data/ibi/plots_for_pub", "ibi_val_final_2021-12-07.png"), dpi = "print")
 
 # metrics.scores.val <- metrics.scores.plot %>% 
   # filter(site_id %in% test.df.vec) 
@@ -2241,7 +2242,7 @@ metrics.scores.plot %>%
 
 # plot all final scores
 metrics.scores.plot %>%
-  mutate(condition_class = factor(class, c("LD", "SMD", "MD"))) %>% 
+  mutate(condition_class = factor(class, c("LD", "ID", "MD"))) %>% 
   ggplot(aes(condition_class, SITE_SCORE)) +
   coord_cartesian(ylim = c(0, 10)) +
   geom_boxplot() +
@@ -2251,8 +2252,8 @@ metrics.scores.plot %>%
   # ylab(NULL) +
   # xlab(NULL) +
   xlab("Condition Class") +
-  ylab("LG-BAP Score") 
-  # ggsave(file.path(root.dir, "data/ibi/plots_for_pub", "ibi_allsites_final_2021-07-30.png"), dpi = "print")
+  ylab("LGBAP Score") 
+  # ggsave(file.path(root.dir, "data/ibi/plots_for_pub", "ibi_allsites_final_2021-12-07.png"), dpi = "print")
 
 
 # Plot all scores, single box and whisker to visualize distribution against scale
@@ -2267,9 +2268,48 @@ metrics.scores.plot %>%
   # ylab(NULL) +
   # xlab(NULL) +
   xlab("Condition Class") +
-  ylab("LG-BAP Score") 
+  ylab("LGBAP Score") 
 
 ```
+
+```{r Chem vs IBI plot}
+# Chemistry (independent dataset) correlations w metrics (all sites (44), final metrics)
+chemsites.ibi <- metrics.scores %>%
+  select(-condition_class) %>%
+  filter(site_id %in% abiotic.chem$site_id) %>% 
+  rename(LGBAP = SITE_SCORE)
+
+metrics.cor.chem<-left_join(chemsites.ibi, abiotic.chem, by=c("site_id"))
+metric.param.corr.chem<-metrics.cor.chem %>% 
+  select(-site_id) %>% 
+  correlate(use = "pairwise.complete.obs", method = "spearman")
+metric.param.corr.chem<-metric.param.corr.chem %>% 
+  select(term, LGBAP, all_of(metrics.final)) %>%
+  slice(8:33) %>% 
+  remove_rownames %>% 
+  column_to_rownames(var="term")  
+ggcorrplot::ggcorrplot(metric.param.corr.chem)
+
+# Replot using un-standardized scores for indiv metrics
+
+chemsites.ibi.metrics <- metrics.scores %>%
+  rename(LGBAP = SITE_SCORE) %>% 
+  select(site_id, LGBAP) %>%
+  left_join(., chemsites.metrics.final) %>% 
+  filter(site_id %in% abiotic.chem$site_id) 
+
+metrics.cor.chem<-left_join(chemsites.ibi.metrics, abiotic.chem, by=c("site_id"))
+metric.param.corr.chem<-metrics.cor.chem %>% 
+  select(-site_id) %>% 
+  correlate(use = "pairwise.complete.obs", method = "spearman")
+metric.param.corr.chem<-metric.param.corr.chem %>% 
+  select(term, LGBAP, all_of(metrics.final)) %>%
+  slice(8:33) %>% 
+  remove_rownames %>% 
+  column_to_rownames(var="term")  
+ggcorrplot::ggcorrplot(metric.param.corr.chem)
+```
+
 
 ```{r Model testing}
 

@@ -207,10 +207,10 @@ pca_biplot <- autoplot(abiotic.pca, data = fielddata.pca.scale, label = F, label
 pca_biplot +
   geom_vline(xintercept = c(-0.87304171, 1.01738099), linetype = "dotdash") +
   annotate("text", x = -3.75, y = -2.75, label = "Most Disturbed", fontface = "bold", size = 4.5) +
-  annotate("text", x = 0.1, y = -2.75, label = "Slightly-Moderately\nDisturbed", fontface = "bold", size = 4.5) +
+  annotate("text", x = 0.1, y = -2.75, label = "Intermediately\nDisturbed", fontface = "bold", size = 4.5) +
   annotate("text", x =  2.5, y = -2.75, label = "Least Disturbed", fontface = "bold", size = 4.5)
   
-  # ggsave(file.path(root.dir, "data/ibi/plots_for_pub", "pca_2021-07-30.png"), dpi = "print")
+  ggsave(file.path(root.dir, "data/ibi/plots_for_pub", "pca_2021-12-07.png"), dpi = "print")
 
 
 
@@ -380,13 +380,13 @@ all.abiotic.classified<-left_join(fielddata.lc, class.plot.df, by=c("site_id")) 
   select(site_id, condition_class, everything(), -PC2)
 
 # Join with table of individual counts ("totcounts" data frame must be loaded from compile_2015-19_bugs.Rmd)
-all.abiotic.classified.count <- all.abiotic.classified %>% 
-  left_join(., totcounts) %>% 
-  select(site_id, condition_class, tot, target, missed, over, under)
+# all.abiotic.classified.count <- all.abiotic.classified %>% 
+#   left_join(., totcounts) %>% 
+#   select(site_id, condition_class, tot, target, missed, over, under)
 
 # List sites with total indiv counts <150 to see how they were classified
-all.abiotic.classified.lowct <- all.abiotic.classified %>% 
-  filter(site_id %in% c('03-BEEK-4.5', '09-SOAP-0.8', '10-CMIL-3.3', '10-COLW-0.7', '13-FISH-16.3', '13-WKLEI-0.6', '17-EMED-0.4', '17-SWML-1.4'))
+# all.abiotic.classified.lowct <- all.abiotic.classified %>% 
+#   filter(site_id %in% c('03-BEEK-4.5', '09-SOAP-0.8', '10-CMIL-3.3', '10-COLW-0.7', '13-FISH-16.3', '13-WKLEI-0.6', '17-EMED-0.4', '17-SWML-1.4'))
 # Conclusion: 1 sites class'd as reference had count <66% of target (200).  10-COLW-0.7 had only 121 so changed to moderately degraded site in class.plot.df above.
 
 
@@ -429,6 +429,7 @@ class.LD.basins <- all.abiotic.classified %>%
 unique(class.HD.basins$basin)
 unique(class.MD.basins$basin)
 unique(class.LD.basins$basin)
+unique(all.abiotic.classified$basin)
 
 # # Reclassify sites based on BPJ
 # 
