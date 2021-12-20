@@ -2106,6 +2106,8 @@ metrics.df.standardized.long %>%
 #   select(metric, disturbance, floor, ceiling) %>%
 #   distinct()
 
+
+
 # Determine floor and ceiling thresholds using training only, using class 1 and class 3, respectively
 # THIS BLOCK USES the 75th of class 1 for ceiling and 25th of class 3 for floor (for metrics that decrease with disturbance), or the inverse for metrics that increase with disturbance 
 metrics.thresholds <- metrics.df.standardized.long %>%
@@ -2114,23 +2116,10 @@ metrics.thresholds <- metrics.df.standardized.long %>%
   group_by(metric, condition_class) %>%
   mutate(floor = quantile(value, probs = 0.25)) %>%
   mutate(ceiling =  quantile(value, probs = 0.75)) %>%
-  # mutate(floor = case_when(
-  #   disturbance == "decrease" ~ quantile(value, probs = 0.25),
-  #   disturbance == "increase" ~ quantile(value, probs = 0.75)
-  # )) %>%
-  # mutate(ceiling = case_when(
-  #   disturbance == "decrease" ~ quantile(value, probs = 0.75),
-  #   disturbance == "increase" ~ quantile(value, probs = 0.25)
-  # )) %>%
   ungroup() %>%
   select(metric, disturbance, floor, ceiling, condition_class) %>%
   distinct() %>%
   pivot_wider(names_from = condition_class, values_from = c("floor", "ceiling"))
-  # select(metric, disturbance,
-         # floor = floor_3,
-         # ceiling = ceiling_1)
-
-# write_csv(metrics.thresholds, file.path(root.dir, "data/ibi/reruns", "metrics_thresholds_2021-07-27.csv"))
 
 # Standardize using thresholds determined above and truncate scores >10 to 10 and <0 to 0
 metrics.df.standardized.long.percentiles <- metrics.df.standardized.long %>%
@@ -2142,6 +2131,52 @@ metrics.df.standardized.long.percentiles <- metrics.df.standardized.long %>%
   mutate(SCORE = SCORE * 10,
          SCORE = if_else(SCORE > 10, 10, SCORE),
          SCORE = if_else(SCORE < 0, 0, SCORE)) 
+
+
+
+#### Alternative method using midpoint to standardize
+## For metrics decreasing w disturbance:
+##   midpoint = abs(25th of LD - 75th of MD)
+##   ceiling =  75th of LD
+##   floor = midpoint - (75th of LD - midpoint)
+## For metrics increasing w disturbance:
+##   midpoint = abs(75th of LD - 25th of MD)
+##   ceiling = midpoint + (midpoint - 25th of LD)
+##   floor = 25th of LD
+
+metrics.thresholds <- metrics.df.standardized.long %>%
+  filter(site_id %in% train.df.vec,
+         condition_class != 2) %>%
+  group_by(metric, condition_class) %>%
+  mutate(q25 = quantile(value, probs = 0.25),
+         q75 =  quantile(value, probs = 0.75)) %>% 
+  ungroup() %>%
+  select(metric, disturbance, q25, q75, condition_class) %>%
+  distinct() %>%
+  pivot_wider(names_from = condition_class, values_from = c("q25", "q75")) %>% 
+  mutate(midpoint_incr = colMeans(metrics.thresholds[ , c(q25_1, q75_3)]))
+    
+  #   midpoint = case_when(
+  #   disturbance == "decrease" ~ mean(c(q25_1, q75_3)),
+  #   disturbance == "increase" ~ mean(c(q75_1, q25_3))
+  #   )
+  # )
+
+
+  
+# Standardize using thresholds determined above and truncate scores >10 to 10 and <0 to 0
+metrics.df.standardized.long.percentiles <- metrics.df.standardized.long %>%
+  left_join(metrics.thresholds, by = c("metric", "disturbance")) %>% 
+  mutate(SCORE = case_when(
+    disturbance == "decrease" ~ ((value - floor_3)/(ceiling_1 - floor_3)),
+    disturbance == "increase" ~ ((ceiling_3 - value)/(ceiling_3 - floor_1)),
+  )) %>% 
+  mutate(SCORE = SCORE * 10,
+         SCORE = if_else(SCORE > 10, 10, SCORE),
+         SCORE = if_else(SCORE < 0, 0, SCORE))
+
+
+
 
 #plot rescaled individual metrics
 metrics.df.standardized.long.percentiles %>% 
@@ -2168,7 +2203,29 @@ metrics.scores <- metrics.df.standardized.long.percentiles %>%
   select(site_id, SITE_SCORE, rich_ttaxa_coe, rich_ttaxa_insecta, pct_gatherer, rich_genus, shannon_ttaxa_shredder) %>% 
   left_join(condition)
 
+
+# Determine 25th of class 1 and 75th of class to find midpoint, to use as possible impairment threshold
+metrics.scores.cc1 <- metrics.scores %>% 
+  filter(site_id %in% train.df.vec,
+         condition_class == 1) 
+quantile(metrics.scores.cc1$SITE_SCORE, probs = 0.25)
+
+quantile(metrics.scores.cc1$SITE_SCORE, probs = seq(0, 1, 0.05), na.rm = FALSE, names = TRUE, type = 7)
+
+
+metrics.scores.cc3 <- metrics.scores %>% 
+  filter(site_id %in% train.df.vec,
+         condition_class == 3) 
+quantile(metrics.scores.cc3$SITE_SCORE, probs = 0.75)
+
+imp_thresh <- ((quantile(metrics.scores.cc1$SITE_SCORE, probs = 0.25) - 
+                  quantile(metrics.scores.cc3$SITE_SCORE, probs = 0.75)) / 2 ) + 
+  quantile(metrics.scores.cc3$SITE_SCORE, probs = 0.75)
+
 ```
+
+
+
 ```{r Look at effect of subsampling on richness}
 # counts.subsamp <- read_csv(file.path(root.dir, "data/compile_2015-2019/bugs/counts", "indiv_counts_subsamp_2021-12-01.csv")) %>% 
 #   select(site_id, tot)
@@ -2207,7 +2264,12 @@ metrics.scores.plot %>%
   ggtitle("Training") +
   # xlab(NULL) +
   xlab("Condition Class") +
-  ylab("LGBAP Score") 
+  ylab("LGBAP Score") +
+  geom_hline(yintercept=5.56, color = "red") +
+  geom_hline(yintercept=4.37, color = "blue") +
+  geom_hline(yintercept=4.8, color = "green") +
+  geom_hline(yintercept=5.79, color = "purple")
+
   # ggsave(file.path(root.dir, "data/ibi/plots_for_pub", "ibi_training_final_2021-12-07.png"), dpi = "print")
 
 # Plot validation final scores
@@ -2318,8 +2380,10 @@ ggcorrplot::ggcorrplot(metric.param.corr.chem)
 metrics.scores.train <- metrics.scores %>% 
   filter(site_id %in% c(train.df.vec)) %>% 
   mutate(prediction = case_when(
-    SITE_SCORE > 5 ~ "1",
-    SITE_SCORE < 5 ~ "3",
+    # SITE_SCORE > 5 ~ "1",
+    # SITE_SCORE < 5 ~ "3",
+    SITE_SCORE > 5.56 ~ "1",
+    SITE_SCORE < 5.56 ~ "3",
   )) %>% 
   rename(truth = condition_class) %>% 
   select(truth, prediction) %>% 
@@ -2339,8 +2403,10 @@ metrics.scores.train %>%
 metrics.scores.validation <- metrics.scores %>% 
   filter(site_id %in% c(test.df.vec)) %>% 
   mutate(prediction = case_when(
-    SITE_SCORE > 5 ~ "1",
-    SITE_SCORE < 5 ~ "3",
+    # SITE_SCORE > 5 ~ "1",
+    # SITE_SCORE < 5 ~ "3",
+    SITE_SCORE > 5.56 ~ "1",
+    SITE_SCORE < 5.56 ~ "3",
   )) %>% 
   rename(truth = condition_class) %>% 
   select(truth, prediction) %>% 
