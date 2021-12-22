@@ -2695,7 +2695,7 @@ fielddata %>%
 ```{r Data prep and model creation}
 
 # Packages at https://www.tidymodels.org/
-
+#
 # Create recipe object
 rec_obj <- train_sensitive.df %>% 
   select(condition_class, all_of(metrics.final)) %>% 
@@ -2709,7 +2709,6 @@ rec_obj <- train_sensitive.df %>%
   themis::step_smote(condition_class)
   # step_smote creates a specification of a recipe step that generate new examples of the minority class using nearest neighbors of these cases.
   # Matt says step_smote is redundant if already balanced btw test and ref sites... but removing does not result in an identical DF!
-
 
 # Extract finalized training set (juice function). Specifiy params for log regr. and engine.
 
