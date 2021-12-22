@@ -309,6 +309,154 @@ bugnames.15to19.mismatch <- bugnames.15to19 %>%
 
 ```
 
+```{r Add habit to master taxa table, 11/30/21}
+
+# Based on Matt Kraft's Master_Taxa_Habits_MK-2021-11-24.Rmd
+
+master.taxa <- master.taxa %>% 
+  rename(TSN = integr_taxonomic_info_sys)
+
+# Matt said this table was downloaded from https://cfpub.epa.gov/ncea/global/traits/search.cfm
+Habits <- read_excel(file.path(root.dir, "data", "adding_habit", "FreshwaterBioTraits_Transposed_20100927.xls"), sheet = "DataTable") %>% 
+  select(TSN, Genus, Family, Habit_prim_abbrev) %>% 
+  rename(genus = Genus, family = Family)
+
+#Cycle down taxonomic levels to extract habits. Some taxa may have more than one habit listed in the freshwater bio traits database. Go through each level and count to determine the most frequent occurrence for each level and select that habit for the final tables.
+
+Habit_TSN<-Habits %>% 
+  group_by(TSN, Habit_prim_abbrev) %>% 
+  tally() %>% 
+  ungroup() %>% 
+  filter(!is.na(Habit_prim_abbrev))%>% 
+  filter(!is.na(TSN)) %>% 
+  group_by(TSN) %>% 
+  slice(which.max(n)) %>% 
+  select(-n)
+
+Habit_Genus<-Habits %>% 
+  group_by(genus, Habit_prim_abbrev) %>% 
+  tally() %>% 
+  ungroup() %>% 
+  filter(!is.na(Habit_prim_abbrev))%>% 
+  filter(!is.na(genus))%>% 
+  group_by(genus) %>% 
+  slice(which.max(n)) %>% 
+  select(-n) %>% 
+  mutate(genus = tolower(genus))
+  
+Habit_Family<-Habits %>%
+  group_by(family, Habit_prim_abbrev) %>% 
+  tally() %>% 
+  ungroup() %>% 
+  filter(!is.na(Habit_prim_abbrev)) %>% 
+  filter(!is.na(family))%>% 
+  group_by(family) %>% 
+  slice(which.max(n)) %>% 
+  select(-n) %>% 
+  mutate(family = tolower(family))
+
+master.taxa.habit <- left_join(master.taxa, Habit_TSN, by = c("TSN")) %>% 
+  rename(habit_tsn = Habit_prim_abbrev)
+
+master.taxa.habit_Genus <- left_join(master.taxa.habit, Habit_Genus, by = c("genus")) %>% 
+  rename(habit_genus = Habit_prim_abbrev)
+
+master.taxa.habit_Family<-left_join(master.taxa.habit_Genus, Habit_Family, by =c("family")) %>% 
+  rename(habit_family = Habit_prim_abbrev)
+
+master.taxa.habit.final<-master.taxa.habit_Family %>% 
+  mutate(habit = NA)
+# master.taxa.habit.final$habit<-NA
+
+master.taxa.habit.final<-master.taxa.habit.final %>% 
+  mutate(habit = habit_tsn) %>% 
+  mutate(habit = case_when(
+    is.na(habit) ~ habit_genus,
+    TRUE ~ habit
+  )) %>% 
+  mutate(habit = case_when(
+    is.na(habit) ~ habit_family,
+    TRUE ~ habit
+  ))
+
+master.taxa <- master.taxa.habit.final %>% 
+  select(-habit_tsn, -habit_genus, -habit_family)
+
+```
+
+```{r Add voltinism to master taxa table, 11/30/21}
+
+# Based on Matt Kraft's Master_Taxa_Habits_MK-2021-11-24.Rmd
+
+# Matt said this table was downloaded from https://cfpub.epa.gov/ncea/global/traits/search.cfm
+volt <- read_excel(file.path(root.dir, "data", "adding_habit", "FreshwaterBioTraits_Transposed_20100927.xls"), sheet = "DataTable") %>% 
+  select(TSN, Genus, Family, Voltinism_abbrev) %>% 
+  rename(genus = Genus, family = Family)
+
+#Cycle down taxonomic levels to extract voltinism. Some taxa may have more than one habit listed in the freshwater bio traits database. Go through each level and count to determine the most frequent occurrence for each level and select that voltinism for the final tables.
+
+volt_TSN<-volt %>% 
+  group_by(TSN, Voltinism_abbrev) %>% 
+  tally() %>% 
+  ungroup() %>% 
+  filter(!is.na(Voltinism_abbrev))%>% 
+  filter(!is.na(TSN)) %>% 
+  group_by(TSN) %>% 
+  slice(which.max(n)) %>% 
+  select(-n)
+
+volt_genus<-volt %>% 
+  group_by(genus, Voltinism_abbrev) %>% 
+  tally() %>% 
+  ungroup() %>% 
+  filter(!is.na(Voltinism_abbrev))%>% 
+  filter(!is.na(genus))%>% 
+  group_by(genus) %>% 
+  slice(which.max(n)) %>% 
+  select(-n) %>% 
+  mutate(genus = tolower(genus))
+  
+volt_family<-volt %>%
+  group_by(family, Voltinism_abbrev) %>% 
+  tally() %>% 
+  ungroup() %>% 
+  filter(!is.na(Voltinism_abbrev)) %>% 
+  filter(!is.na(family))%>% 
+  group_by(family) %>% 
+  slice(which.max(n)) %>% 
+  select(-n) %>% 
+  mutate(family = tolower(family))
+
+master.taxa.volt <- left_join(master.taxa, volt_TSN, by = c("TSN")) %>% 
+  rename(volt_tsn = Voltinism_abbrev)
+
+master.taxa.volt_Genus <- left_join(master.taxa.volt, volt_genus, by = c("genus")) %>% 
+  rename(volt_genus = Voltinism_abbrev)
+
+master.taxa.volt_Family<-left_join(master.taxa.volt_Genus, volt_family, by =c("family")) %>% 
+  rename(volt_family = Voltinism_abbrev)
+
+master.taxa.volt.final<-master.taxa.volt_Family %>% 
+  mutate(voltinism = NA)
+# master.taxa.habit.final$habit<-NA
+
+master.taxa.volt.final<-master.taxa.volt.final %>% 
+  mutate(voltinism = volt_tsn) %>% 
+  mutate(voltinism = case_when(
+    is.na(voltinism) ~ volt_genus,
+    TRUE ~ voltinism
+  )) %>% 
+  mutate(voltinism = case_when(
+    is.na(voltinism) ~ volt_family,
+    TRUE ~ voltinism
+  ))
+
+master.taxa <- master.taxa.volt.final %>% 
+  select(-volt_tsn, -volt_genus, -volt_family)
+
+```
+
+
 Look into bad tolerance naming conventions
 ```{r, eval = FALSE}
 master.taxa.tol <- master.taxa %>% 
@@ -350,36 +498,81 @@ matchlist <- bugmatrix.15to19 %>%
 Export matrices for use elsewhere
 ```{r, eval = FALSE}
 
-teams.datadir <- "C:/Users/gmlemley/New York State Office of Information Technology Services/SMAS - Low Gradient IBI/data"
-
-# All bugs
-write.table(bugmatrix.15to19, file.path(root.dir, "data/compile_2015-2019/bugs/2015-2019_lowgrad_bugs_matrix_20201207.csv"),sep=",", row.names = FALSE)
-write.table(bugmatrix.15to19, file.path(teams.datadir, "bugs/2015-2019_lowgrad_bugs_matrix_20201207.csv"),sep=",", row.names = FALSE)
-
-# Only unique bugs
-write.table(bugmatrix.15to19.unique, file.path(root.dir, "data/compile_2015-2019/bugs/2015-2019_lowgrad_bugs_matrix_UNIQUE_20201210.csv"),sep=",", row.names = FALSE)
-write.table(bugmatrix.15to19.unique, file.path(teams.datadir, "bugs", "2015-2019_lowgrad_bugs_matrix_UNIQUE_20201210.csv"),sep=",", row.names = FALSE)
+# teams.datadir <- "C:/Users/gmlemley/New York State Office of Information Technology Services/SMAS - Low Gradient IBI/data"
+# 
+# # All bugs
+# write.table(bugmatrix.15to19, file.path(root.dir, "data/compile_2015-2019/bugs/2015-2019_lowgrad_bugs_matrix_20201207.csv"),sep=",", row.names = FALSE)
+# write.table(bugmatrix.15to19, file.path(teams.datadir, "bugs/2015-2019_lowgrad_bugs_matrix_20201207.csv"),sep=",", row.names = FALSE)
+# 
+# # Only unique bugs
+# write.table(bugmatrix.15to19.unique, file.path(root.dir, "data/compile_2015-2019/bugs/2015-2019_lowgrad_bugs_matrix_UNIQUE_20201210.csv"),sep=",", row.names = FALSE)
+# write.table(bugmatrix.15to19.unique, file.path(teams.datadir, "bugs", "2015-2019_lowgrad_bugs_matrix_UNIQUE_20201210.csv"),sep=",", row.names = FALSE)
 
 ```
 
 
-```{r}
-# Add total indiv count fields, flag those <200???
-```
+```{r Subsampling and site omitting}
 
-
-```{r Perform taxa_fill function}
-
-# Convert from wide to long
+# Convert from wide to long and filter out sites to be omitted (low sample counts or poor sample collected)
 bugs.unique.long <- bugmatrix.15to19.unique %>% 
   gather(final_id, count, -site_id) %>% 
   filter(!is.na(count),
-         count > 0)  %>% 
-  # Filter out sites to be omitted (low sample counts or poor sample collected)
+         count > 0)  %>%
   filter(!(site_id %in% c(
     "17-PECN-12.4",
     "13-WALK-35.6",
     "13-IDNK-0.5")))
+
+# Summarize total counts
+totcounts <- bugs.unique.long %>% 
+  select(-final_id) %>% 
+  group_by(site_id) %>% 
+  summarise(tot = sum(count)) %>% 
+  mutate(target = 200,
+         missed = tot-target,
+         over = ifelse(missed <0, 0, missed),
+         under = ifelse(missed >0, 0, missed)
+  )
+
+#  Subsample those with indiv counts >200 down to 200
+library(splitstackshape)
+resample <- bugs.unique.long %>%
+     group_by(site_id, final_id, count) %>%
+     mutate(n = n()) %>%
+     expandRows(., "count") %>% 
+  ungroup()
+
+set.seed(52)
+bugs.unique.long <- resample %>%
+  group_by(site_id) %>% 
+  slice_sample(n = 200, replace = FALSE) %>% 
+  rename(count = n) %>% 
+  group_by(site_id, final_id) %>% 
+  summarise(count = sum(count))
+
+# Summarize total counts again
+totcounts_subsamp <- bugs.unique.long %>% 
+  select(-final_id) %>% 
+  group_by(site_id) %>% 
+  summarise(tot = sum(count)) %>% 
+  mutate(target = 200,
+         missed = tot-target,
+         over = ifelse(missed <0, 0, missed),
+         under = ifelse(missed >0, 0, missed)
+  )
+
+# List sites with <132 count - for possible disqualifying as reference
+totcount_noref <- totcounts_new %>% 
+  filter(tot <132)
+# cat(unique(totcount_noref$site_id), sep = "', '")
+
+# write_csv(totcounts, file.path(root.dir, "data/compile_2015-2019/bugs/counts", "indiv_counts_orig_2021-12-01.csv"))
+# write_csv(totcounts_subsamp, file.path(root.dir, "data/compile_2015-2019/bugs/counts", "indiv_counts_subsamp_2021-12-01.csv"))
+
+```
+
+
+```{r Perform taxa_fill function and join taxa traits}
 
 # Identify taxa missing from master table
 # missing.df <- bugs.unique.long %>% 
@@ -448,18 +641,18 @@ bugs.unique.wide.tol <- bugs.unique.long %>%
 # Export long and wide sample taxa tables
 
 ```{r, eval = FALSE}
-write_csv(bugs.unique.long, file.path(root.dir, "data/compile_2015-2019/bugs", "2015-2019_lowgrad_taxa_unique_long_speciesfill_2021-11-18.csv"))
-write_csv(bugs.unique.wide, file.path(root.dir, "data/compile_2015-2019/bugs", "2015-2019_lowgrad_taxa_unique_wide_speciesfill_2021-11-18.csv"))
+write_csv(bugs.unique.long, file.path(root.dir, "data/compile_2015-2019/bugs", "2015-2019_LGtaxa_unique_long_subsamp_2021-11-30.csv"))
+write_csv(bugs.unique.wide, file.path(root.dir, "data/compile_2015-2019/bugs", "2015-2019_lowgrad_taxa_unique_wide_speciesfill_2021-11-24.csv"))
 
-write_csv(bugs.unique.wide.genus, file.path(root.dir, "data/compile_2015-2019/bugs", "2015-2019_lowgrad_taxa_unique_wide_speciesfill-genus_2021-11-18.csv"))
-write_csv(bugs.unique.wide.family, file.path(root.dir, "data/compile_2015-2019/bugs", "2015-2019_lowgrad_taxa_unique_wide_speciesfill-family_2021-11-18.csv"))
-write_csv(bugs.unique.wide.order, file.path(root.dir, "data/compile_2015-2019/bugs", "2015-2019_lowgrad_taxa_unique_wide_speciesfill-order_2021-11-18.csv"))
-write_csv(bugs.unique.wide.ffg, file.path(root.dir, "data/compile_2015-2019/bugs", "2015-2019_lowgrad_taxa_unique_wide_speciesfill-ffg_2021-11-18.csv"))
-write_csv(bugs.unique.wide.tol, file.path(root.dir, "data/compile_2015-2019/bugs", "2015-2019_lowgrad_taxa_unique_wide_speciesfill-tolerance_2021-11-18.csv"))
+write_csv(bugs.unique.wide.genus, file.path(root.dir, "data/compile_2015-2019/bugs", "2015-2019_lowgrad_taxa_unique_wide_speciesfill-genus_2021-11-24.csv"))
+write_csv(bugs.unique.wide.family, file.path(root.dir, "data/compile_2015-2019/bugs", "2015-2019_lowgrad_taxa_unique_wide_speciesfill-family_2021-11-24.csv"))
+write_csv(bugs.unique.wide.order, file.path(root.dir, "data/compile_2015-2019/bugs", "2015-2019_lowgrad_taxa_unique_wide_speciesfill-order_2021-11-24.csv"))
+write_csv(bugs.unique.wide.ffg, file.path(root.dir, "data/compile_2015-2019/bugs", "2015-2019_lowgrad_taxa_unique_wide_speciesfill-ffg_2021-11-24.csv"))
+write_csv(bugs.unique.wide.tol, file.path(root.dir, "data/compile_2015-2019/bugs", "2015-2019_lowgrad_taxa_unique_wide_speciesfill-tolerance_2021-11-24.csv"))
 
 ```
 
-```{r Add quotes to file for use in PRIMER}
+```{r Add quotes to file for use in PRIMER, eval = FALSE}
 
 file <- read.csv(file.path(root.dir, "data/compile_2015-2019/bugs/for_primer_ord", "2015-2019_LG_bugs_order+abiotic-field+LC+condition-TRIMMED_2021-11-18.csv"))
 

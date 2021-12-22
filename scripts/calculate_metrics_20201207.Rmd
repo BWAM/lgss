@@ -17,7 +17,11 @@ datamod.dir <- file.path("C:/Users/gmlemley/New York State Office of Information
 
 ```{r Load sample taxa and prep}
 
-taxa.df <- read_csv(file.path(root.dir, "data/compile_2015-2019/bugs", "2015-2019_lowgrad_taxa_unique_long_speciesfill_2021-11-18.csv"))
+# High counts subsampled down to 200 
+taxa.df <- read_csv(file.path(root.dir, "data/compile_2015-2019/bugs", "2015-2019_LGtaxa_unique_long_subsamp_2021-11-30.csv"))
+
+# Not subsampled
+# taxa.df <- read_csv(file.path(root.dir, "data/compile_2015-2019/bugs", "2015-2019_lowgrad_taxa_unique_long_speciesfill_2021-11-18.csv"))
 
 # Create nested dataframe
 nest.df <- taxa.df %>%
@@ -25,10 +29,64 @@ nest.df <- taxa.df %>%
 
 ```
 
-```{r Exploring taxa, eval = FALSE}
+```{r Misc taxa exploration, eval = FALSE}
 taxa.df.coleop.fam <- taxa.df %>% 
   filter(order %in% "coleoptera") #%>% 
   # distinct(family)
+
+taxa.df.distinctsp <- taxa.df %>% 
+  distinct(macro_genspecies, .keep_all = "TRUE")
+
+# Seeing if insecta are mostly made up of interolerant/facultative. 
+taxa.df.insecta.tol <- taxa.df.distinctsp %>% 
+  filter(class %in% "insecta",
+         tol_char %in% "tolerant")
+taxa.df.insecta.intol <- taxa.df.distinctsp %>% 
+  filter(class %in% "insecta",
+         tol_char %in% "intolerant")
+taxa.df.insecta.fac <- taxa.df.distinctsp %>% 
+  filter(class %in% "insecta",
+         tol_char %in% "facultative")
+taxa.df.insecta.fac.na <- taxa.df.distinctsp %>% 
+  filter(is.na(tol_char))
+# Turns out they are mostly facultative and intolerant.
+
+# Looking at presence and spread of voltinism data
+taxa.df.volt.u <- taxa.df.distinctsp %>% 
+  filter(voltinism %in% "univoltine")
+taxa.df.volt.s <- taxa.df.distinctsp %>% 
+  filter(voltinism %in% "semivoltine")
+taxa.df.volt.mult <- taxa.df.distinctsp %>% 
+  filter(voltinism %in% "bi_multivoltine")
+taxa.df.volt.na <- taxa.df.distinctsp %>% 
+  filter(is.na(voltinism))
+# ~23% of unique taxa in this dataset do not have voltinism defined!
+
+# Looking at presence and spread of tolerance data
+taxa.df.tol.tol <- taxa.df.distinctsp %>% 
+  filter(tol_char %in% "tolerant")
+taxa.df.tol.int <- taxa.df.distinctsp %>% 
+  filter(tol_char %in% "intolerant")
+taxa.df.tol.fac <- taxa.df.distinctsp %>% 
+  filter(tol_char %in% "facultative")
+taxa.df.tol.na <- taxa.df.distinctsp %>% 
+  filter(is.na(tol_char))
+# ~7% of unique taxa in this dataset do not have voltinism defined.
+
+# Looking at presence and spread of functional feeding group data
+taxa.df.ffg.gath <- taxa.df.distinctsp %>% 
+  filter(ffg %in% "gatherer")
+taxa.df.ffg.shred <- taxa.df.distinctsp %>% 
+  filter(ffg %in% "shredder")
+taxa.df.ffg.scrp <- taxa.df.distinctsp %>% 
+  filter(ffg %in% "scraper")
+taxa.df.ffg.pred <- taxa.df.distinctsp %>% 
+  filter(ffg %in% "predator")
+taxa.df.ffg.filt <- taxa.df.distinctsp %>% 
+  filter(ffg %in% "filterer")
+taxa.df.ffg.na <- taxa.df.distinctsp %>% 
+  filter(is.na(ffg))
+# ~9% of unique taxa in this dataset do not have FFG defined.
 
 ```
 
@@ -975,7 +1033,9 @@ seq.df <- nest.df %>%
                                   "order",
                                   "family",
                                   "tol_char",
-                                  "ffg"),
+                                  "ffg",
+                                  "habit",
+                                  "voltinism"),
              .group_col = ttaxa,
              .job = "rich",
              .exclude_pattern = "undetermined",
@@ -989,7 +1049,9 @@ seq.df <- nest.df %>%
                                   "order",
                                   "family",
                                   "tol_char",
-                                  "ffg"),
+                                  "ffg",
+                                  "habit",
+                                  "voltinism"),
              .group_col = ttaxa,
              .job = "pct_rich",
              .exclude_pattern = "undetermined",
@@ -1003,7 +1065,9 @@ seq.df <- nest.df %>%
                                   "family",
                                   "genus",
                                   "tol_char",
-                                  "ffg"),
+                                  "ffg",
+                                  "habit",
+                                  "voltinism"),
              .job = "pct",
              .exclude_pattern = "undetermined",
              .unnest_col = data),
@@ -1015,7 +1079,9 @@ seq.df <- nest.df %>%
                                   "order", 
                                   "family",
                                   "tol_char",
-                                  "ffg"),
+                                  "ffg",
+                                  "habit",
+                                  "voltinism"),
              .group_col = ttaxa,
              .base_log = 2,
              .job = "shannon",
@@ -1028,7 +1094,9 @@ seq.df <- nest.df %>%
                                   "order", 
                                   "family",
                                   "tol_char",
-                                  "ffg"),
+                                  "ffg",
+                                  "habit",
+                                  "voltinism"),
              .group_col = ttaxa,
              .job = "simpson",
              .exclude_pattern = "undetermined",
@@ -1070,7 +1138,8 @@ metrics.df <- list(  div_subgr.df,
 
 metrics.names <- names(metrics.df)
 metrics.names.df <- as.data.frame(metrics.names, col.names = c("metrics", "x")) %>% 
-  filter(!(metrics.names %in% "site_id"))
+  filter(!metrics.names %in% "site_id",
+         !metrics.names %in% "condition_class")
 
 # Invesitage rich_ffg issues
 # metrics.df.rich_ffg <- metrics.df %>% 
@@ -1121,9 +1190,8 @@ taxa.df.class.plecop <- taxa.df.class %>% filter(order %in% "plecoptera")
 
 ```
 
-```{r Clean up workspace, eval=FALSE}
-rm(master.taxa.fill,
-   taxa.df,
+```{r Clean up workspace}
+rm(taxa.df,
    nest.df,
    div_subgr.df,
    div.df,
@@ -1134,8 +1202,7 @@ rm(master.taxa.fill,
    rich_subgr.df,
    taxa_tol.df,
    seq.df,
-   seq.names,
-   condition)
+   seq.names)
 ```
 
 
@@ -1205,11 +1272,7 @@ metrics.df <- metrics.df %>%
 
 ```
 
-
-
 # Subsampling
-
-
 ```{r Split into training and test (validation) datasets}
 
 library(tidymodels)
@@ -1230,7 +1293,8 @@ train_test_split <- metrics.df %>%
 
 # Create training dataset
 train.df <- training(train_test_split) %>% 
-  filter(condition_class %in% c("1", "3")) 
+  filter(condition_class %in% c("1", "3"))
+         # !site_id %in% "07-JACB-1.9")
 
 # Create testing dataset
 test.df <- testing(train_test_split) %>% 
@@ -1240,93 +1304,6 @@ test.df <- testing(train_test_split) %>%
 test.df.vec <- c(test.df$site_id)
 train.df.vec <- c(train.df$site_id)
 
-# Create dataset with class 2 (set aside to help validate later)
-# test.class2.df <- metrics.df %>% 
-#   filter(condition_class %in% "2") 
-
-
-
-###################
-###################
-
-### Confirm set.seed(80) reproducibility when running this code. PMA metrics produced in the code chunk below (DF train.df.PMA) should match those entered in chunk above. 
-### In case set.seed(80) is no longer reproducible, the following test and training sites were randomly selected using set.seed(80) and used during development of this IBI:
-
-# > test.df.vec
-#  [1] "01-GILL-0.3"      "02-CASS-25.6"     "03-JEDO_T3-0.4"  
-#  [4] "04-BLAK_T7-3.0"   "04-BLCE-5.2"      "04-WDIT-0.1"     
-#  [7] "07-BLDY-0.1"      "07-LITR-0.2"      "07-ONON_W_T7-1.5"
-# [10] "07-POBK_T4-1.5"   "08-BLAC-2.5"      "09-CEDL-0.1"     
-# [13] "09-LSAL_T1-1.0"   "13-BASC_T17-2.4"  "14-HURL-2.8"     
-# [16] "14-TENR-3.7"      "14-WLAK-5.8"      "15-MAWA-3.7"     
-# [19] "17-OROW-0.6"      "17-SAMP-2.1"     
-# 
-# > train.df.vec
-#  [1] "01-FISN-2.4"      "01-GOTC-0.2"      "02-RAWS-0.8"     
-#  [4] "03-BEAG-1.8"      "03-EMIL_E_T6-0.4" "03-FOMI-5.5"     
-#  [7] "03-HRTB-2.2"      "03-JOHN-13.7"     "03-MIDL-2.4"     
-# [10] "03-SAND_T21-4.0"  "03-YANT_T1c-0.2"  "04-BLAK_T16-0.8" 
-# [13] "04-JCOX-4.6"      "04-JCOX_S-3.7"    "04-SPRG-10.1"    
-# [16] "04-WMRSG-0.2"     "05-CAMB-11.2"     "05-CBRO-1.8"     
-# [19] "06-NING-7.7"      "07-GEDD-1.4"      "07-HARB-0.5"     
-# [22] "07-HENC_T4-1.2"   "07-JACB-1.9"      "07-NINE-0.7"     
-# [25] "07-SNDR-1.5"      "07-WBOT-0.3"      "08-BARE_T5-0.5"  
-# [28] "08-BENE-0.2"      "08-MURM-3.4"      "09-BIBK-5.4"     
-# [31] "09-BLCH-0.2"      "09-ENGL-17.6"     "09-LSUK-11.3"    
-# [34] "09-MARA-4.5"      "09-PLMB-12.4"     "09-WSCK-3.4"     
-# [37] "10-BISH-0.6"      "10-COLW-0.7"      "10-LSAR_T10-0.3" 
-# [40] "10-MILC-6.3"      "10-NSAR_T7-0.8"   "10-PUTM_T5-0.3"  
-# [43] "10-TRAE-4.5"      "10-TWOB-3.6"      "11-GORN-6.0"     
-# [46] "11-SRUN-3.8"      "11-TEET-0.8"      "11-TOMH-12.2"    
-# [49] "13-EBCR-16.3"     "13-IDNK-0.5"      "13-WBLKK-8.9"    
-# [52] "16-BOGH-0.3"      "16-WEBA-23.3"     "17-EMED-0.4"     
-# [55] "17-GREN-0.8"      "17-MBUR-2.1"      "17-NISS_E-2.6"   
-# [58] "17-PECN-8.9"      "17-PENA-1.4"      "17-SANT-1.7"     
-# [61] "17-SWML-1.4"    
-
-# PMA values:
-#    PMA_clitellata = 4.59,
-#    PMA_ephemeroptera = 9.11,
-#    PMA_plecoptera = 0.28,
-#    PMA_coleoptera = 5.37,
-#    PMA_trichoptera = 4.45,
-#    PMA_chironomidae = 43.5,
-#    PMA_other = 32.7
-
-
-#########################################################################################################
-#########################################################################################################
-###### SUBSAMPLE GROUPS ABOVE ARE NO LONGER VALID AFTER RECLASSIFICATION WITH CORRECTED PCA, 5/26/21 ####
-#########################################################################################################
-#########################################################################################################
-
-
-# 1st rerun with corrected PCA, 5/26/21
-# > test.df.vec
-#  [1] "01-GILL-0.3"      "02-CASS-25.6"     "04-JCOX-4.6"      "04-WDIT-0.1"      "04-WMRSG-0.2"     "07-BLDY-0.1"      "07-ONON_W_T7-1.5"
-#  [8] "07-POBK_T4-1.5"   "08-BARE_T5-0.5"   "08-MURM-3.4"      "09-ENGL-17.6"     "09-LSAL_T1-1.0"   "13-EBCR-16.3"     "14-TENR-3.7"     
-# [15] "14-WLAK-5.8"      "15-MAWA-3.7"      "16-BOGH-0.3"      "17-EMED-0.4"      "17-OROW-0.6"      "17-SWML-1.4" 
-# > train.df.PMA
-# # A tibble: 1 x 8
-#   site_id pct_clitellata pct_ephemeroptera pct_plecoptera pct_coleoptera pct_trichoptera pct_chironomidae other
-#     <dbl>          <dbl>             <dbl>          <dbl>          <dbl>           <dbl>            <dbl> <dbl>
-# 1      NA           5.02              9.65          0.235           4.53            3.95             41.7  34.9
-
-
-
-# 2nd rerun, same input data and seed (set.seed(80)) after R package updates...
-
-# > test.df.vec
-#  [1] "01-FISN-2.4"      "03-EMIL_E_T6-0.4" "03-JOHN-13.7"     "03-YANT_T1c-0.2"  "04-JCOX-4.6"      "05-CAMB-11.2"     "07-GEDD-1.4"     
-#  [8] "07-ONON_W_T7-1.5" "07-SNDR-1.5"      "08-BLAC-2.5"      "09-CEDL-0.1"      "09-WSCK-3.4"      "10-BISH-0.6"      "10-COLW-0.7"     
-# [15] "10-LSAR_T10-0.3"  "10-PUTM_T5-0.3"   "10-TRAE-4.5"      "10-TWOB-3.6"      "11-TOMH-12.2"     "12-BARK-0.6"      "13-BASC_T17-2.4" 
-# [22] "17-SANT-1.7"     
-# > train.df.PMA
-# # A tibble: 1 x 8
-#   site_id pct_clitellata pct_ephemeroptera pct_plecoptera pct_coleoptera pct_trichoptera pct_chironomidae other
-#     <dbl>          <dbl>             <dbl>          <dbl>          <dbl>           <dbl>            <dbl> <dbl>
-# 1      NA           4.50              10.4          0.289           5.11            4.91             37.8  37.0
-  
   
 #######################
 #######################
@@ -1345,8 +1322,7 @@ train.df.vec <- c(train.df$site_id)
 ```
 
 # Calculating pct comp for PMA metric above
-```{r, eval=FALSE}
-
+```{r}
 ### Determining percent composition of each major group for PMA calculation above
 
 train.df.PMA <- train.df %>% 
@@ -1367,9 +1343,18 @@ train.df.PMA <- train.df %>%
 
 ### Could also calculate PMA for FFG Composition (PMA-FFG)
 
-```
-# Calculating sensitivies and initial filtering 
 
+# Should have the following output for current run:
+
+# > train.df.PMA
+# # A tibble: 1 x 8
+#   site_id pct_clitellata pct_ephemeroptera pct_plecoptera pct_coleoptera pct_trichoptera pct_chironomidae other
+#     <dbl>          <dbl>             <dbl>          <dbl>          <dbl>           <dbl>            <dbl> <dbl>
+# 1      NA           5.42              10.2          0.231           6.52            3.90             35.1  38.5
+
+```
+
+# Calculating sensitivies and initial filtering 
 ```{r Calculate Sensitivity and filter}
 
 # For full dataset
@@ -1428,7 +1413,7 @@ test_10cv.df <- test_sensitive.df %>%
 sens.df.ffg <- sens.df %>% 
   filter(grepl("predator|gatherer|shredder|filterer|scraper|collector", metric))
 
-# write.csv(sens.df, file.path(root.dir, "data/metrics/june2021_rerun/metrics_sens_seed70_20210603.csv"))
+# write.csv(sens.df, file.path(root.dir, "data/metrics/nov2021_rerun_subsampling/metrics_sens_seed60_20211221_JACB_omitted.csv"))
 # write.csv(sens.df.ffg, file.path(root.dir, "data/metrics/june2021_rerun/metrics_sens_seed70-FFG_20210603.csv"))
 
 ```
@@ -1741,7 +1726,7 @@ sens.filt <- sens.df %>%
 
 DT::datatable(head(sens.filt, 500), options = list(scrollX = TRUE))
 
-# write.csv(sens.filt, file.path(root.dir, "data/metrics/june2021_rerun/sens.filt_seed60_2021-06-14.csv"))
+# write.csv(sens.filt, file.path(root.dir, "data/metrics/june2021_rerun/sens.filt_seed5122_2021-11-28.csv"))
 ```
 
 
@@ -1808,7 +1793,12 @@ DT::datatable(head(sens.filt, 500), options = list(scrollX = TRUE))
 # metrics.final <- c("rich_ttaxa_tol_0to7", "rich_ttaxa_coe", "rich_ttaxa_insecta", "shannon_ttaxa_shredder", "shannon_ttaxa_cte", "shannon_ttaxa_toe")
 # metrics.final <- c("rich_ttaxa_tol_0to7", "rich_ttaxa_coe", "rich_ttaxa_insecta", "shannon_ttaxa_shredder", "shannon_ttaxa_cte")
 # metrics.final <- c("rich_ttaxa_coe", "rich_ttaxa_insecta", "shannon_ttaxa_shredder", "shannon_ttaxa_cte", "shannon_ttaxa_toe",	"shannon_ttaxa_pote",	"shannon_ttaxa_et",	"shannon_ttaxa_ept", "shannon_ttaxa_coe", "shannon_ttaxa_cote", "shannon_ttaxa_potec")
-metrics.final <- c("rich_ttaxa_coe", "rich_ttaxa_insecta", "shannon_ttaxa_shredder", "shannon_ttaxa_cte")
+# metrics.final <- c("rich_ttaxa_coe", "rich_ttaxa_insecta", "shannon_ttaxa_shredder", "shannon_ttaxa_cte")
+
+# Post-subsampling updates, 11/28/21
+# metrics.final <- c("rich_ttaxa_coe", "rich_ttaxa_insecta", "pct_gatherer", "shannon_ttaxa_coe", "rich_genus", "shannon_ttaxa_shredder")
+metrics.final <- c("rich_ttaxa_coe", "rich_ttaxa_insecta", "pct_gatherer", "rich_genus", "shannon_ttaxa_shredder")
+
 
 #plot final chosen metrics
 # sens.df %>% 
@@ -1833,7 +1823,7 @@ long.df %>%
 
 # plot specific metrics
 sens.df %>% 
-  filter(metric %in% c("shannon_ttaxa_cte", "shannon_ttaxa_toe",	"shannon_ttaxa_pote",	"shannon_ttaxa_et",	"shannon_ttaxa_ept")) %>%
+  filter(metric %in% c("simpson_ttaxa_univoltine", "pct_rich_ttaxa_gammaridae",	"shannon_ttaxa_univoltine")) %>%
   arrange(metric) %>% 
   inner_join(long.df, by = "metric") %>% 
   mutate(metric = factor(metric, levels = unique(metric)),
@@ -1886,7 +1876,7 @@ tryCatch({
     round(digits = 3) %>% 
     rownames_to_column() %>%
     # Remove values < 0.9
-    mutate_all(funs(replace(., . <= 0.75, NA))) %>%
+    # mutate_all(funs(replace(., . <= 0.8, NA))) %>%
     # Remove columns and rows with all NAs
     column_to_rownames() %>% 
     purrr::discard(~all(is.na(.))) %>% 
@@ -1899,6 +1889,11 @@ ggcorrplot::ggcorrplot(corr.final_rownames.cc1)
 # Metric corr w abiotic variables
 
 ```{r Metric corr w abiotic variables}
+
+
+#### MUST UPDATE ABIOTIC TABLE BELOW WITH NEW VERSION BEFORE USING THIS FOR FIGS ####
+
+
 # Import sample dates for rejoining
 sample.dates <- read_csv(file.path(root.dir, "data", "compile_2015-2019", "bugs", "2015-2019_lowgrad_bugs_UNIQUEdates_20210111.csv"))
 
@@ -1911,7 +1906,7 @@ rm(sample.dates)
 
 # Import chem data for 2017-2019 samples (does not exist for 2015 & 2016) and transform as needed
 abiotic.chem <- read_csv(file.path(root.dir, "data/chemistry/2017-2019_chem_lowgrad_assoc_20210111.csv")) %>% 
-  mutate(result_value = ifelse(lab_qualifiers %in% "U", 0, result_value),
+  mutate(result_value = ifelse(lab_qualifiers %in% "U", method_detection_limit/2, result_value),
          chemical_name = paste0(chemical_name, "_", result_unit)) %>% 
   filter(!is.na(result_value)) %>% 
   mutate(year = substr(sample_date, 3, 4),
@@ -1962,7 +1957,7 @@ metric.param.corr<-metrics.cor.abiotic %>%
   correlate(use = "pairwise.complete.obs", method = "spearman")
 metric.param.corr<-metric.param.corr %>% 
   select(term, all_of(metrics.final)) %>%
-  slice(8:14) %>% 
+  slice(6:99) %>%
   remove_rownames %>% 
   column_to_rownames(var="term")  
 ggcorrplot::ggcorrplot(metric.param.corr)
@@ -1980,12 +1975,12 @@ metric.param.corr.chem<-metrics.cor.chem %>%
   correlate(use = "pairwise.complete.obs", method = "spearman")
 metric.param.corr.chem<-metric.param.corr.chem %>% 
   select(term, all_of(metrics.final)) %>% 
-  slice(8:33) %>% 
+  slice(6:99) %>%
   remove_rownames %>% 
   column_to_rownames(var="term")  
 ggcorrplot::ggcorrplot(metric.param.corr.chem)
 
-# Chemistry (independent dataset) correlations w metrics (training only; 17 site matches)
+# Chemistry (independent dataset) correlations w metrics (training only; 12 site matches)
 train.df.final.2 <- train.df.final %>%
   select(-condition_class)
 
@@ -1995,19 +1990,19 @@ metric.param.corr.chem<-metrics.cor.chem %>%
   correlate(use = "pairwise.complete.obs", method = "spearman")
 metric.param.corr.chem<-metric.param.corr.chem %>% 
   select(term, all_of(metrics.final)) %>%
-  slice(8:33) %>% 
+  slice(6:99) %>%
   remove_rownames %>% 
   column_to_rownames(var="term")  
 ggcorrplot::ggcorrplot(metric.param.corr.chem)
 
-# Chemisty param correlations w metrics (validation only; 5 SITES ONLY)
+# Chemisty param correlations w metrics (validation only; 9 SITES ONLY)
 metrics.cor.chem<-left_join(test.df.cor, abiotic.chem, by=c("site_id"))
 metric.param.corr.chem<-metrics.cor.chem %>%
   select(-site_id) %>%
   correlate(use = "pairwise.complete.obs", method = "spearman")
 metric.param.corr.chem<-metric.param.corr.chem %>%
   select(term, all_of(metrics.final)) %>%
-  slice(8:33) %>%
+  slice(6:99) %>%
   remove_rownames %>%
   column_to_rownames(var="term")
 ggcorrplot::ggcorrplot(metric.param.corr.chem)
@@ -2024,7 +2019,7 @@ metric.param.corr.chem<-metrics.cor.chem %>%
   correlate(use = "pairwise.complete.obs", method = "spearman")
 metric.param.corr.chem<-metric.param.corr.chem %>% 
   select(term, all_of(metrics.filt)) %>% 
-  slice(35:53) %>% 
+  slice(28:99) %>%
   remove_rownames %>% 
   column_to_rownames(var="term")  
 ggcorrplot::ggcorrplot(metric.param.corr.chem)
@@ -2046,11 +2041,11 @@ metric.chem.corscore2 <- metric.param.corr.chem %>%
   t() %>% 
   as.data.frame() %>% 
   rownames_to_column(var = "metric") %>%
-  mutate(corrscore = abs(rowSums(.[2:16]))) %>% 
+  mutate(corrscore = abs(rowSums(.[2:13]))) %>% 
   select(metric, corrscore, everything())
 
 metric.chem.corscore3 <- metric.chem.corscore2 %>% 
-  filter(metric %in% metrics.filt)
+  filter(metric %in% metrics.final)
 
 # colSums(metric.chem.corscore) %>% 
 #    knitr::kable()
@@ -2063,7 +2058,8 @@ metric.chem.corscore3 <- metric.chem.corscore2 %>%
 
 # Traditional IBI method
 
-```{r Standardizing metrics}
+
+```{r Prep and plot prior to standardization}
 
 metrics.df.final <- metrics.df %>%
    select(site_id, condition_class, all_of(metrics.final)) 
@@ -2100,6 +2096,12 @@ metrics.df.standardized.long %>%
   facet_wrap(~metric, ncol = 4, scales = "free") +
   ggtitle("Final metrics (training)")
 
+```
+
+
+```{r Standardize - Method 1 (simple quantiles), eval=FALSE}
+# Using simple quantiles for floors/ceilings
+
 # Determine floor and ceiling thresholds using training only
 # THIS BLOCK USES the 95th/5th for ceiling/floor of all training data
 # metrics.thresholds <- metrics.df.standardized.long %>%
@@ -2112,7 +2114,8 @@ metrics.df.standardized.long %>%
 #   distinct()
 
 # Determine floor and ceiling thresholds using training only, using class 1 and class 3, respectively
-# THIS BLOCK USES the 75th of class 1 for ceiling and 25th of class 3 for floor
+# THIS BLOCK USES the 75th of class 1 for ceiling and 25th of class 3 for floor (for metrics that decrease with disturbance), or the inverse for metrics that increase with disturbance 
+
 metrics.thresholds <- metrics.df.standardized.long %>%
   filter(site_id %in% train.df.vec,
          condition_class != 2) %>%
@@ -2122,23 +2125,18 @@ metrics.thresholds <- metrics.df.standardized.long %>%
   ungroup() %>%
   select(metric, disturbance, floor, ceiling, condition_class) %>%
   distinct() %>%
-  pivot_wider(names_from = condition_class, values_from = c("floor", "ceiling")) %>%
-  select(metric, disturbance,
-         floor = floor_3,
-         ceiling = ceiling_1)
-
-# write_csv(metrics.thresholds, file.path(root.dir, "data/ibi/reruns", "metrics_thresholds_2021-07-27.csv"))
+  pivot_wider(names_from = condition_class, values_from = c("floor", "ceiling"))
 
 # Standardize using thresholds determined above and truncate scores >10 to 10 and <0 to 0
 metrics.df.standardized.long.percentiles <- metrics.df.standardized.long %>%
-  left_join(metrics.thresholds, by = c("metric", "disturbance")) %>% 
+  left_join(metrics.thresholds, by = c("metric", "disturbance")) %>%
   mutate(SCORE = case_when(
-    disturbance == "decrease" ~ ((value - floor)/(ceiling - floor)),
-    disturbance == "increase" ~ ((ceiling - value)/(ceiling - floor)),
-  )) %>% 
+    disturbance == "decrease" ~ ((value - floor_3)/(ceiling_1 - floor_3)),
+    disturbance == "increase" ~ ((ceiling_3 - value)/(ceiling_3 - floor_1)),
+  )) %>%
   mutate(SCORE = SCORE * 10,
          SCORE = if_else(SCORE > 10, 10, SCORE),
-         SCORE = if_else(SCORE < 0, 0, SCORE)) 
+         SCORE = if_else(SCORE < 0, 0, SCORE))
 
 #plot rescaled individual metrics
 metrics.df.standardized.long.percentiles %>% 
@@ -2152,6 +2150,7 @@ metrics.df.standardized.long.percentiles %>%
   geom_boxplot() +
   facet_wrap(~metric, ncol = 4, scales = "free") +
   ggtitle("Final metrics (rescaled, all sites)")
+# ggsave(file.path(root.dir, "data/IBI/plots_for_pub/rescaling", "metrics_rescaled_midpoint_thresholds.png"), dpi = "print")
 
 
 # Calculate final IBI scores for all data
@@ -2159,51 +2158,250 @@ metrics.scores <- metrics.df.standardized.long.percentiles %>%
   select(site_id, metric, SCORE) %>% 
   pivot_wider(names_from = metric, values_from = SCORE) %>% 
   group_by(site_id) %>%
-  mutate(SITE_SCORE = sum(c(rich_ttaxa_coe, rich_ttaxa_insecta, shannon_ttaxa_shredder, shannon_ttaxa_cte))) %>%
-  mutate(SITE_SCORE = SITE_SCORE/4) %>%
+  mutate(SITE_SCORE = sum(c(rich_ttaxa_coe, rich_ttaxa_insecta, pct_gatherer, rich_genus, shannon_ttaxa_shredder))) %>%
+  mutate(SITE_SCORE = SITE_SCORE/5) %>%
   ungroup() %>%
-  select(site_id, SITE_SCORE, rich_ttaxa_coe, rich_ttaxa_insecta, shannon_ttaxa_shredder, shannon_ttaxa_cte) %>% 
+  select(site_id, SITE_SCORE, rich_ttaxa_coe, rich_ttaxa_insecta, pct_gatherer, rich_genus, shannon_ttaxa_shredder) %>% 
   left_join(condition)
 
+metrics.scores.cc1 <- metrics.scores %>% 
+  filter(site_id %in% train.df.vec,
+         condition_class == 1) 
+metrics.scores.cc3 <- metrics.scores %>% 
+  filter(site_id %in% train.df.vec,
+         condition_class ==3)
+
+imp_thresh <- ((quantile(metrics.scores.cc1$SITE_SCORE, probs = 0.25) - 
+                  quantile(metrics.scores.cc3$SITE_SCORE, probs = 0.75)) / 2 ) + 
+  quantile(metrics.scores.cc3$SITE_SCORE, probs = 0.75)
+
 ```
+
+```{r Standardize - Method 2 (midpoints/ranges), eval=FALSE}
+# Using midpoints and ranges to LD floor/ceiling
+
+
+## For metrics decreasing w disturbance:
+##   midpoint = mean of 25th of LD and 75th of MD
+##   ceiling =  75th of LD
+##   floor = midpoint - (75th of LD - midpoint)
+## For metrics increasing w disturbance:
+##   midpoint = mean of 75th of LD and 25th of MD
+##   ceiling = midpoint + (midpoint - 25th of LD)
+##   floor = 25th of LD
+
+metrics.midpoints <- metrics.df.standardized.long %>%
+  filter(site_id %in% train.df.vec,
+         condition_class != 2) %>%
+  group_by(metric, condition_class) %>%
+  mutate(q25 = quantile(value, probs = 0.25),
+         q75 =  quantile(value, probs = 0.75)) %>%
+  ungroup() %>%
+  select(metric, disturbance, q25, q75, condition_class) %>%
+  distinct() %>%
+  pivot_wider(names_from = condition_class, values_from = c("q25", "q75")) %>%
+  mutate(midpoint = case_when(
+    disturbance == "decrease" ~ (q25_1 + q75_3)/2,
+    disturbance == "increase" ~ (q75_1 + q25_3)/2)
+  )
+
+metrics.thresholds <- metrics.df.standardized.long %>% 
+  filter(site_id %in% train.df.vec,
+         condition_class != 2) %>% 
+  group_by(metric) %>% 
+  ungroup() %>% 
+  left_join(., metrics.midpoints) %>% 
+  mutate(range = case_when(
+    disturbance == "decrease" ~ q75_1 - midpoint,
+    disturbance == "increase" ~ midpoint - q25_1)
+  ) %>%
+  mutate(ceiling = case_when(
+    disturbance == "decrease" ~ q75_1,
+    disturbance == "increase" ~ midpoint + range)
+  ) %>%
+  mutate(floor = case_when(
+    disturbance == "decrease" ~ midpoint - range,
+    disturbance == "increase" ~ q25_1)
+  ) %>% 
+  select(metric, disturbance, floor, ceiling) %>%
+  distinct() 
+
+# Standardize using thresholds determined above and truncate scores >10 to 10 and <0 to 0
+metrics.df.standardized.long.percentiles <- metrics.df.standardized.long %>%
+  left_join(metrics.thresholds, by = c("metric", "disturbance")) %>%
+  mutate(SCORE = case_when(
+    disturbance == "decrease" ~ ((value - floor)/(ceiling - floor)),
+    disturbance == "increase" ~ ((ceiling - value)/(ceiling - floor)),
+  )) %>%
+  mutate(SCORE = SCORE * 10,
+         SCORE = if_else(SCORE > 10, 10, SCORE),
+         SCORE = if_else(SCORE < 0, 0, SCORE))
+
+#plot rescaled individual metrics
+metrics.df.standardized.long.percentiles %>% 
+  left_join(condition) %>% 
+  filter(metric %in% metrics.final) %>%
+  arrange(metric) %>% 
+  arrange(condition_class) %>% 
+  mutate(metric = factor(metric, levels = unique(metric)),
+         condition_class = factor(condition_class, levels = unique(condition_class))) %>% 
+  ggplot(aes(condition_class, SCORE)) +
+  geom_boxplot() +
+  facet_wrap(~metric, ncol = 4, scales = "free") +
+  ggtitle("Final metrics (rescaled, all sites)")
+# ggsave(file.path(root.dir, "data/IBI/plots_for_pub/rescaling", "metrics_rescaled_midpoint_thresholds.png"), dpi = "print")
+
+
+# Calculate final IBI scores for all data
+metrics.scores <- metrics.df.standardized.long.percentiles %>% 
+  select(site_id, metric, SCORE) %>% 
+  pivot_wider(names_from = metric, values_from = SCORE) %>% 
+  group_by(site_id) %>%
+  mutate(SITE_SCORE = sum(c(rich_ttaxa_coe, rich_ttaxa_insecta, pct_gatherer, rich_genus, shannon_ttaxa_shredder))) %>%
+  mutate(SITE_SCORE = SITE_SCORE/5) %>%
+  ungroup() %>%
+  select(site_id, SITE_SCORE, rich_ttaxa_coe, rich_ttaxa_insecta, pct_gatherer, rich_genus, shannon_ttaxa_shredder) %>% 
+  left_join(condition)
+
+metrics.scores.cc1 <- metrics.scores %>% 
+  filter(site_id %in% train.df.vec,
+         condition_class == 1) 
+metrics.scores.cc3 <- metrics.scores %>% 
+  filter(site_id %in% train.df.vec,
+         condition_class ==3)
+
+imp_thresh <- ((quantile(metrics.scores.cc1$SITE_SCORE, probs = 0.25) - 
+                  quantile(metrics.scores.cc3$SITE_SCORE, probs = 0.75)) / 2 ) + 
+  quantile(metrics.scores.cc3$SITE_SCORE, probs = 0.75)
+
+```
+
+
+
+
+```{r Standardize - Method 3 (centering), eval=FALSE}
+
+# Determine midpoints between LD and MD classes for each metric (training)
+metrics.midpoints <- metrics.df.standardized.long %>%
+  filter(site_id %in% train.df.vec,
+         condition_class != 2) %>%
+  group_by(metric, condition_class) %>%
+  mutate(q25 = quantile(value, probs = 0.25),
+         q75 =  quantile(value, probs = 0.75)) %>%
+  ungroup() %>%
+  select(metric, disturbance, q25, q75, condition_class) %>%
+  distinct() %>%
+  pivot_wider(names_from = condition_class, values_from = c("q25", "q75")) %>%
+  mutate(midpoint = case_when(
+    disturbance == "decrease" ~ (q25_1 + q75_3)/2,
+    disturbance == "increase" ~ (q75_1 + q25_3)/2)
+  ) %>%
+  select(metric, midpoint)
+
+# Determine standard deviations for each metric (training)
+metrics.sd <- metrics.df.standardized.long %>% 
+  filter(site_id %in% train.df.vec,
+         condition_class != 2) %>% 
+  group_by(metric) %>% 
+  summarize(stdev = sd(value))
+
+# Join midpoint and SD table for use later
+metrics.mid.sd <- metrics.midpoints %>% 
+  left_join(., metrics.sd)
+rm(metrics.midpoints, metrics.sd)
+
+# Center all data for each metric using midpoints and SDs from training 
+metrics.df.standardized.long.centered <- metrics.df.standardized.long %>% 
+  # filter(site_id %in% train.df.vec,
+  #        condition_class != 2) %>% 
+  # group_by(metric) %>% 
+  # mutate(stdev = sd(value)) %>% 
+  # ungroup() %>% 
+  left_join(., metrics.mid.sd) %>% 
+  mutate(value_ctr = value - midpoint,
+         rescaled = value_ctr/stdev)
+
+# Plot metrics after centering
+ggplot(metrics.df.standardized.long.centered, aes(x = as.character(condition_class), y = rescaled)) +
+  geom_boxplot() +
+  facet_wrap(~metric)
+
+# Take inverse of metrics increasing w disturbance
+metrics.centered.scale <- metrics.df.standardized.long.centered %>% 
+  mutate(rescaled = ifelse(disturbance %in% "increase", rescaled*-1, rescaled))
+
+# Replot
+ggplot(metrics.centered.scale, aes(x = as.character(condition_class), y = rescaled)) +
+  geom_boxplot() +
+  facet_wrap(~metric)
+
+# Calculate final IBI scores for all data by averaging and rescale from 0-10 using +1 and -1 as the floor and ceiling.
+metrics.scores <- metrics.centered.scale %>% 
+  select(site_id, metric, rescaled) %>% 
+  pivot_wider(names_from = metric, values_from = rescaled) %>% 
+  group_by(site_id) %>%
+  mutate(SITE_SCORE = sum(c(rich_ttaxa_coe, rich_ttaxa_insecta, pct_gatherer, rich_genus, shannon_ttaxa_shredder))) %>%
+  mutate(SITE_SCORE = SITE_SCORE/5,
+         SITE_SCORE = if_else(SITE_SCORE > 1, 1, SITE_SCORE),
+         SITE_SCORE = if_else(SITE_SCORE < -1, -1, SITE_SCORE),
+         SITE_SCORE = (SITE_SCORE * 5) + 5 
+  )  %>% 
+  ungroup() %>%
+  select(site_id, SITE_SCORE, rich_ttaxa_coe, rich_ttaxa_insecta, pct_gatherer, rich_genus, shannon_ttaxa_shredder) %>% 
+  left_join(condition)
+
+# Replot
+ggplot(metrics.scores, aes(x = as.character(condition_class), y = SITE_SCORE)) +
+  geom_boxplot()
+
+```
+
+
+
+
 ```{r Final IBI plots, fig.width=3, fig.height=5, eval=FALSE}
 # Plot training final scores
 
 metrics.scores.plot <- metrics.scores %>% 
   mutate(class = case_when(
     condition_class == "1" ~ "LD",
-    condition_class == "2" ~ "SMD",
+    condition_class == "2" ~ "ID",
     condition_class == "3" ~ "MD",
   )) 
 
   
 metrics.scores.plot %>% 
   filter(site_id %in% c(train.df.vec)) %>% 
-  mutate(condition_class = factor(class, c("LD", "SMD", "MD"))) %>% 
+  mutate(condition_class = factor(class, c("LD", "ID", "MD"))) %>% 
   ggplot(aes(condition_class, SITE_SCORE)) +
   coord_cartesian(ylim = c(0, 10)) +
   geom_boxplot() +
   ggtitle("Training") +
   # xlab(NULL) +
   xlab("Condition Class") +
-  ylab("LG-BAP Score") 
-  ggsave(file.path(root.dir, "data/ibi/plots_for_pub", "ibi_training_final_2021-07-30.png"), dpi = "print")
+  ylab("LGBAP Score") 
+  # geom_hline(yintercept=imp_thresh, color = "red") 
+  # geom_hline(yintercept=4.37, color = "blue") +
+  # geom_hline(yintercept=4.8, color = "green") +
+  # geom_hline(yintercept=5.79, color = "purple")
+
+  # ggsave(file.path(root.dir, "data/ibi/plots_for_pub/rescaling", "ibi_mid-range_scaling_train.png"), dpi = "print")
 
 # Plot validation final scores
 metrics.scores.plot %>% 
   filter(site_id %in% c(test.df.vec)) %>% 
-  mutate(condition_class = factor(class, c("LD", "SMD", "MD"))) %>% 
+  mutate(condition_class = factor(class, c("LD", "ID", "MD"))) %>% 
   ggplot(aes(condition_class, SITE_SCORE)) +
   coord_cartesian(ylim = c(0, 10)) +
   geom_boxplot() +
   ggtitle("Validation") +
   xlab("Condition Class") +
-  ylab("LG-BAP Score") 
+  ylab("LGBAP Score") 
   # xlab(NULL) +
   # ylab(NULL) +
   # theme(axis.text.y = element_blank(),
         # axis.ticks.y = element_blank()) +
-  ggsave(file.path(root.dir, "data/ibi/plots_for_pub", "ibi_val_final_2021-07-30.png"), dpi = "print")
+  # ggsave(file.path(root.dir, "data/ibi/plots_for_pub/rescaling", "ibi_mid-range_scaling_val.png"), dpi = "print")
 
 # metrics.scores.val <- metrics.scores.plot %>% 
   # filter(site_id %in% test.df.vec) 
@@ -2221,7 +2419,7 @@ metrics.scores.plot %>%
 
 # plot all final scores
 metrics.scores.plot %>%
-  mutate(condition_class = factor(class, c("LD", "SMD", "MD"))) %>% 
+  mutate(condition_class = factor(class, c("LD", "ID", "MD"))) %>% 
   ggplot(aes(condition_class, SITE_SCORE)) +
   coord_cartesian(ylim = c(0, 10)) +
   geom_boxplot() +
@@ -2231,8 +2429,8 @@ metrics.scores.plot %>%
   # ylab(NULL) +
   # xlab(NULL) +
   xlab("Condition Class") +
-  ylab("LG-BAP Score") 
-  ggsave(file.path(root.dir, "data/ibi/plots_for_pub", "ibi_allsites_final_2021-07-30.png"), dpi = "print")
+  ylab("LGBAP Score") 
+  # ggsave(file.path(root.dir, "data/ibi/plots_for_pub/rescaling", "ibi_mid-range_scaling_allsites.png"), dpi = "print")
 
 
 # Plot all scores, single box and whisker to visualize distribution against scale
@@ -2247,9 +2445,10 @@ metrics.scores.plot %>%
   # ylab(NULL) +
   # xlab(NULL) +
   xlab("Condition Class") +
-  ylab("LG-BAP Score") 
+  ylab("LGBAP Score") 
 
 ```
+
 
 ```{r Model testing}
 
@@ -2260,6 +2459,8 @@ metrics.scores.train <- metrics.scores %>%
   mutate(prediction = case_when(
     SITE_SCORE > 5 ~ "1",
     SITE_SCORE < 5 ~ "3",
+    # SITE_SCORE > imp_thresh ~ "1",
+    # SITE_SCORE < imp_thresh ~ "3",
   )) %>% 
   rename(truth = condition_class) %>% 
   select(truth, prediction) %>% 
@@ -2281,6 +2482,8 @@ metrics.scores.validation <- metrics.scores %>%
   mutate(prediction = case_when(
     SITE_SCORE > 5 ~ "1",
     SITE_SCORE < 5 ~ "3",
+    # SITE_SCORE > imp_thresh ~ "1",
+    # SITE_SCORE < imp_thresh ~ "3",
   )) %>% 
   rename(truth = condition_class) %>% 
   select(truth, prediction) %>% 
@@ -2295,6 +2498,65 @@ metrics.scores.validation %>%
   as_tibble()
 
 ```
+
+
+
+```{r Chem vs IBI plot}
+# Chemistry (independent dataset) correlations w metrics (all sites (44), final metrics)
+chemsites.ibi <- metrics.scores %>%
+  select(-condition_class) %>%
+  filter(site_id %in% abiotic.chem$site_id) %>% 
+  rename(LGBAP = SITE_SCORE)
+
+metrics.cor.chem<-left_join(chemsites.ibi, abiotic.chem, by=c("site_id"))
+metric.param.corr.chem<-metrics.cor.chem %>% 
+  select(-site_id) %>% 
+  correlate(use = "pairwise.complete.obs", method = "spearman")
+metric.param.corr.chem<-metric.param.corr.chem %>% 
+  select(term, LGBAP, all_of(metrics.final)) %>%
+  slice(8:33) %>% 
+  remove_rownames %>% 
+  column_to_rownames(var="term")  
+ggcorrplot::ggcorrplot(metric.param.corr.chem)
+
+# Replot using un-standardized scores for indiv metrics
+
+chemsites.ibi.metrics <- metrics.scores %>%
+  rename(LGBAP = SITE_SCORE) %>% 
+  select(site_id, LGBAP) %>%
+  left_join(., chemsites.metrics.final) %>% 
+  filter(site_id %in% abiotic.chem$site_id) 
+
+metrics.cor.chem<-left_join(chemsites.ibi.metrics, abiotic.chem, by=c("site_id"))
+metric.param.corr.chem<-metrics.cor.chem %>% 
+  select(-site_id) %>% 
+  correlate(use = "pairwise.complete.obs", method = "spearman")
+metric.param.corr.chem<-metric.param.corr.chem %>% 
+  select(term, LGBAP, all_of(metrics.final)) %>%
+  slice(8:33) %>% 
+  remove_rownames %>% 
+  column_to_rownames(var="term")  
+ggcorrplot::ggcorrplot(metric.param.corr.chem)
+```
+
+```{r Look at effect of subsampling on richness}
+# counts.subsamp <- read_csv(file.path(root.dir, "data/compile_2015-2019/bugs/counts", "indiv_counts_subsamp_2021-12-01.csv")) %>% 
+#   select(site_id, tot)
+counts <- read_csv(file.path(root.dir, "data/compile_2015-2019/bugs/counts", "indiv_counts_orig_2021-12-01.csv")) %>%
+  select(site_id, tot)
+
+rich.count <- metrics.df %>% 
+  select(site_id, rich_ttaxa, condition_class) %>% 
+  left_join(., counts)
+
+library(ggplot2)
+ggplot(rich.count, aes(x = tot, y = rich_ttaxa)) +
+    geom_point()
+
+# ggsave(file.path(root.dir, "data/compile_2015-2019/bugs/counts/count_vs_richness", "count_vs_sp_rich_not_subsampled_2021-12-01.png"), dpi = "print")
+# write_csv(rich.count, file.path(root.dir, "data/compile_2015-2019/bugs/counts/count_vs_richness", "count_vs_sp_rich_not_subsampled_2021-12-01.csv"))
+```
+
 
 ```{r PC1 correlations, eval = FALSE}
 
@@ -2433,7 +2695,7 @@ fielddata %>%
 ```{r Data prep and model creation}
 
 # Packages at https://www.tidymodels.org/
-
+#
 # Create recipe object
 rec_obj <- train_sensitive.df %>% 
   select(condition_class, all_of(metrics.final)) %>% 
@@ -2447,7 +2709,6 @@ rec_obj <- train_sensitive.df %>%
   themis::step_smote(condition_class)
   # step_smote creates a specification of a recipe step that generate new examples of the minority class using nearest neighbors of these cases.
   # Matt says step_smote is redundant if already balanced btw test and ref sites... but removing does not result in an identical DF!
-
 
 # Extract finalized training set (juice function). Specifiy params for log regr. and engine.
 
