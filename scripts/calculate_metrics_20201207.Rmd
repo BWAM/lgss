@@ -1294,7 +1294,8 @@ train_test_split <- metrics.df %>%
 
 # Create training dataset
 train.df <- training(train_test_split) %>% 
-  filter(condition_class %in% c("1", "3")) 
+  filter(condition_class %in% c("1", "3"))
+         # !site_id %in% "07-JACB-1.9") 
 
 # Create testing dataset
 test.df <- testing(train_test_split) %>% 
@@ -1413,7 +1414,7 @@ test_10cv.df <- test_sensitive.df %>%
 sens.df.ffg <- sens.df %>% 
   filter(grepl("predator|gatherer|shredder|filterer|scraper|collector", metric))
 
-# write.csv(sens.df, file.path(root.dir, "data/metrics/june2021_rerun/metrics_sens_seed70_20210603.csv"))
+# write.csv(sens.df, file.path(root.dir, "data/metrics/nov2021_rerun_subsampling/metrics_sens_seed60_20211221.csv"))
 # write.csv(sens.df.ffg, file.path(root.dir, "data/metrics/june2021_rerun/metrics_sens_seed70-FFG_20210603.csv"))
 
 ```
@@ -2058,7 +2059,8 @@ metric.chem.corscore3 <- metric.chem.corscore2 %>%
 
 # Traditional IBI method
 
-```{r Standardizing metrics}
+
+```{r Prep and plot prior to standardization}
 
 metrics.df.final <- metrics.df %>%
    select(site_id, condition_class, all_of(metrics.final)) 
@@ -2095,6 +2097,12 @@ metrics.df.standardized.long %>%
   facet_wrap(~metric, ncol = 4, scales = "free") +
   ggtitle("Final metrics (training)")
 
+```
+
+
+```{r Standardize - Method 1 (simple quantiles), eval=FALSE}
+# Using simple quantiles for floors/ceilings
+
 # Determine floor and ceiling thresholds using training only
 # THIS BLOCK USES the 95th/5th for ceiling/floor of all training data
 # metrics.thresholds <- metrics.df.standardized.long %>%
@@ -2106,10 +2114,9 @@ metrics.df.standardized.long %>%
 #   select(metric, disturbance, floor, ceiling) %>%
 #   distinct()
 
-
-
 # Determine floor and ceiling thresholds using training only, using class 1 and class 3, respectively
 # THIS BLOCK USES the 75th of class 1 for ceiling and 25th of class 3 for floor (for metrics that decrease with disturbance), or the inverse for metrics that increase with disturbance 
+
 metrics.thresholds <- metrics.df.standardized.long %>%
   filter(site_id %in% train.df.vec,
          condition_class != 2) %>%
@@ -2123,60 +2130,14 @@ metrics.thresholds <- metrics.df.standardized.long %>%
 
 # Standardize using thresholds determined above and truncate scores >10 to 10 and <0 to 0
 metrics.df.standardized.long.percentiles <- metrics.df.standardized.long %>%
-  left_join(metrics.thresholds, by = c("metric", "disturbance")) %>% 
+  left_join(metrics.thresholds, by = c("metric", "disturbance")) %>%
   mutate(SCORE = case_when(
     disturbance == "decrease" ~ ((value - floor_3)/(ceiling_1 - floor_3)),
     disturbance == "increase" ~ ((ceiling_3 - value)/(ceiling_3 - floor_1)),
-  )) %>% 
-  mutate(SCORE = SCORE * 10,
-         SCORE = if_else(SCORE > 10, 10, SCORE),
-         SCORE = if_else(SCORE < 0, 0, SCORE)) 
-
-
-
-#### Alternative method using midpoint to standardize
-## For metrics decreasing w disturbance:
-##   midpoint = abs(25th of LD - 75th of MD)
-##   ceiling =  75th of LD
-##   floor = midpoint - (75th of LD - midpoint)
-## For metrics increasing w disturbance:
-##   midpoint = abs(75th of LD - 25th of MD)
-##   ceiling = midpoint + (midpoint - 25th of LD)
-##   floor = 25th of LD
-
-metrics.thresholds <- metrics.df.standardized.long %>%
-  filter(site_id %in% train.df.vec,
-         condition_class != 2) %>%
-  group_by(metric, condition_class) %>%
-  mutate(q25 = quantile(value, probs = 0.25),
-         q75 =  quantile(value, probs = 0.75)) %>% 
-  ungroup() %>%
-  select(metric, disturbance, q25, q75, condition_class) %>%
-  distinct() %>%
-  pivot_wider(names_from = condition_class, values_from = c("q25", "q75")) %>% 
-  mutate(midpoint_incr = colMeans(metrics.thresholds[ , c(q25_1, q75_3)]))
-    
-  #   midpoint = case_when(
-  #   disturbance == "decrease" ~ mean(c(q25_1, q75_3)),
-  #   disturbance == "increase" ~ mean(c(q75_1, q25_3))
-  #   )
-  # )
-
-
-  
-# Standardize using thresholds determined above and truncate scores >10 to 10 and <0 to 0
-metrics.df.standardized.long.percentiles <- metrics.df.standardized.long %>%
-  left_join(metrics.thresholds, by = c("metric", "disturbance")) %>% 
-  mutate(SCORE = case_when(
-    disturbance == "decrease" ~ ((value - floor_3)/(ceiling_1 - floor_3)),
-    disturbance == "increase" ~ ((ceiling_3 - value)/(ceiling_3 - floor_1)),
-  )) %>% 
+  )) %>%
   mutate(SCORE = SCORE * 10,
          SCORE = if_else(SCORE > 10, 10, SCORE),
          SCORE = if_else(SCORE < 0, 0, SCORE))
-
-
-
 
 #plot rescaled individual metrics
 metrics.df.standardized.long.percentiles %>% 
@@ -2190,6 +2151,7 @@ metrics.df.standardized.long.percentiles %>%
   geom_boxplot() +
   facet_wrap(~metric, ncol = 4, scales = "free") +
   ggtitle("Final metrics (rescaled, all sites)")
+# ggsave(file.path(root.dir, "data/IBI/plots_for_pub/rescaling", "metrics_rescaled_midpoint_thresholds.png"), dpi = "print")
 
 
 # Calculate final IBI scores for all data
@@ -2203,20 +2165,111 @@ metrics.scores <- metrics.df.standardized.long.percentiles %>%
   select(site_id, SITE_SCORE, rich_ttaxa_coe, rich_ttaxa_insecta, pct_gatherer, rich_genus, shannon_ttaxa_shredder) %>% 
   left_join(condition)
 
-
-# Determine 25th of class 1 and 75th of class to find midpoint, to use as possible impairment threshold
 metrics.scores.cc1 <- metrics.scores %>% 
   filter(site_id %in% train.df.vec,
          condition_class == 1) 
-quantile(metrics.scores.cc1$SITE_SCORE, probs = 0.25)
-
-quantile(metrics.scores.cc1$SITE_SCORE, probs = seq(0, 1, 0.05), na.rm = FALSE, names = TRUE, type = 7)
-
-
 metrics.scores.cc3 <- metrics.scores %>% 
   filter(site_id %in% train.df.vec,
-         condition_class == 3) 
-quantile(metrics.scores.cc3$SITE_SCORE, probs = 0.75)
+         condition_class ==3)
+
+imp_thresh <- ((quantile(metrics.scores.cc1$SITE_SCORE, probs = 0.25) - 
+                  quantile(metrics.scores.cc3$SITE_SCORE, probs = 0.75)) / 2 ) + 
+  quantile(metrics.scores.cc3$SITE_SCORE, probs = 0.75)
+
+```
+
+```{r Standardize - Method 2 (midpoints/ranges), eval=FALSE}
+# Using midpoints and ranges to LD floor/ceiling
+
+
+## For metrics decreasing w disturbance:
+##   midpoint = mean of 25th of LD and 75th of MD
+##   ceiling =  75th of LD
+##   floor = midpoint - (75th of LD - midpoint)
+## For metrics increasing w disturbance:
+##   midpoint = mean of 75th of LD and 25th of MD
+##   ceiling = midpoint + (midpoint - 25th of LD)
+##   floor = 25th of LD
+
+metrics.midpoints <- metrics.df.standardized.long %>%
+  filter(site_id %in% train.df.vec,
+         condition_class != 2) %>%
+  group_by(metric, condition_class) %>%
+  mutate(q25 = quantile(value, probs = 0.25),
+         q75 =  quantile(value, probs = 0.75)) %>%
+  ungroup() %>%
+  select(metric, disturbance, q25, q75, condition_class) %>%
+  distinct() %>%
+  pivot_wider(names_from = condition_class, values_from = c("q25", "q75")) %>%
+  mutate(midpoint = case_when(
+    disturbance == "decrease" ~ (q25_1 + q75_3)/2,
+    disturbance == "increase" ~ (q75_1 + q25_3)/2)
+  )
+
+metrics.thresholds <- metrics.df.standardized.long %>% 
+  filter(site_id %in% train.df.vec,
+         condition_class != 2) %>% 
+  group_by(metric) %>% 
+  ungroup() %>% 
+  left_join(., metrics.midpoints) %>% 
+  mutate(range = case_when(
+    disturbance == "decrease" ~ q75_1 - midpoint,
+    disturbance == "increase" ~ midpoint - q25_1)
+  ) %>%
+  mutate(ceiling = case_when(
+    disturbance == "decrease" ~ q75_1,
+    disturbance == "increase" ~ midpoint + range)
+  ) %>%
+  mutate(floor = case_when(
+    disturbance == "decrease" ~ midpoint - range,
+    disturbance == "increase" ~ q25_1)
+  ) %>% 
+  select(metric, disturbance, floor, ceiling) %>%
+  distinct() 
+
+# Standardize using thresholds determined above and truncate scores >10 to 10 and <0 to 0
+metrics.df.standardized.long.percentiles <- metrics.df.standardized.long %>%
+  left_join(metrics.thresholds, by = c("metric", "disturbance")) %>%
+  mutate(SCORE = case_when(
+    disturbance == "decrease" ~ ((value - floor)/(ceiling - floor)),
+    disturbance == "increase" ~ ((ceiling - value)/(ceiling - floor)),
+  )) %>%
+  mutate(SCORE = SCORE * 10,
+         SCORE = if_else(SCORE > 10, 10, SCORE),
+         SCORE = if_else(SCORE < 0, 0, SCORE))
+
+#plot rescaled individual metrics
+metrics.df.standardized.long.percentiles %>% 
+  left_join(condition) %>% 
+  filter(metric %in% metrics.final) %>%
+  arrange(metric) %>% 
+  arrange(condition_class) %>% 
+  mutate(metric = factor(metric, levels = unique(metric)),
+         condition_class = factor(condition_class, levels = unique(condition_class))) %>% 
+  ggplot(aes(condition_class, SCORE)) +
+  geom_boxplot() +
+  facet_wrap(~metric, ncol = 4, scales = "free") +
+  ggtitle("Final metrics (rescaled, all sites)")
+# ggsave(file.path(root.dir, "data/IBI/plots_for_pub/rescaling", "metrics_rescaled_midpoint_thresholds.png"), dpi = "print")
+
+
+# Calculate final IBI scores for all data
+metrics.scores <- metrics.df.standardized.long.percentiles %>% 
+  select(site_id, metric, SCORE) %>% 
+  pivot_wider(names_from = metric, values_from = SCORE) %>% 
+  group_by(site_id) %>%
+  mutate(SITE_SCORE = sum(c(rich_ttaxa_coe, rich_ttaxa_insecta, pct_gatherer, rich_genus, shannon_ttaxa_shredder))) %>%
+  mutate(SITE_SCORE = SITE_SCORE/5) %>%
+  ungroup() %>%
+  select(site_id, SITE_SCORE, rich_ttaxa_coe, rich_ttaxa_insecta, pct_gatherer, rich_genus, shannon_ttaxa_shredder) %>% 
+  left_join(condition)
+
+metrics.scores.cc1 <- metrics.scores %>% 
+  filter(site_id %in% train.df.vec,
+         condition_class == 1) 
+metrics.scores.cc3 <- metrics.scores %>% 
+  filter(site_id %in% train.df.vec,
+         condition_class ==3)
 
 imp_thresh <- ((quantile(metrics.scores.cc1$SITE_SCORE, probs = 0.25) - 
                   quantile(metrics.scores.cc3$SITE_SCORE, probs = 0.75)) / 2 ) + 
@@ -2226,23 +2279,86 @@ imp_thresh <- ((quantile(metrics.scores.cc1$SITE_SCORE, probs = 0.25) -
 
 
 
-```{r Look at effect of subsampling on richness}
-# counts.subsamp <- read_csv(file.path(root.dir, "data/compile_2015-2019/bugs/counts", "indiv_counts_subsamp_2021-12-01.csv")) %>% 
-#   select(site_id, tot)
-counts <- read_csv(file.path(root.dir, "data/compile_2015-2019/bugs/counts", "indiv_counts_orig_2021-12-01.csv")) %>%
-  select(site_id, tot)
 
-rich.count <- metrics.df %>% 
-  select(site_id, rich_ttaxa, condition_class) %>% 
-  left_join(., counts)
+```{r Standardize - Method 3 (centering), eval=FALSE}
 
-library(ggplot2)
-ggplot(rich.count, aes(x = tot, y = rich_ttaxa)) +
-    geom_point()
+# Determine midpoints between LD and MD classes for each metric (training)
+metrics.midpoints <- metrics.df.standardized.long %>%
+  filter(site_id %in% train.df.vec,
+         condition_class != 2) %>%
+  group_by(metric, condition_class) %>%
+  mutate(q25 = quantile(value, probs = 0.25),
+         q75 =  quantile(value, probs = 0.75)) %>%
+  ungroup() %>%
+  select(metric, disturbance, q25, q75, condition_class) %>%
+  distinct() %>%
+  pivot_wider(names_from = condition_class, values_from = c("q25", "q75")) %>%
+  mutate(midpoint = case_when(
+    disturbance == "decrease" ~ (q25_1 + q75_3)/2,
+    disturbance == "increase" ~ (q75_1 + q25_3)/2)
+  ) %>%
+  select(metric, midpoint)
 
-# ggsave(file.path(root.dir, "data/compile_2015-2019/bugs/counts/count_vs_richness", "count_vs_sp_rich_not_subsampled_2021-12-01.png"), dpi = "print")
-# write_csv(rich.count, file.path(root.dir, "data/compile_2015-2019/bugs/counts/count_vs_richness", "count_vs_sp_rich_not_subsampled_2021-12-01.csv"))
+# Determine standard deviations for each metric (training)
+metrics.sd <- metrics.df.standardized.long %>% 
+  filter(site_id %in% train.df.vec,
+         condition_class != 2) %>% 
+  group_by(metric) %>% 
+  summarize(stdev = sd(value))
+
+# Join midpoint and SD table for use later
+metrics.mid.sd <- metrics.midpoints %>% 
+  left_join(., metrics.sd)
+rm(metrics.midpoints, metrics.sd)
+
+# Center all data for each metric using midpoints and SDs from training 
+metrics.df.standardized.long.centered <- metrics.df.standardized.long %>% 
+  # filter(site_id %in% train.df.vec,
+  #        condition_class != 2) %>% 
+  # group_by(metric) %>% 
+  # mutate(stdev = sd(value)) %>% 
+  # ungroup() %>% 
+  left_join(., metrics.mid.sd) %>% 
+  mutate(value_ctr = value - midpoint,
+         rescaled = value_ctr/stdev)
+
+# Plot metrics after centering
+ggplot(metrics.df.standardized.long.centered, aes(x = as.character(condition_class), y = rescaled)) +
+  geom_boxplot() +
+  facet_wrap(~metric)
+
+# Take inverse of metrics increasing w disturbance
+metrics.centered.scale <- metrics.df.standardized.long.centered %>% 
+  mutate(rescaled = ifelse(disturbance %in% "increase", rescaled*-1, rescaled))
+
+# Replot
+ggplot(metrics.centered.scale, aes(x = as.character(condition_class), y = rescaled)) +
+  geom_boxplot() +
+  facet_wrap(~metric)
+
+# Calculate final IBI scores for all data by averaging and rescale from 0-10 using +1 and -1 as the floor and ceiling.
+metrics.scores <- metrics.centered.scale %>% 
+  select(site_id, metric, rescaled) %>% 
+  pivot_wider(names_from = metric, values_from = rescaled) %>% 
+  group_by(site_id) %>%
+  mutate(SITE_SCORE = sum(c(rich_ttaxa_coe, rich_ttaxa_insecta, pct_gatherer, rich_genus, shannon_ttaxa_shredder))) %>%
+  mutate(SITE_SCORE = SITE_SCORE/5,
+         SITE_SCORE = if_else(SITE_SCORE > 1, 1, SITE_SCORE),
+         SITE_SCORE = if_else(SITE_SCORE < -1, -1, SITE_SCORE),
+         SITE_SCORE = (SITE_SCORE * 5) + 5 
+  )  %>% 
+  ungroup() %>%
+  select(site_id, SITE_SCORE, rich_ttaxa_coe, rich_ttaxa_insecta, pct_gatherer, rich_genus, shannon_ttaxa_shredder) %>% 
+  left_join(condition)
+
+# Replot
+ggplot(metrics.scores, aes(x = as.character(condition_class), y = SITE_SCORE)) +
+  geom_boxplot()
+
 ```
+
+
+
 
 ```{r Final IBI plots, fig.width=3, fig.height=5, eval=FALSE}
 # Plot training final scores
@@ -2264,13 +2380,13 @@ metrics.scores.plot %>%
   ggtitle("Training") +
   # xlab(NULL) +
   xlab("Condition Class") +
-  ylab("LGBAP Score") +
-  geom_hline(yintercept=5.56, color = "red") +
-  geom_hline(yintercept=4.37, color = "blue") +
-  geom_hline(yintercept=4.8, color = "green") +
-  geom_hline(yintercept=5.79, color = "purple")
+  ylab("LGBAP Score") 
+  # geom_hline(yintercept=imp_thresh, color = "red") 
+  # geom_hline(yintercept=4.37, color = "blue") +
+  # geom_hline(yintercept=4.8, color = "green") +
+  # geom_hline(yintercept=5.79, color = "purple")
 
-  # ggsave(file.path(root.dir, "data/ibi/plots_for_pub", "ibi_training_final_2021-12-07.png"), dpi = "print")
+  # ggsave(file.path(root.dir, "data/ibi/plots_for_pub/rescaling", "ibi_mid-range_scaling_train.png"), dpi = "print")
 
 # Plot validation final scores
 metrics.scores.plot %>% 
@@ -2286,7 +2402,7 @@ metrics.scores.plot %>%
   # ylab(NULL) +
   # theme(axis.text.y = element_blank(),
         # axis.ticks.y = element_blank()) +
-  # ggsave(file.path(root.dir, "data/ibi/plots_for_pub", "ibi_val_final_2021-12-07.png"), dpi = "print")
+  # ggsave(file.path(root.dir, "data/ibi/plots_for_pub/rescaling", "ibi_mid-range_scaling_val.png"), dpi = "print")
 
 # metrics.scores.val <- metrics.scores.plot %>% 
   # filter(site_id %in% test.df.vec) 
@@ -2315,7 +2431,7 @@ metrics.scores.plot %>%
   # xlab(NULL) +
   xlab("Condition Class") +
   ylab("LGBAP Score") 
-  # ggsave(file.path(root.dir, "data/ibi/plots_for_pub", "ibi_allsites_final_2021-12-07.png"), dpi = "print")
+  # ggsave(file.path(root.dir, "data/ibi/plots_for_pub/rescaling", "ibi_mid-range_scaling_allsites.png"), dpi = "print")
 
 
 # Plot all scores, single box and whisker to visualize distribution against scale
@@ -2333,6 +2449,58 @@ metrics.scores.plot %>%
   ylab("LGBAP Score") 
 
 ```
+
+
+```{r Model testing}
+
+# Test training
+
+metrics.scores.train <- metrics.scores %>% 
+  filter(site_id %in% c(train.df.vec)) %>% 
+  mutate(prediction = case_when(
+    SITE_SCORE > 5 ~ "1",
+    SITE_SCORE < 5 ~ "3",
+    # SITE_SCORE > imp_thresh ~ "1",
+    # SITE_SCORE < imp_thresh ~ "3",
+  )) %>% 
+  rename(truth = condition_class) %>% 
+  select(truth, prediction) %>% 
+  mutate(prediction = factor(prediction, c("1","3"))) %>% 
+  mutate(truth = factor(truth, c("1","3")))
+
+metrics.scores.train %>%
+  conf_mat(truth, prediction) %>%
+  summary() %>%
+  filter(.metric %in%
+    c("accuracy", "precision", "recall", "f_meas")) %>%
+  as_tibble()
+
+
+# Test validation
+
+metrics.scores.validation <- metrics.scores %>% 
+  filter(site_id %in% c(test.df.vec)) %>% 
+  mutate(prediction = case_when(
+    SITE_SCORE > 5 ~ "1",
+    SITE_SCORE < 5 ~ "3",
+    # SITE_SCORE > imp_thresh ~ "1",
+    # SITE_SCORE < imp_thresh ~ "3",
+  )) %>% 
+  rename(truth = condition_class) %>% 
+  select(truth, prediction) %>% 
+  mutate(prediction = factor(prediction, c("1","3"))) %>% 
+  mutate(truth = factor(truth, c("1","3")))
+
+metrics.scores.validation %>%
+  conf_mat(truth, prediction) %>%
+  summary() %>%
+  filter(.metric %in%
+    c("accuracy", "precision", "recall", "f_meas")) %>%
+  as_tibble()
+
+```
+
+
 
 ```{r Chem vs IBI plot}
 # Chemistry (independent dataset) correlations w metrics (all sites (44), final metrics)
@@ -2372,55 +2540,24 @@ metric.param.corr.chem<-metric.param.corr.chem %>%
 ggcorrplot::ggcorrplot(metric.param.corr.chem)
 ```
 
+```{r Look at effect of subsampling on richness}
+# counts.subsamp <- read_csv(file.path(root.dir, "data/compile_2015-2019/bugs/counts", "indiv_counts_subsamp_2021-12-01.csv")) %>% 
+#   select(site_id, tot)
+counts <- read_csv(file.path(root.dir, "data/compile_2015-2019/bugs/counts", "indiv_counts_orig_2021-12-01.csv")) %>%
+  select(site_id, tot)
 
-```{r Model testing}
+rich.count <- metrics.df %>% 
+  select(site_id, rich_ttaxa, condition_class) %>% 
+  left_join(., counts)
 
-# Test training
+library(ggplot2)
+ggplot(rich.count, aes(x = tot, y = rich_ttaxa)) +
+    geom_point()
 
-metrics.scores.train <- metrics.scores %>% 
-  filter(site_id %in% c(train.df.vec)) %>% 
-  mutate(prediction = case_when(
-    # SITE_SCORE > 5 ~ "1",
-    # SITE_SCORE < 5 ~ "3",
-    SITE_SCORE > 5.56 ~ "1",
-    SITE_SCORE < 5.56 ~ "3",
-  )) %>% 
-  rename(truth = condition_class) %>% 
-  select(truth, prediction) %>% 
-  mutate(prediction = factor(prediction, c("1","3"))) %>% 
-  mutate(truth = factor(truth, c("1","3")))
-
-metrics.scores.train %>%
-  conf_mat(truth, prediction) %>%
-  summary() %>%
-  filter(.metric %in%
-    c("accuracy", "precision", "recall", "f_meas")) %>%
-  as_tibble()
-
-
-# Test validation
-
-metrics.scores.validation <- metrics.scores %>% 
-  filter(site_id %in% c(test.df.vec)) %>% 
-  mutate(prediction = case_when(
-    # SITE_SCORE > 5 ~ "1",
-    # SITE_SCORE < 5 ~ "3",
-    SITE_SCORE > 5.56 ~ "1",
-    SITE_SCORE < 5.56 ~ "3",
-  )) %>% 
-  rename(truth = condition_class) %>% 
-  select(truth, prediction) %>% 
-  mutate(prediction = factor(prediction, c("1","3"))) %>% 
-  mutate(truth = factor(truth, c("1","3")))
-
-metrics.scores.validation %>%
-  conf_mat(truth, prediction) %>%
-  summary() %>%
-  filter(.metric %in%
-    c("accuracy", "precision", "recall", "f_meas")) %>%
-  as_tibble()
-
+# ggsave(file.path(root.dir, "data/compile_2015-2019/bugs/counts/count_vs_richness", "count_vs_sp_rich_not_subsampled_2021-12-01.png"), dpi = "print")
+# write_csv(rich.count, file.path(root.dir, "data/compile_2015-2019/bugs/counts/count_vs_richness", "count_vs_sp_rich_not_subsampled_2021-12-01.csv"))
 ```
+
 
 ```{r PC1 correlations, eval = FALSE}
 
