@@ -2279,7 +2279,7 @@ imp_thresh <- ((quantile(metrics.scores.cc1$SITE_SCORE, probs = 0.25) -
 
 
 
-```{r Standardize - Method 3 (centering), eval=FALSE}
+```{r Standardize - Method 3 (centering)}
 
 # Determine midpoints between LD and MD classes for each metric (training)
 metrics.midpoints <- metrics.df.standardized.long %>%
@@ -2335,6 +2335,15 @@ ggplot(metrics.centered.scale, aes(x = as.character(condition_class), y = rescal
   geom_boxplot() +
   facet_wrap(~metric)
 
+# Replot (training only)
+metrics.centered.scale.train <- metrics.centered.scale %>% 
+   filter(site_id %in% train.df.vec,
+         condition_class != 2)  
+ggplot(metrics.centered.scale.train, aes(x = as.character(condition_class), y = rescaled)) +
+  geom_boxplot() +
+  facet_wrap(~metric)
+
+
 # Calculate final IBI scores for all data by averaging and rescale from 0-10 using +1 and -1 as the floor and ceiling.
 metrics.scores <- metrics.centered.scale %>% 
   select(site_id, metric, rescaled) %>% 
@@ -2385,7 +2394,7 @@ metrics.scores.plot %>%
   # geom_hline(yintercept=4.8, color = "green") +
   # geom_hline(yintercept=5.79, color = "purple")
 
-  # ggsave(file.path(root.dir, "data/ibi/plots_for_pub/rescaling", "ibi_mid-range_scaling_train.png"), dpi = "print")
+  # ggsave(file.path(root.dir, "data/ibi/plots_for_pub/rescaling", "ibi_training_2021-12-29.png"), dpi = "print")
 
 # Plot validation final scores
 metrics.scores.plot %>% 
@@ -2401,7 +2410,7 @@ metrics.scores.plot %>%
   # ylab(NULL) +
   # theme(axis.text.y = element_blank(),
         # axis.ticks.y = element_blank()) +
-  # ggsave(file.path(root.dir, "data/ibi/plots_for_pub/rescaling", "ibi_mid-range_scaling_val.png"), dpi = "print")
+  # ggsave(file.path(root.dir, "data/ibi/plots_for_pub/rescaling", "ibi_validation_2021-12-29.png"), dpi = "print")
 
 # metrics.scores.val <- metrics.scores.plot %>% 
   # filter(site_id %in% test.df.vec) 
@@ -2430,7 +2439,7 @@ metrics.scores.plot %>%
   # xlab(NULL) +
   xlab("Condition Class") +
   ylab("LGBAP Score") 
-  # ggsave(file.path(root.dir, "data/ibi/plots_for_pub/rescaling", "ibi_mid-range_scaling_allsites.png"), dpi = "print")
+  # ggsave(file.path(root.dir, "data/ibi/plots_for_pub/rescaling", "ibi_allsites_2021-12-29.png"), dpi = "print")
 
 
 # Plot all scores, single box and whisker to visualize distribution against scale
