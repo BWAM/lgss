@@ -2298,12 +2298,14 @@ metrics.midpoints <- metrics.df.standardized.long %>%
   ) %>%
   select(metric, midpoint)
 
-# Determine standard deviations for each metric (training)
+# Determine standard deviations and Median Absolute Deviations for each metric (training)
 metrics.sd <- metrics.df.standardized.long %>% 
   filter(site_id %in% train.df.vec,
-         condition_class != 2) %>% 
+         condition_class != 2) %>%
+  left_join(., metrics.midpoints) %>% 
   group_by(metric) %>% 
-  summarize(stdev = sd(value))
+  summarize(stdev = sd(value),
+            mad = mad(value, center = midpoint))
 
 # Join midpoint and SD table for use later
 metrics.mid.sd <- metrics.midpoints %>% 
@@ -2319,7 +2321,7 @@ metrics.df.standardized.long.centered <- metrics.df.standardized.long %>%
   # ungroup() %>% 
   left_join(., metrics.mid.sd) %>% 
   mutate(value_ctr = value - midpoint,
-         rescaled = value_ctr/stdev)
+         rescaled = value_ctr/mad)
 
 # Plot metrics after centering
 ggplot(metrics.df.standardized.long.centered, aes(x = as.character(condition_class), y = rescaled)) +
@@ -2385,6 +2387,7 @@ metrics.scores.plot %>%
   ggplot(aes(condition_class, SITE_SCORE)) +
   coord_cartesian(ylim = c(0, 10)) +
   geom_boxplot() +
+  # geom_jitter() +
   ggtitle("Training") +
   # xlab(NULL) +
   xlab("Condition Class") +
@@ -2394,7 +2397,7 @@ metrics.scores.plot %>%
   # geom_hline(yintercept=4.8, color = "green") +
   # geom_hline(yintercept=5.79, color = "purple")
 
-  # ggsave(file.path(root.dir, "data/ibi/plots_for_pub/rescaling", "ibi_training_2021-12-29.png"), dpi = "print")
+  ggsave(file.path(root.dir, "data/ibi/plots_for_pub/rescaling", "ibi_training_MAD_2021-12-31.png"), dpi = "print")
 
 # Plot validation final scores
 metrics.scores.plot %>% 
@@ -2403,6 +2406,7 @@ metrics.scores.plot %>%
   ggplot(aes(condition_class, SITE_SCORE)) +
   coord_cartesian(ylim = c(0, 10)) +
   geom_boxplot() +
+  # geom_jitter() +
   ggtitle("Validation") +
   xlab("Condition Class") +
   ylab("LGBAP Score") 
@@ -2410,7 +2414,7 @@ metrics.scores.plot %>%
   # ylab(NULL) +
   # theme(axis.text.y = element_blank(),
         # axis.ticks.y = element_blank()) +
-  # ggsave(file.path(root.dir, "data/ibi/plots_for_pub/rescaling", "ibi_validation_2021-12-29.png"), dpi = "print")
+  ggsave(file.path(root.dir, "data/ibi/plots_for_pub/rescaling", "ibi_validation_MAD_2021-12-31.png"), dpi = "print")
 
 # metrics.scores.val <- metrics.scores.plot %>% 
   # filter(site_id %in% test.df.vec) 
@@ -2432,6 +2436,7 @@ metrics.scores.plot %>%
   ggplot(aes(condition_class, SITE_SCORE)) +
   coord_cartesian(ylim = c(0, 10)) +
   geom_boxplot() +
+  # geom_jitter() +
   ggtitle("All Sites") +
   # theme(axis.text.y = element_blank(),
   #       axis.ticks.y = element_blank()) +
@@ -2439,7 +2444,7 @@ metrics.scores.plot %>%
   # xlab(NULL) +
   xlab("Condition Class") +
   ylab("LGBAP Score") 
-  # ggsave(file.path(root.dir, "data/ibi/plots_for_pub/rescaling", "ibi_allsites_2021-12-29.png"), dpi = "print")
+  ggsave(file.path(root.dir, "data/ibi/plots_for_pub/rescaling", "ibi_allsites__MAD_2021-12-31.png"), dpi = "print")
 
 
 # Plot all scores, single box and whisker to visualize distribution against scale
@@ -2448,6 +2453,7 @@ metrics.scores.plot %>%
   ggplot(aes(condition_class, SITE_SCORE)) +
   coord_cartesian(ylim = c(0, 10)) +
   geom_boxplot() +
+  # geom_jitter() +
   ggtitle("All Sites") +
   # theme(axis.text.y = element_blank(),
   #       axis.ticks.y = element_blank()) +
