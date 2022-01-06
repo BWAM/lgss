@@ -2516,7 +2516,7 @@ metrics.scores.validation %>%
 
 
 
-```{r Chem vs IBI plot}
+```{r Chem vs IBI plot, fig.width=14, fig.height=12}
 # Chemistry (independent dataset) correlations w metrics (all sites (44), final metrics)
 chemsites.ibi <- metrics.scores %>%
   select(-condition_class) %>%
@@ -2552,6 +2552,175 @@ metric.param.corr.chem<-metric.param.corr.chem %>%
   remove_rownames %>% 
   column_to_rownames(var="term")  
 ggcorrplot::ggcorrplot(metric.param.corr.chem)
+
+# Perform Dunn's test of multiple comparisons
+chem.test <- chemsites.ibi %>% 
+  select(site_id, LGBAP) %>% 
+  left_join(abiotic.chem) %>% 
+  pivot_longer(cols = c(-site_id, -LGBAP),
+               names_to = "param",
+               values_to = "value") %>% 
+  mutate(classification = case_when(
+    LGBAP <= 2.5  ~ "severe",
+    LGBAP <= 5.0  ~ "moderate",
+    LGBAP <= 7.5  ~ "slight",
+    LGBAP > 7.5 ~ "non-impacted"
+  ))
+
+library(dunn.test)
+dunn_test.chem <- chem.test %>%
+  group_by(param) %>%
+  nest() %>%
+  mutate(model = map(data, ~dunn.test(x = .x$value, g = .x$classification, method = "bonferroni") %>% as_tibble())) %>%
+  unnest(model)
+
+p <- chem.test %>% 
+  mutate(classification = factor(classification, c("non-impacted", "slight", "moderate", "severe"))) %>%  
+  ggplot(aes(classification, value)) +
+  geom_boxplot(outlier.size = 0.7) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1), axis.title.y=element_blank())
+
+p + facet_wrap(vars(param), ncol = 6, scales = "free", strip.position = "left",)
+
+
+```
+```{r Kruskal-Wallis tests on IBI vs certain chem params}
+
+chem.test.binary <- chemsites.ibi %>% 
+  select(site_id, LGBAP) %>% 
+  left_join(abiotic.chem) %>% 
+  pivot_longer(cols = c(-site_id, -LGBAP),
+               names_to = "param",
+               values_to = "value") %>% 
+  mutate(classification = case_when(
+    LGBAP < 5 ~ "impaired",
+    LGBAP >= 5 ~ "non-impacted"
+  ))
+
+chem.test.cl <- chem.test.binary %>% 
+  filter(grepl("chloride", param))
+shapiro.test(chem.test.cl$value)
+wilcox.test(chem.test.cl$value ~ chem.test.cl$classification)
+kruskal.test(chem.test.cl$value ~ chem.test.cl$classification)
+
+
+
+
+
+chem.test.cl <- chem.test %>% 
+  filter(grepl("ammonia", param))
+kruskal.test(chem.test.cl$value ~ chem.test.cl$classification)
+chem.test.TN <- chem.test %>% 
+  filter(param %in% "nitrogen_mg/l")
+kruskal.test(chem.test.TN$value ~ chem.test.TN$classification)
+chem.test.TP <- chem.test %>% 
+  filter(param %in% "phosphorus, total (as p)_mg/l")
+kruskal.test(chem.test.TP$value ~ chem.test.TP$classification)
+chem.test.cu <- chem.test %>% 
+  filter(grepl("copper", param))
+kruskal.test(chem.test.cu$value ~ chem.test.cu$classification)
+```
+
+```{r Abiotic vs IBI, fig.width=14, fig.height=3}
+
+scores.val <- metrics.scores %>%
+  select(-condition_class) %>%
+  filter(site_id %in% test.df.vec) %>% 
+  rename(LGBAP = SITE_SCORE)
+
+# Perform Dunn's test of multiple comparisons
+
+abiotic.test <- scores.val %>% 
+  select(site_id, LGBAP) %>% 
+  left_join(abiotic) %>% 
+  pivot_longer(cols = c(-site_id, -LGBAP),
+               names_to = "param",
+               values_to = "value") %>% 
+  mutate(classification = case_when(
+    LGBAP <= 2.5  ~ "severe",
+    LGBAP <= 5.0  ~ "moderate",
+    LGBAP <= 7.5  ~ "slight",
+    LGBAP > 7.5 ~ "non-impacted"
+  ))
+
+library(dunn.test)
+dunn_test.abiotic <- abiotic.test %>%
+  group_by(param) %>%
+  nest() %>%
+  mutate(model = map(data, ~dunn.test(x = .x$value, g = .x$classification, method = "bonferroni") %>% as_tibble())) %>%
+  unnest(model)
+
+p <- abiotic.test %>% 
+  mutate(classification = factor(classification, c("non-impacted", "slight", "moderate", "severe"))) %>%  
+  ggplot(aes(classification, value)) +
+  geom_boxplot(outlier.size = 0.7) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1), axis.title.y=element_blank())
+
+p + facet_wrap(vars(param), ncol = 7, scales = "free", strip.position = "left",)
+
+
+# Perform simple Kruskal-Wallis tests on binary bins
+
+abiotic.test.binary <- scores.val %>% 
+  select(site_id, LGBAP) %>% 
+  left_join(abiotic) %>% 
+  pivot_longer(cols = c(-site_id, -LGBAP),
+               names_to = "param",
+               values_to = "value") %>% 
+  mutate(classification = case_when(
+    LGBAP < 5 ~ "impaired",
+    LGBAP >= 5 ~ "non-impacted"
+  ))
+
+## Below code does not work. Attempted to create table of KW tests similar to Dunn test table above.
+# kw_test.abiotic <- abiotic.test %>%
+#   group_by(param) %>%
+#   nest() %>%
+#   mutate(model = map(data, ~kruskal.test(.x$value ~ .x$classification) %>% as_tibble())) %>%
+#   unnest(model)
+
+abiotic.test.spcond <- abiotic.test.binary %>% 
+  filter(grepl("spcond", param))
+shapiro.test(abiotic.test.spcond$value)
+wilcox.test(abiotic.test.spcond$value ~ abiotic.test.spcond$classification)
+kruskal.test(abiotic.test.spcond$value ~ abiotic.test.spcond$classification)
+
+abiotic.test.nat <- abiotic.test.binary %>% 
+  filter(grepl("nat", param))
+shapiro.test(abiotic.test.nat$value)
+wilcox.test(abiotic.test.nat$value ~ abiotic.test.nat$classification)
+kruskal.test(abiotic.test.nat$value ~ abiotic.test.nat$classification)
+
+abiotic.test.dev <- abiotic.test.binary %>% 
+  filter(grepl("dev", param))
+shapiro.test(abiotic.test.dev$value)
+wilcox.test(abiotic.test.dev$value ~ abiotic.test.dev$classification)
+kruskal.test(abiotic.test.dev$value ~ abiotic.test.dev$classification)
+
+abiotic.test.hab <- abiotic.test.binary %>% 
+  filter(grepl("habitat", param))
+shapiro.test(abiotic.test.hab$value)
+wilcox.test(abiotic.test.hab$value ~ abiotic.test.hab$classification)
+kruskal.test(abiotic.test.hab$value ~ abiotic.test.hab$classification)
+
+abiotic.test.ag <- abiotic.test.binary %>% 
+  filter(grepl("ag", param))
+shapiro.test(abiotic.test.ag$value)
+wilcox.test(abiotic.test.ag$value ~ abiotic.test.ag$classification)
+kruskal.test(abiotic.test.ag$value ~ abiotic.test.ag$classification)
+
+abiotic.test.ph <- abiotic.test.binary %>% 
+  filter(param %in% "ph")
+shapiro.test(abiotic.test.ph$value)
+kruskal.test(abiotic.test.ph$value ~ abiotic.test.ph$classification)
+summary(aov(abiotic.test.ph$value ~ abiotic.test.ph$classification))
+
+abiotic.test.mac <- abiotic.test.binary %>% 
+  filter(grepl("macrophyte", param))
+shapiro.test(abiotic.test.mac$value)
+wilcox.test(abiotic.test.mac$value ~ abiotic.test.mac$classification)
+kruskal.test(abiotic.test.mac$value ~ abiotic.test.mac$classification)
+
 ```
 
 ```{r Look at effect of subsampling on richness}
