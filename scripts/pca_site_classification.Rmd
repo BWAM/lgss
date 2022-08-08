@@ -107,12 +107,17 @@ datacounts2 <- data.frame(colname = names(fielddata.num.sub),colSums_fielddata=c
 
 # Fill in dummy values with means and calculate total habitat score
 fielddata.dummy <- fielddata.num.sub %>% 
+  # mutate(macrophyte_pct = is.numeric(macrophyte_pct),
+  #        sediment_deposition = is.numeric(sediment_deposition),
+  #        embeddedness_pooling = is.numeric(embeddedness_pooling)) %>% 
+  mutate_if(is.integer,as.numeric) %>% 
   ### (see Dray and Josse, 2015 for deeper dive into filling in missing vals)
   mutate_at(vars(depth), ~replace_na(., mean(depth, na.rm = TRUE))) %>%
   mutate_at(vars(width), ~replace_na(., mean(width, na.rm = TRUE))) %>%
   mutate_at(vars(cur_spd), ~replace_na(., mean(cur_spd, na.rm = TRUE))) %>%
   mutate_at(vars(canopy), ~replace_na(., mean(canopy, na.rm = TRUE))) %>%
   mutate_at(vars(macrophyte_pct), ~replace_na(., mean(macrophyte_pct, na.rm = TRUE))) %>%
+  # replace_na(., list(macrophyte_pct = mean(macrophyte_pct, na.rm = TRUE))) %>%
   mutate_at(vars(sediment_deposition), ~replace_na(., mean(sediment_deposition, na.rm = TRUE))) %>%
   mutate_at(vars(embeddedness_pooling), ~replace_na(., mean(embeddedness_pooling, na.rm = TRUE))) %>%
   mutate_at(vars(flow_status), ~replace_na(., mean(flow_status, na.rm = TRUE))) %>%
@@ -168,16 +173,18 @@ fielddata.pca.disturb.simp <- fielddata.pca.disturb.nat %>%
 
 Load additional libs
 ```{r}
-library(vegan)
-library(recipes)
-library(rsample)
-library(modeldata)
+
 library(ggplot2)
 library(ggfortify)
-library(corrr)
-library(tidymodels)
 library(factoextra)
-library(here)
+library(corrr)
+
+# library(vegan)
+# library(recipes)
+# library(rsample)
+# library(modeldata)
+# library(tidymodels)
+# library(here)
 ```
 
 
@@ -210,7 +217,7 @@ pca_biplot +
   annotate("text", x = 0.1, y = -2.75, label = "Intermediately\nDisturbed", fontface = "bold", size = 4.5) +
   annotate("text", x =  2.5, y = -2.75, label = "Least Disturbed", fontface = "bold", size = 4.5)
   
-  ggsave(file.path(root.dir, "data/ibi/plots_for_pub", "pca_2021-12-07.png"), dpi = "print")
+  # ggsave(file.path(root.dir, "data/ibi/plots_for_pub", "pca_2021-12-07.png"), dpi = "print")
 
 
 

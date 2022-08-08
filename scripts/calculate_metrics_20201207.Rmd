@@ -1962,6 +1962,12 @@ metric.param.corr<-metric.param.corr %>%
   column_to_rownames(var="term")  
 ggcorrplot::ggcorrplot(metric.param.corr)
 
+metric.param.corr.flip <- metric.param.corr %>% 
+  t()
+
+ggsave(file.path(root.dir, "data/metrics/abiotic_corr", "metrics_abiotic_corr_2022-02-23.png"), dpi = "print")
+
+
 ## Plot above w validation + class 2?
 
 # Chemistry (independent dataset) correlations w metrics (all sites (44), final metrics)
@@ -1980,6 +1986,9 @@ metric.param.corr.chem<-metric.param.corr.chem %>%
   column_to_rownames(var="term")  
 ggcorrplot::ggcorrplot(metric.param.corr.chem)
 
+ggsave(file.path(root.dir, "data/metrics/abiotic_corr", "metrics_abiotic_corr_chem_2022-02-23.png"), dpi = "print")
+
+
 # Chemistry (independent dataset) correlations w metrics (training only; 12 site matches)
 train.df.final.2 <- train.df.final %>%
   select(-condition_class)
@@ -1995,7 +2004,7 @@ metric.param.corr.chem<-metric.param.corr.chem %>%
   column_to_rownames(var="term")  
 ggcorrplot::ggcorrplot(metric.param.corr.chem)
 
-# Chemisty param correlations w metrics (validation only; 9 SITES ONLY)
+# Chemistry param correlations w metrics (validation only; 9 SITES ONLY)
 metrics.cor.chem<-left_join(test.df.cor, abiotic.chem, by=c("site_id"))
 metric.param.corr.chem<-metrics.cor.chem %>%
   select(-site_id) %>%
