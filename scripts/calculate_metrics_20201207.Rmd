@@ -1965,7 +1965,7 @@ ggcorrplot::ggcorrplot(metric.param.corr)
 metric.param.corr.flip <- metric.param.corr %>% 
   t()
 
-ggsave(file.path(root.dir, "data/metrics/abiotic_corr", "metrics_abiotic_corr_2022-02-23.png"), dpi = "print")
+# ggsave(file.path(root.dir, "data/metrics/abiotic_corr", "metrics_abiotic_corr_2022-02-23.png"), dpi = "print")
 
 
 ## Plot above w validation + class 2?
@@ -1986,7 +1986,7 @@ metric.param.corr.chem<-metric.param.corr.chem %>%
   column_to_rownames(var="term")  
 ggcorrplot::ggcorrplot(metric.param.corr.chem)
 
-ggsave(file.path(root.dir, "data/metrics/abiotic_corr", "metrics_abiotic_corr_chem_2022-02-23.png"), dpi = "print")
+# ggsave(file.path(root.dir, "data/metrics/abiotic_corr", "metrics_abiotic_corr_chem_2022-02-23.png"), dpi = "print")
 
 
 # Chemistry (independent dataset) correlations w metrics (training only; 12 site matches)
@@ -2288,7 +2288,7 @@ imp_thresh <- ((quantile(metrics.scores.cc1$SITE_SCORE, probs = 0.25) -
 
 
 
-```{r Standardize - Method 3 (centering)}
+```{r Standardize - Method 3 ~FINAL METHOD~ (centering)}
 
 # Determine midpoints between LD and MD classes for each metric (training)
 metrics.midpoints <- metrics.df.standardized.long %>%
@@ -2406,7 +2406,7 @@ metrics.scores.plot %>%
   # geom_hline(yintercept=4.8, color = "green") +
   # geom_hline(yintercept=5.79, color = "purple")
 
-  ggsave(file.path(root.dir, "data/ibi/plots_for_pub/rescaling", "ibi_training_MAD_2021-12-31.png"), dpi = "print")
+  # ggsave(file.path(root.dir, "data/ibi/plots_for_pub/rescaling", "ibi_training_MAD_2021-12-31.png"), dpi = "print")
 
 # Plot validation final scores
 metrics.scores.plot %>% 
@@ -2423,7 +2423,7 @@ metrics.scores.plot %>%
   # ylab(NULL) +
   # theme(axis.text.y = element_blank(),
         # axis.ticks.y = element_blank()) +
-  ggsave(file.path(root.dir, "data/ibi/plots_for_pub/rescaling", "ibi_validation_MAD_2021-12-31.png"), dpi = "print")
+  # ggsave(file.path(root.dir, "data/ibi/plots_for_pub/rescaling", "ibi_validation_MAD_2021-12-31.png"), dpi = "print")
 
 # metrics.scores.val <- metrics.scores.plot %>% 
   # filter(site_id %in% test.df.vec) 
@@ -2453,7 +2453,7 @@ metrics.scores.plot %>%
   # xlab(NULL) +
   xlab("Condition Class") +
   ylab("LGBAP Score") 
-  ggsave(file.path(root.dir, "data/ibi/plots_for_pub/rescaling", "ibi_allsites__MAD_2021-12-31.png"), dpi = "print")
+  # ggsave(file.path(root.dir, "data/ibi/plots_for_pub/rescaling", "ibi_allsites__MAD_2021-12-31.png"), dpi = "print")
 
 
 # Plot all scores, single box and whisker to visualize distribution against scale
@@ -2561,6 +2561,19 @@ metric.param.corr.chem<-metric.param.corr.chem %>%
   remove_rownames %>% 
   column_to_rownames(var="term")  
 ggcorrplot::ggcorrplot(metric.param.corr.chem)
+
+
+# Rerun IBI-chem correlations using psych package to get p-values for reporting (in lieu of using Dunn's test below)
+ibi.chem.corrtest <- metrics.cor.chem %>% 
+  select(-1, -c(3:7)) %>% 
+  psych::corr.test(., method = "spearman", adjust = "none")
+ibi.chem.corrtest.r <- as.data.frame(ibi.chem.corrtest$r)
+ibi.chem.corrtest.p <- as.data.frame(ibi.chem.corrtest$p)
+
+# ibi.chem.corrp2 <- metrics.cor.chem %>% 
+#   select(-1, -c(3:7)) %>% 
+#   psych::corr.p(., 42, adjust = "none")
+
 
 # Perform Dunn's test of multiple comparisons
 chem.test <- chemsites.ibi %>% 
