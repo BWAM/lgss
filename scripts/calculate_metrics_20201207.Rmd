@@ -2574,6 +2574,15 @@ ibi.chem.corrtest.p <- as.data.frame(ibi.chem.corrtest$p)
 #   select(-1, -c(3:7)) %>% 
 #   psych::corr.p(., 42, adjust = "none")
 
+# Scatterplots of chem vs IBI scores
+metrics.cor.chem.melt <- metrics.cor.chem %>% 
+  select(-1, -c(3:7)) %>% 
+  reshape2::melt(., id = "LGBAP")
+
+ggplot(metrics.cor.chem.melt, aes(x = LGBAP, y = value)) +
+    facet_wrap(~variable, scales = "free") +
+    geom_point()
+
 
 # Perform Dunn's test of multiple comparisons
 chem.test <- chemsites.ibi %>% 
