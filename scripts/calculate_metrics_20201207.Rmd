@@ -2288,7 +2288,7 @@ imp_thresh <- ((quantile(metrics.scores.cc1$SITE_SCORE, probs = 0.25) -
 
 
 
-```{r Standardize - Method 3 ~FINAL METHOD~ (centering)}
+```{r Standardize - Method 3 ~FINAL CHOSEN METHOD~ (centering)}
 
 # Determine midpoints between LD and MD classes for each metric (training)
 metrics.midpoints <- metrics.df.standardized.long %>%
@@ -2381,6 +2381,12 @@ ggplot(metrics.scores, aes(x = as.character(condition_class), y = SITE_SCORE)) +
 
 ```{r Final IBI plots, fig.width=3, fig.height=5, eval=FALSE}
 # Plot training final scores
+
+# Export DFs for running this chunk in a separate file
+# dir.ibiplot_dfs <- file.path(here::here(), "data/IBI/df_exports_for_IBI_plot")
+# write_csv(metrics.scores, file.path(dir.ibiplot_dfs, "metrics.scores.df_2022-12-21.csv"))
+# write.csv(train.df.vec, file.path(dir.ibiplot_dfs, "train.df.vec_2022-12-21.csv"), row.names = F)
+# write.csv(test.df.vec, file.path(dir.ibiplot_dfs, "test.df.vec_2022-12-21.csv"), row.names = F)
 
 metrics.scores.plot <- metrics.scores %>% 
   mutate(class = case_when(
@@ -2581,7 +2587,8 @@ metrics.cor.chem.melt <- metrics.cor.chem %>%
 
 ggplot(metrics.cor.chem.melt, aes(x = LGBAP, y = value)) +
     facet_wrap(~variable, scales = "free") +
-    geom_point()
+    geom_point() +
+  geom_smooth(method = "lm")
 
 
 # Perform Dunn's test of multiple comparisons

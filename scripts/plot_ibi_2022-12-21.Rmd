@@ -1,0 +1,114 @@
+---
+title: "plot_ibi_2022-12-21"
+author: "glemley"
+date: '2022-12-21'
+output: html_document
+---
+
+```{r}
+library(tidyverse)
+
+# Plot training final scores
+
+# Import final metric scores and training/test site vectors
+dir.ibiplot_dfs <- file.path(here::here(), "data/IBI/df_exports_for_IBI_plot")
+
+metrics.scores <- read.csv(file.path(dir.ibiplot_dfs, "metrics.scores.df_2022-12-21.csv"))
+train.df.vec <- read.csv(file.path(dir.ibiplot_dfs, "train.df.vec_2022-12-21.csv"))
+test.df.vec <- read.csv(file.path(dir.ibiplot_dfs, "test.df.vec_2022-12-21.csv"))
+
+```
+
+
+```{r Final IBI plots, fig.width=3, fig.height=5, eval=FALSE}
+
+metrics.scores.plot <- metrics.scores %>% 
+  mutate(class = case_when(
+    condition_class == "1" ~ "LD",
+    condition_class == "2" ~ "ID",
+    condition_class == "3" ~ "MD",
+  )) 
+
+  
+metrics.scores.plot %>% 
+  filter(site_id %in% train.df.vec$x) %>% 
+  mutate(condition_class = factor(class, c("LD", "ID", "MD"))) %>% 
+  ggplot(aes(condition_class, SITE_SCORE)) +
+  coord_cartesian(ylim = c(0, 10)) +
+  geom_boxplot() +
+  # geom_jitter() +
+  ggtitle("Training") +
+  # xlab(NULL) +
+  xlab("Condition Class") +
+  ylab("LGBAP Score") 
+  # geom_hline(yintercept=imp_thresh, color = "red") 
+  # geom_hline(yintercept=4.37, color = "blue") +
+  # geom_hline(yintercept=4.8, color = "green") +
+  # geom_hline(yintercept=5.79, color = "purple")
+
+  # ggsave(file.path(root.dir, "data/ibi/plots_for_pub/rescaling", "ibi_training_MAD_2021-12-31.png"), dpi = "print")
+
+# Plot validation final scores
+metrics.scores.plot %>% 
+  filter(site_id %in% test.df.vec$x) %>% 
+  mutate(condition_class = factor(class, c("LD", "ID", "MD"))) %>% 
+  ggplot(aes(condition_class, SITE_SCORE)) +
+  coord_cartesian(ylim = c(0, 10)) +
+  geom_boxplot() +
+  # geom_jitter() +
+  ggtitle("Validation") +
+  xlab("Condition Class") +
+  ylab("LGBAP Score") 
+  # xlab(NULL) +
+  # ylab(NULL) +
+  # theme(axis.text.y = element_blank(),
+        # axis.ticks.y = element_blank()) +
+  # ggsave(file.path(root.dir, "data/ibi/plots_for_pub/rescaling", "ibi_validation_MAD_2021-12-31.png"), dpi = "print")
+
+# metrics.scores.val <- metrics.scores.plot %>% 
+  # filter(site_id %in% test.df.vec) 
+
+# Plot validation + class 2 (all data plotted minus training) final scores
+# metrics.scores.plot %>% 
+#   filter(!(site_id %in% train.df.vec)) %>%
+#   mutate(condition_class = factor(condition_class, c("1", "2", "3"))) %>% 
+#   ggplot(aes(condition_class, SITE_SCORE)) +
+#   coord_cartesian(ylim = c(0, 10)) +
+#   geom_boxplot() +
+#   ggtitle("Final scores (val + class 2)") +
+#   xlab("Condition Class") +
+#   ylab("LG-BAP Score")
+
+# plot all final scores
+metrics.scores.plot %>%
+  mutate(condition_class = factor(class, c("LD", "ID", "MD"))) %>% 
+  ggplot(aes(condition_class, SITE_SCORE)) +
+  coord_cartesian(ylim = c(0, 10)) +
+  geom_boxplot() +
+  # geom_jitter() +
+  ggtitle("All Sites") +
+  # theme(axis.text.y = element_blank(),
+  #       axis.ticks.y = element_blank()) +
+  # ylab(NULL) +
+  # xlab(NULL) +
+  xlab("Condition Class") +
+  ylab("LGBAP Score") 
+  # ggsave(file.path(root.dir, "data/ibi/plots_for_pub/rescaling", "ibi_allsites__MAD_2021-12-31.png"), dpi = "print")
+
+
+# Plot all scores, single box and whisker to visualize distribution against scale
+metrics.scores.plot %>%
+  # mutate(condition_class = factor(condition_class, c("1", "2", "3"))) %>%
+  ggplot(aes(condition_class, SITE_SCORE)) +
+  coord_cartesian(ylim = c(0, 10)) +
+  geom_boxplot() +
+  # geom_jitter() +
+  ggtitle("All Sites") +
+  # theme(axis.text.y = element_blank(),
+  #       axis.ticks.y = element_blank()) +
+  # ylab(NULL) +
+  # xlab(NULL) +
+  xlab("Condition Class") +
+  ylab("LGBAP Score") 
+
+```

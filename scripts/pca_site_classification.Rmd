@@ -205,8 +205,18 @@ library(corrr)
 fielddata.pca.input <- fielddata.pca.disturb2 %>% 
   column_to_rownames(var = "site_id")
 
+# Rename parameters for cleaner PCA plot
+fielddata.pca.input.plot <- fielddata.pca.input %>% 
+  rename(MACR = macrophyte_pct,
+         SPCO = spcond,
+         PH = ph,
+         NAT = landcover_nat_pct,
+         DEV = landcover_dev_pct,
+         AG = landcover_ag_pct,
+         HAB = habitat_total_score)
+
 # PCA setup and biplot
-fielddata.pca.scale <- scale(fielddata.pca.input, center = TRUE, scale = TRUE)
+fielddata.pca.scale <- scale(fielddata.pca.input.plot, center = TRUE, scale = TRUE)
 abiotic.pca <- prcomp(fielddata.pca.scale, cor = TRUE)
 
 # Plot PCA Biplot and quantiles of PC1 values
@@ -219,6 +229,20 @@ pca_biplot +
   
   # ggsave(file.path(root.dir, "data/ibi/plots_for_pub", "pca_2021-12-07.png"), dpi = "print")
 
+pca_biplot.pub <- autoplot(abiotic.pca, data = fielddata.pca.scale, label = F, loadings.label = TRUE,loadings.colour = 'black', loadings.label.repel=T, loadings.label.size =4, loadings.label.colour = "black", loadings.label.style = "bold", scale= 0)
+pca_biplot.pub +
+  geom_vline(xintercept = c(-0.87304171, 1.01738099), linetype = "dashed") +
+  annotate("text", x = -3.75, y = -2.75, label = "Most Disturbed", fontface = "bold", size = 4.5) +
+  annotate("text", x = 0.1, y = -2.75, label = "Intermediately\nDisturbed", fontface = "bold", size = 4.5) +
+  annotate("text", x =  2.5, y = -2.75, label = "Least Disturbed", fontface = "bold", size = 4.5) +
+  theme(axis.text=element_text(size=12), axis.title=element_text(size=14)) +
+  ggpubr::theme_pubr()
+
+  # ggsave(file.path(root.dir, "data/ibi/plots_for_pub", "pca_2022-12-21_2.tiff"), 
+  #        dpi = 400, 
+  #        device = "tiff",
+  #        width = 10,
+  #        height = 6)
 
 
 ### 2nd plot:
@@ -279,7 +303,7 @@ evplot = function(ev) {
   # Plot eigenvalues and % of variation for each axis
   op = par(mfrow=c(2,1),omi=c(0.1,0.3,0.1,0.1), mar=c(2, 2, 2, 2))
   barplot(ev, main="Eigenvalues", col="white", las=1)
-  abline(h=mean(ev), col="red")
+  abline(h=mean(ev), col="black")
   return(ev)
   return(mean(ev))
   legend("right", "Average eigenvalue", lwd=1, col=2, bty="n")
@@ -301,7 +325,7 @@ evplot2 = function(ev) {
   # Plot eigenvalues and % of variation for each axis
   op = par(mfrow=c(2,1),omi=c(0.1,0.3,0.1,0.1), mar=c(1, 1, 1, 1))
   barplot(ev, main="Eigenvalues", col="bisque", las=2)
-  abline(h=mean(ev), col="red")
+  abline(h=mean(ev), col="black")
   legend("topright", "Average eigenvalue", lwd=1, col=2, bty="n")
   barplot(t(cbind(100*ev/sum(ev), bsm$p[n:1])), beside=TRUE, 
           main="% variation", col=c("bisque",2), las=2)
