@@ -7,8 +7,8 @@ output: html_document
 
 ```{r}
 library(tidyverse)
-
-# Plot training final scores
+library(ggplot2)
+library(ggh4x)
 
 # Import final metric scores and training/test site vectors
 dir.ibiplot_dfs <- file.path(here::here(), "data/IBI/df_exports_for_IBI_plot")
@@ -20,16 +20,172 @@ test.df.vec <- read.csv(file.path(dir.ibiplot_dfs, "test.df.vec_2022-12-21.csv")
 ```
 
 
-```{r Final IBI plots, fig.width=3, fig.height=5, eval=FALSE}
+```{r}
+
+
+
+# Add groups to scores table
 
 metrics.scores.plot <- metrics.scores %>% 
   mutate(class = case_when(
     condition_class == "1" ~ "LD",
     condition_class == "2" ~ "ID",
     condition_class == "3" ~ "MD",
-  )) 
+  ),
+  group = case_when(
+    site_id %in% train.df.vec$x ~ "Training",
+    site_id %in% test.df.vec$x ~ "Validation",
+    TRUE ~ "Other"
+  ))
 
-  
+
+# p <- qplot(displ, hwy, data = transform(mpg, cyl = as.character(cyl)))
+# cyl6 <- subset(mpg, cyl == 6)
+# p + geom_boxplot(data = transform(cyl6, cyl = "7"), colour = "red") +
+#   geom_boxplot(data = transform(mpg, cyl = "all"), colour = "blue") +
+#   facet_wrap(~ cyl)
+# 
+# 
+# metrics.scores.plot %>% 
+#   mutate(condition_class = factor(class, c("LD", "ID", "MD"))) %>% 
+#          # group = factor(group, c("Training", "Validation"))) %>% 
+#   ggplot(aes(condition_class, SITE_SCORE)) +
+#   coord_cartesian(ylim = c(0, 10)) +
+#   geom_boxplot() +
+#   facet_grid(~group, margins = T, drop = F) 
+#   # ggpubr::theme_pubr()
+# 
+# 
+# mpg %>% 
+#   # mutate(cyl = factor(class, c("1", "2", "3"))) %>% 
+#   ggplot(aes(displ, hwy)) +
+#   # coord_cartesian(ylim = c(0, 10)) +
+#   geom_boxplot() +
+#   facet_grid(~cyl, margins = T) 
+#   # ggpubr::theme_pubr()
+# 
+# data(mpg)
+
+# metrics.scores.plot %>%
+#   mutate(condition_class = factor(class, c("LD", "ID", "MD"))) %>%
+#          # group = factor(group, c("Training", "Validation"))) %>%
+#   ggplot(aes(condition_class, SITE_SCORE)) +
+#   coord_cartesian(ylim = c(0, 10)) +
+#   geom_boxplot() +
+#   facet_grid(~group, margins = T, drop = F)
+
+
+```
+
+```{r}
+CreateAllFacet <- function(df, col){
+  df$facet <- df[[col]]
+  temp <- df
+  temp$facet <- "All sites"
+  merged <-rbind(temp, df)
+
+  # ensure the facet value is a factor
+  merged[[col]] <- as.factor(merged[[col]])
+
+  return(merged)
+}
+
+# df <- CreateAllFacet(mpg, "cyl")
+# 
+# ggplot(data=df, aes(x=displ,y=hwy)) +
+#   geom_point(aes(color=cyl))  +
+#   facet_wrap(~ facet) +
+#   theme(legend.position = "none")
+# 
+
+
+
+
+# df3 %>% 
+#   mutate(condition_class = factor(class, c("LD", "ID", "MD")), 
+#           facet = factor(facet, c("Training", "Validation", "All sites"))) %>% 
+#  ggplot(aes(condition_class, SITE_SCORE)) +
+#   coord_cartesian(ylim = c(0, 10)) +
+#   geom_boxplot()  +
+#   # facet_wrap(~ facet, scales = "free") +
+#   facet_wrap2(~facet,  # ggh4x package for nested facets
+#               strip = strip_nested(),    # sub facets normal
+#               scales = "free", axes = "margins",
+#               remove_labels = "all") +
+#   facetted_pos_scales(
+#     y = list(COL == 2 ~ scale_y_discrete(),
+#              COL == 3 ~ scale_y_discrete())
+#   )
+# 
+# df3 %>% 
+#   mutate(condition_class = factor(class, c("LD", "ID", "MD")), 
+#           facet = factor(facet, c("Training", "Validation", "All sites"))) %>% 
+#  ggplot(aes(condition_class, SITE_SCORE)) +
+#   coord_cartesian(ylim = c(0, 10)) +
+#   geom_boxplot()  +
+#   # facet_wrap(~ facet, scales = "free") +
+#   facet_wrap2(~facet,  # ggh4x package for nested facets
+#               strip = strip_nested(),    # sub facets normal
+#               scales = "free",
+#               remove_labels = "all")
+# 
+
+
+df2 <- CreateAllFacet(metrics.scores.plot, "group")
+df3 <- df2 %>% 
+  filter(!((group %in% "Other") & (facet %in% "Other"))) %>% 
+  mutate(condition_class = factor(class, c("LD", "ID", "MD")), 
+          facet = factor(facet, c("Training", "Validation", "All sites"))) 
+
+labels <- data.frame(f=letters[1:3], label=LETTERS[1:3])
+
+
+# df3 %>% 
+p <- ggplot(df3, aes(condition_class, SITE_SCORE)) +
+  coord_cartesian(ylim = c(0, 10)) +
+  geom_boxplot()  +
+  # facet_wrap(~ facet, scales = "free") +
+  facet_grid(~facet, scales = "free", space = "free") +
+  facetted_pos_scales(y = list(~ scale_y_discrete(guide = 'none'))) +
+  # geom_label(data = c("A",), aes(label=label), 
+  #           x = Inf, y = -Inf, hjust=1, vjust=0,
+  #           inherit.aes = FALSE) +
+  # theme(legend.position = "none") +
+  xlab("Condition class") +
+  ylab("LGBAP") +
+  # ggpubr::theme_pubr()
+  # theme_classic()
+  # theme_minimal()
+  # theme_bw() +
+  theme(strip.text = element_text(size=10),
+        axis.title.x = element_text(size = 10),
+        axis.title.y = element_text(size = 10))
+
+p
+
+egg::tag_facet(p, 
+          x = -Inf, y = -Inf, 
+          vjust = -1,
+          open = "", close = "",
+          tag_pool = LETTERS,
+          fontface = 2,
+          size = 4,
+          )
+
+
+
+  ggsave(file.path(here::here(), "data/ibi/plots_for_pub", "IBI_2022-12-22.tiff"),
+         dpi = 400,
+         device = "tiff",
+         width = 5,
+         height = 4)
+
+
+```
+
+
+
+```{r old plots}
 metrics.scores.plot %>% 
   filter(site_id %in% train.df.vec$x) %>% 
   mutate(condition_class = factor(class, c("LD", "ID", "MD"))) %>% 
@@ -110,5 +266,5 @@ metrics.scores.plot %>%
   # xlab(NULL) +
   xlab("Condition Class") +
   ylab("LGBAP Score") 
-
 ```
+

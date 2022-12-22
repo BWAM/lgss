@@ -229,7 +229,7 @@ pca_biplot +
   
   # ggsave(file.path(root.dir, "data/ibi/plots_for_pub", "pca_2021-12-07.png"), dpi = "print")
 
-pca_biplot.pub <- autoplot(abiotic.pca, data = fielddata.pca.scale, label = F, loadings.label = TRUE,loadings.colour = 'black', loadings.label.repel=T, loadings.label.size =4, loadings.label.colour = "black", loadings.label.style = "bold", scale= 0)
+pca_biplot.pub <- autoplot(abiotic.pca, data = fielddata.pca.scale, size = 1, label = F, loadings.label = TRUE,loadings.colour = 'black', loadings.label.repel=T, loadings.label.size =4, loadings.label.colour = "black", loadings.label.style = "bold", scale= 0)
 pca_biplot.pub +
   geom_vline(xintercept = c(-0.87304171, 1.01738099), linetype = "dashed") +
   annotate("text", x = -3.75, y = -2.75, label = "Most Disturbed", fontface = "bold", size = 4.5) +
@@ -238,11 +238,11 @@ pca_biplot.pub +
   theme(axis.text=element_text(size=12), axis.title=element_text(size=14)) +
   ggpubr::theme_pubr()
 
-  # ggsave(file.path(root.dir, "data/ibi/plots_for_pub", "pca_2022-12-21_2.tiff"), 
-  #        dpi = 400, 
-  #        device = "tiff",
-  #        width = 10,
-  #        height = 6)
+  ggsave(file.path(root.dir, "data/ibi/plots_for_pub", "pca_2022-12-22.tiff"),
+         dpi = 400,
+         device = "tiff",
+         width = 8,
+         height = 5)
 
 
 ### 2nd plot:
