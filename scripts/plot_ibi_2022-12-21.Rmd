@@ -161,8 +161,10 @@ p <- ggplot(df3, aes(condition_class, SITE_SCORE)) +
         axis.title.x = element_text(size = 10),
         axis.title.y = element_text(size = 10))
 
+# Plot without panel tags:
 p
 
+# Plot with panel tags:
 egg::tag_facet(p, 
           x = -Inf, y = -Inf, 
           vjust = -1,
@@ -173,12 +175,12 @@ egg::tag_facet(p,
           )
 
 
-
-  ggsave(file.path(here::here(), "data/ibi/plots_for_pub", "IBI_2022-12-22.tiff"),
-         dpi = 400,
-         device = "tiff",
-         width = 5,
-         height = 4)
+# for final plot export:
+  # ggsave(file.path(here::here(), "data/ibi/plots_for_pub", "IBI_2022-12-22.tiff"),
+  #        dpi = 400,
+  #        device = "tiff",
+  #        width = 5,
+  #        height = 4)
 
 
 ```
