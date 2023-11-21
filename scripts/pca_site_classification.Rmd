@@ -514,12 +514,12 @@ unique(all.abiotic.classified$basin)
 Exporting data
 ```{r, eval = FALSE}
 # Export joined data with classes
-# write.table(all.abiotic.classified, file.path(root.dir, "data/compile_2015-2019/field_data/2015-2019_LG_field_landcover_condclasses_2021-11-24-reclass.csv"),sep=",", row.names = FALSE)
+# write.table(all.abiotic.classified, file.path(root.dir, "data/compile_2015-2019/field_data/2015-2019_LG_field_landcover_condclasses_2021-11-24-reclass_FINAL.csv"),sep=",", row.names = FALSE)
 
 # Export just the classes for joining elsewhere
 classes.export <- all.abiotic.classified %>%
   select(site_id, condition_class, PC1)
-# write.table(classes.export, file.path(root.dir, "data/compile_2015-2019/condition_classes/2015-2019_LG_condclasses_2021-11-24-reclass.csv"),sep=",", row.names = FALSE)
+# write.table(classes.export, file.path(root.dir, "data/compile_2015-2019/condition_classes/2015-2019_LG_condclasses_2021-11-24-reclass_FINAL.csv"),sep=",", row.names = FALSE)
 
 ```
 
