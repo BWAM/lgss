@@ -10,7 +10,7 @@ library(tidyverse)
 library(mmir)
 
 root.dir <- rprojroot::find_root("lgss.Rproj")
-datamod.dir <- file.path("C:/Users/gmlemley/New York State Office of Information Technology Services/SMAS - Streams Data Modernization/Cleaned Files/FINAL_RELOADS_SEPT2020")
+# datamod.dir <- file.path("C:/Users/gmlemley/New York State Office of Information Technology Services/SMAS - Streams Data Modernization/Cleaned Files/FINAL_RELOADS_SEPT2020")
 
 ```
 
@@ -1187,6 +1187,10 @@ taxa.df.class <- taxa.df %>% left_join(condition, by = "site_id")
 
 # Look at plecop only
 taxa.df.class.plecop <- taxa.df.class %>% filter(order %in% "plecoptera")
+
+# Look at trichop only
+taxa.df.class.trichop <- taxa.df.class %>% filter(order %in% "trichoptera")
+
 
 ```
 
@@ -2914,7 +2918,7 @@ fielddata %>%
 
 #Training and Logistical Regression model
 
-```{r Data prep and model creation}
+```{r Data prep and model creation, eval=FALSE}
 
 # Packages at https://www.tidymodels.org/
 #
@@ -2951,7 +2955,7 @@ met.flow <- workflow() %>%
 ```
 
 
-```{r Cross validation and measuring performace}
+```{r Cross validation and measuring performace, eval=FALSE}
 
 # Cross validation tutorial: https://www.youtube.com/watch?v=fSytzGwwBVw 
 
@@ -2989,7 +2993,7 @@ show_best(spline_res, metric = "pr_auc")
 
 ```
 
-```{r Create logistical regression model}
+```{r Create logistical regression model, eval=FALSE}
 
 test.df <- testing(train_test_split) %>% 
   filter(condition_class %in% c("1", "3")) %>% 
@@ -3009,7 +3013,7 @@ pred_test_all <- predict(fit_train, new_data = metrics.df, type = "prob") %>%
 ```
 
 
-```{r Logistical regression model plots}
+```{r Logistical regression model plots, eval=FALSE}
 
 # Training
 
@@ -3055,7 +3059,7 @@ ggplot(aes(.pred_1, condition)) +
 
 ```
 
-```{r Visualize model performance (ROC curve)}
+```{r Visualize model performance (ROC curve), eval=FALSE}
 
 # Receiver operator curve
 # Add in resampling as shown at https://yardstick.tidymodels.org/ ?
@@ -3087,7 +3091,7 @@ autoplot(simple_glm_roc)
 
 ## Probilities from log regr. for each class - Summary of results!
 
-```{r Log regr boxplot}
+```{r Log regr boxplot, eval=FALSE}
 
 
 # ***Training***
@@ -3138,7 +3142,7 @@ outliers.all <- c(all.df.outliers.cl3, all.df.outliers.cl1) %>%
 
 ```
 
-```{r, confusion matrix accuracy assessment for validation dataset}
+```{r, confusion matrix accuracy assessment for validation dataset, eval=FALSE}
 
 test.df <- predict(fit_train, new_data = testing(train_test_split), type = "prob") %>% 
   bind_cols(select(testing(train_test_split), condition_class, site_id))
