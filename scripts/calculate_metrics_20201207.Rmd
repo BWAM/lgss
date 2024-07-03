@@ -1192,6 +1192,25 @@ taxa.df.class.plecop <- taxa.df.class %>% filter(order %in% "plecoptera")
 taxa.df.class.trichop <- taxa.df.class %>% filter(order %in% "trichoptera")
 
 
+taxa.df.class.count <- taxa.df.class %>% 
+  count(site_id, order, condition_class) %>% 
+  pivot_wider(names_from = "order", values_from = "n", values_fill = 0) %>% 
+  relocate(site_id, condition_class, ephemeroptera, plecoptera, trichoptera, coleoptera, odonata)
+
+# roll up by class to look at abundance of non-insect organisms...
+taxa.df.class.count.class <- taxa.df.class %>% 
+  count(site_id, class, condition_class) %>% 
+  pivot_wider(names_from = "class", values_from = "n", values_fill = 0) %>% 
+  relocate(site_id, condition_class)
+
+taxa.df.class.count.class.LD <- taxa.df.class.count.class %>% 
+  filter(condition_class == "1") %>% 
+  janitor::adorn_totals()
+
+taxa.df.class.count.class.MD <- taxa.df.class.count.class %>% 
+  filter(condition_class == "3") %>% 
+  janitor::adorn_totals()
+
 ```
 
 ```{r Clean up workspace}
