@@ -9,6 +9,10 @@ output: html_document
 library(tidyverse)
 library(mmir)
 
+# To install mmir package:
+# install.packages("pak")
+# pak::pak("zsmith27/mmir")
+
 root.dir <- rprojroot::find_root("lgss.Rproj")
 # datamod.dir <- file.path("C:/Users/gmlemley/New York State Office of Information Technology Services/SMAS - Streams Data Modernization/Cleaned Files/FINAL_RELOADS_SEPT2020")
 
@@ -1303,7 +1307,7 @@ library(tidymodels)
 # Keep the set.seed number the same to get the same subsampled traning dataset for each run. (Change this to create a new training dataset. Original is 80)
 
 ### Run multiple subsamples then set final seed for training.
-set.seed(60)
+set.seed(60) # USED FOR FINAL RUN. RERAN 9/16/2025 and got the same training and test sites :)
 # set.seed(70)
 # set.seed(80)
 # set.seed(90)
